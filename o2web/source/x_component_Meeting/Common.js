@@ -77,6 +77,7 @@ MWF.xApplication.Meeting.BuildingForm = new Class({
         this.app.confirm("warn", e, this.app.lp.delete_building_title, info, 300, 120, function(){
             _self.remove();
             this.close();
+            _self.close();
         }, function(){
             this.close();
         });
@@ -159,6 +160,7 @@ MWF.xApplication.Meeting.BuildingTooltip = new Class({
             "onPostSave" : save_callback
         } : {};
         var form = new MWF.xApplication.Meeting.BuildingForm(this,this.data, options, {app:this.app});
+        form.view = this.view;
         form.edit();
     },
     removeBuilding: function(e) {
@@ -1200,7 +1202,7 @@ MWF.xApplication.Meeting.MeetingForm = new Class({
             new Element("a", {
                 style: "font-size:14px;",
                 href: this.data.roomLink,
-                text: this.data.roomLink,
+                text: this.lp.openMeetingUrl,
                 target: "_blank"
             }).inject( node );
         }
@@ -1209,17 +1211,17 @@ MWF.xApplication.Meeting.MeetingForm = new Class({
             node = this.formTableArea.getElement("[item='roomId']");
             node.empty();
             new Element("span", { text: this.data.roomId, name: "roomId" }).inject( node );
-            this.app.isCopyEnable().then(function(flag){
-                if( flag ){
-                    new Element("div", {
-                        "text": this.lp.copy,
-                        "styles": this.app.css.inputDenyButton,
-                        "events": {
-                            "click": function (){ this.app.copyTextToClipboard(this.data.roomId) }.bind(this)
-                        }
-                    }).inject( node );
-                }
-            }.bind(this))
+            // this.app.isCopyEnable().then(function(flag){
+            //     if( flag ){
+            //         new Element("div", {
+            //             "text": this.lp.copy,
+            //             "styles": this.app.css.inputDenyButton,
+            //             "events": {
+            //                 "click": function (){ this.app.copyTextToClipboard(this.data.roomId) }.bind(this)
+            //             }
+            //         }).inject( node );
+            //     }
+            // }.bind(this))
         }
     },
     reloadinviteDelPerson: function(){
@@ -1342,7 +1344,7 @@ MWF.xApplication.Meeting.MeetingForm = new Class({
     cancelMeeting: function(e){
         var _self = this;
         var text = this.app.lp.cancel_confirm.replace(/{name}/g, this.data.subject);
-        this.app.confirm("infor", e, this.app.lp.cancel_confirm_title, text, 380, 200, function(){
+        this.app.confirm("infor", e, this.app.lp.cancel_confirm_title, text, 400, 200, function(){
             _self._cancelMeeting();
             this.close();
             _self.close();
@@ -1980,30 +1982,30 @@ MWF.xApplication.Meeting.MeetingTooltip = new Class({
             new Element("a", {
                 style: "font-size:13px;",
                 href: this.data.roomLink,
-                text: this.data.roomLink,
+                text: this.lp.openMeetingUrl,
                 target: "_blank"
             }).inject( node );
         }
-        if( this.data.roomId ){
-            this.app.isCopyEnable().then(function(flag){
-                if( flag ){
-                    node = this.node.getElement("[item='roomId']");
-                    node.empty();
-                    new Element("span", { text: this.data.roomId, name: "roomId" }).inject( node );
-                    new Element("div", {
-                        "text": this.lp.copy,
-                        "styles": this.app.css.inputDenyButton,
-                        "events": {
-                            "click": function (){ this.app.copyTextToClipboard(this.data.roomId) }.bind(this)
-                        }
-                    }).inject( node );
-                }
-            }.bind(this))
-        }
+        // if( this.data.roomId ){
+        //     this.app.isCopyEnable().then(function(flag){
+        //         if( flag ){
+        //             node = this.node.getElement("[item='roomId']");
+        //             node.empty();
+        //             new Element("span", { text: this.data.roomId, name: "roomId" }).inject( node );
+        //             new Element("div", {
+        //                 "text": this.lp.copy,
+        //                 "styles": this.app.css.inputDenyButton,
+        //                 "events": {
+        //                     "click": function (){ this.app.copyTextToClipboard(this.data.roomId) }.bind(this)
+        //                 }
+        //             }).inject( node );
+        //         }
+        //     }.bind(this))
+        //}
     },
     loadRoom: function( callback ){
         var area = this.node.getElement("[item='meetingRoom']");
-        if (area && this.data.room && this.data.room === "noRoom"){
+        if (area && this.data.room && this.data.room !== "noRoom"){
             this.app.actions.getRoom(this.data.room, function(json){
                 this.app.actions.getBuilding(json.data.building, function(bjson){
                     area.set("text", json.data.name+" ("+bjson.data.name+")");
@@ -2518,7 +2520,7 @@ MWF.xApplication.Meeting.MeetingArea = new Class({
     cancel: function(e){
         var _self = this;
         var text = this.app.lp.cancel_confirm.replace(/{name}/g, this.data.subject);
-        this.app.confirm("infor", e, this.app.lp.cancel_confirm_title, text, 380, 150, function(){
+        this.app.confirm("infor", e, this.app.lp.cancel_confirm_title, text, 400, 200, function(){
             _self.cancelMeeting();
             this.close();
         }, function(){

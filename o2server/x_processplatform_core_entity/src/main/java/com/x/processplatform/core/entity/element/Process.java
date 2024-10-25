@@ -100,6 +100,39 @@ public class Process extends SliceJpaObject {
 		}
 	}
 
+	public static final String PERMISSIONWRITESCRIPT_FIELDNAME = "permissionWriteScript";
+	@FieldDescribe("可编辑权限脚本,返回组织专用标识.")
+	@Transient
+	private String permissionWriteScript;
+
+	public String getPermissionWriteScript() {
+		if ((null == permissionWriteScript) && (null != properties)) {
+			this.permissionWriteScript = this.properties.getPermissionWriteScript();
+		}
+		return permissionWriteScript;
+	}
+
+	public void setPermissionWriteScript(String permissionWriteScript) {
+		this.permissionWriteScript = permissionWriteScript;
+		this.getProperties().setPermissionWriteScript(permissionWriteScript);
+	}
+
+	public static final String PERMISSIONWRITESCRIPTTEXT_FIELDNAME = "permissionWriteScriptText";
+	@FieldDescribe("可编辑权限脚本文本,返回组织专用标识.")
+	@Transient
+	private String permissionWriteScriptText;
+
+	public String getPermissionWriteScriptText() {
+		if ((null == permissionWriteScriptText) && (null != properties)) {
+			this.permissionWriteScriptText = this.properties.getPermissionWriteScriptText();
+		}
+		return permissionWriteScriptText;
+	}
+
+	public void setPermissionWriteScriptText(String permissionWriteScriptText) {
+		this.permissionWriteScriptText = permissionWriteScriptText;
+		this.getProperties().setPermissionWriteScriptText(permissionWriteScriptText);
+	}
 	public static final String MAINTENANCEIDENTITY_FIELDNAME = "maintenanceIdentity";
 	@FieldDescribe("流程维护身份,如果无法找到处理身份默认的流程处理身份.")
 	@Transient
@@ -140,6 +173,34 @@ public class Process extends SliceJpaObject {
 	public void setUpdateTableList(List<String> updateTableList) {
 		this.updateTableList = updateTableList;
 		this.getProperties().setUpdateTableList(updateTableList);
+	}
+
+	public static final String dataTraceFieldType_FIELDNAME = "dataTraceFieldType";
+	@FieldDescribe("需要记录数据变化的字段配置方式：all|所有、custom|依据dataTraceFieldList配置的字段.")
+	@Transient
+	private String dataTraceFieldType;
+
+	public String getDataTraceFieldType() {
+		return dataTraceFieldType;
+	}
+
+	public void setDataTraceFieldType(String dataTraceFieldType) {
+		this.dataTraceFieldType = dataTraceFieldType;
+		this.getProperties().setDataTraceFieldType(dataTraceFieldType);
+	}
+
+	public static final String dataTraceFieldList_FIELDNAME = "dataTraceFieldList";
+	@FieldDescribe("需要记录数据变化的字段.")
+	@Transient
+	private List<String> dataTraceFieldList;
+
+	public List<String> getDataTraceFieldList() {
+		return dataTraceFieldList;
+	}
+
+	public void setDataTraceFieldList(List<String> dataTraceFieldList) {
+		this.dataTraceFieldList = dataTraceFieldList;
+		this.getProperties().setDataTraceFieldList(dataTraceFieldList);
 	}
 
 	public Boolean getProjectionFully() {
@@ -223,6 +284,12 @@ public class Process extends SliceJpaObject {
 			this.maintenanceIdentity = this.getProperties().getMaintenanceIdentity();
 			this.targetAssignDataScript = this.getProperties().getTargetAssignDataScript();
 			this.targetAssignDataScriptText = this.getProperties().getTargetAssignDataScriptText();
+			this.manualAfterProcessingScript = this.getProperties().getManualAfterProcessingScript();
+			this.manualAfterProcessingScriptText = this.getProperties().getManualAfterProcessingScriptText();
+			this.dataTraceFieldType = this.getProperties().getDataTraceFieldType();
+			this.dataTraceFieldList = this.getProperties().getDataTraceFieldList();
+			this.permissionWriteScript = this.getProperties().getPermissionWriteScript();
+			this.permissionWriteScriptText = this.getProperties().getPermissionWriteScriptText();
 		}
 	}
 
@@ -678,6 +745,44 @@ public class Process extends SliceJpaObject {
 	@FieldDescribe("人工活动有停留脚本文本.")
 	@Transient
 	private String manualStayScriptText;
+
+	public static final String MANUALAFTERPROCESSINGSCRIPT_FIELDNAME = "manualAfterProcessingScript";
+	@Transient
+	@FieldDescribe("人工环节工作流转后执行脚本.")
+	// @since 8.1.0
+	private String manualAfterProcessingScript;
+
+	public String getManualAfterProcessingScript() {
+		if (null != this.manualAfterProcessingScript) {
+			return this.manualAfterProcessingScript;
+		} else {
+			return this.getProperties().getManualAfterProcessingScript();
+		}
+	}
+
+	public void setManualAfterProcessingScript(String manualAfterProcessingScript) {
+		this.manualAfterProcessingScript = manualAfterProcessingScript;
+		this.getProperties().setManualAfterProcessingScript(manualAfterProcessingScript);
+	}
+
+	public static final String MANUALAFTERPROCESSINGSCRIPTTEXT_FIELDNAME = "manualAfterProcessingScriptText";
+	@Transient
+	@FieldDescribe("人工环节工作流转后执行脚本文本.")
+	// @since 8.1.0
+	private String manualAfterProcessingScriptText;
+
+	public String getManualAfterProcessingScriptText() {
+		if (null != this.manualAfterProcessingScriptText) {
+			return this.manualAfterProcessingScriptText;
+		} else {
+			return this.getProperties().getManualAfterProcessingScriptText();
+		}
+	}
+
+	public void setManualAfterProcessingScriptText(String manualAfterProcessingScriptText) {
+		this.manualAfterProcessingScriptText = manualAfterProcessingScriptText;
+		this.getProperties().setManualAfterProcessingScriptText(manualAfterProcessingScriptText);
+	}
 
 	public static final String TARGETASSIGNDATASCRIPT_FIELDNAME = "targetAssignDataScript";
 	@FieldDescribe("数据执行前脚本.")

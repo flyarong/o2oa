@@ -43,10 +43,32 @@ MWF.xApplication.process.Xform.Eldatetime = MWF.APPEldatetime =  new Class(
     },
     _queryLoaded: function(){
         var data = this._getBusinessData();
-        if( ["datetimerange"].contains(this.json.selectType) ) {
-            if (typeOf(data) === "string") this._setBusinessData([data, ""]);
-        }else{
-            if( typeOf(data) === "array" )this._setBusinessData(data[0] || "");
+        if( data ){
+            if( ["datetimerange"].contains(this.json.selectType) ) {
+                if (typeOf(data) === "string") this._setBusinessData([data, ""]);
+            }else{
+                if( typeOf(data) === "array" )this._setBusinessData(data[0] || "");
+            }
+        }
+    },
+    __setReadonly: function(data){
+        if (this.isReadonly()){
+            if( o2.typeOf(data) === "array" ){
+                this.node.set("text", this.json.rangeSeparator ? data.join(this.json.rangeSeparator) : data );
+            }else{
+                this.node.set("text", data );
+            }
+
+            if( this.json.elProperties ){
+                this.node.set(this.json.elProperties );
+            }
+            if (this.json.elStyles){
+                this.node.setStyles( this._parseStyles(this.json.elStyles) );
+            }
+
+            this.fireEvent("postLoad");
+            this.fireEvent("load");
+            this.isLoaded = true;
         }
     },
     _appendVueData: function(){
@@ -111,6 +133,17 @@ MWF.xApplication.process.Xform.Eldatetime = MWF.APPEldatetime =  new Class(
 
         html += "</el-date-picker>";
         return html;
+    },
+    getInputData: function(){
+        var data = this.json[this.json.$id];
+        if( data === null ){
+            if( ["datetimerange"].contains(this.json.selectType) ) {
+                return [];
+            }else{
+                return "";
+            }
+        }
+        return this.json[this.json.$id];
     },
 
         getExcelData: function(){

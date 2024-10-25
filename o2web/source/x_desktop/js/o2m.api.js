@@ -77,8 +77,12 @@
       }
     }
     var message = JSON.stringify(body);
-    if ((window.o2mNotification && window.o2mNotification.postMessage) || (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.o2mNotification)) {
-      window.o2mNotification && window.o2mNotification.postMessage ? window.o2mNotification.postMessage(message) : window.webkit.messageHandlers.o2mNotification.postMessage(message);
+    if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
+      window.flutter_inappwebview.callHandler('o2mNotification', message);
+    } else if (window.o2mNotification && window.o2mNotification.postMessage) {
+      window.o2mNotification.postMessage(message);
+    } else if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.o2mNotification) {
+      window.webkit.messageHandlers.o2mNotification.postMessage(message);
     } else {
       if (onFail && typeof onFail === "function") {
         onFail("请在O2OA移动端使用！");
@@ -382,12 +386,9 @@
     var title = c && c.title ? c.title : "";
     var cancelButton = c && c.cancelButton ? c.cancelButton : "取消";
     var otherButtons = c && c.otherButtons ? c.otherButtons : [];
+    var tooManyButtons = c && c.tooManyButtons ? c.tooManyButtons : false;
     var onSuccess = c && c.onSuccess ? c.onSuccess : null;
     var onFail = c && c.onFail ? c.onFail : null;
-    if (title === "") {
-      if (typeof onFail === "function") { onFail("title标题不能为空！"); }
-      return;
-    }
     if (otherButtons.length < 1) {
       if (typeof onFail === "function") { onFail("其他按钮列表不能为空！"); }
       return;
@@ -401,7 +402,8 @@
       data: {
         title: title,
         cancelButton: cancelButton,
-        otherButtons: otherButtons
+        otherButtons: otherButtons,
+        tooManyButtons: tooManyButtons
       }
     };
     _notification_post(body, onFail);
@@ -551,8 +553,8 @@
         o2m.util.navigation.openInnerApp
         o2m.util.navigation.openOtherApp
         o2m.util.navigation.openWindow
-  
-  
+        o2m.util.navigation.share
+
   
   * ***** END UTIL BLOCK ******/
 
@@ -571,8 +573,12 @@
       }
     }
     var message = JSON.stringify(body);
-    if ((window.o2mUtil && window.o2mUtil.postMessage) || (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.o2mUtil)) {
-      window.o2mUtil && window.o2mUtil.postMessage ? window.o2mUtil.postMessage(message) : window.webkit.messageHandlers.o2mUtil.postMessage(message);
+    if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
+      window.flutter_inappwebview.callHandler('o2mUtil', message);
+    } else if (window.o2mUtil && window.o2mUtil.postMessage) {
+      window.o2mUtil.postMessage(message);
+    } else if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.o2mUtil) {
+      window.webkit.messageHandlers.o2mUtil.postMessage(message);
     } else {
       if (onFail && typeof onFail === "function") {
         onFail("请在O2OA移动端使用！");
@@ -759,7 +765,7 @@
    * 月历日期选择器
    * @method chooseOneDay
    * @memberOf o2m
-   * @o2membercategory util.date
+   * @o2membercategory util.calendar
    * @static
    * @param {Object} obj  chooseOneDay需要传入对象
    * <pre><code class='language-js'>{
@@ -772,7 +778,7 @@
    * 样例效果：<br/>
    * <img src="img/module/o2m/util_choose_one_day.jpeg">
    * </caption>
-   * o2m.util.date.chooseOneDay({
+   * o2m.util.calendar.chooseOneDay({
    * value: '2019-05-05', //默认显示日期
    * onSuccess : function(result) {
    *     //onSuccess将在点击完成之后回调
@@ -810,7 +816,7 @@
    * 月历日期时间选择器
    * @method chooseDateTime
    * @memberOf o2m
-   * @o2membercategory util.date
+   * @o2membercategory util.calendar
    * @static
    * @param {Object} obj  chooseDateTime需要传入对象
    * <pre><code class='language-js'>{
@@ -823,7 +829,7 @@
    * 样例效果：<br/>
    * <img src="img/module/o2m/util_choose_date_time.jpeg">
    * </caption>
-   * o2m.util.date.chooseDateTime({
+   * o2m.util.calendar.chooseDateTime({
    * value: '2019-05-05 11:00', //默认显示时间
    * onSuccess : function(result) {
    *     //onSuccess将在点击完成之后回调
@@ -863,7 +869,7 @@
    * 月历日期区间选择器
    * @method chooseInterval
    * @memberOf o2m
-   * @o2membercategory util.date
+   * @o2membercategory util.calendar
    * @static
    * @param {Object} obj  chooseInterval需要传入对象
    * <pre><code class='language-js'>{
@@ -877,8 +883,9 @@
    * 样例效果：<br/>
    * <img src="img/module/o2m/util_choose_interval.jpeg">
    * </caption>
-   * o2m.util.date.chooseInterval({
-   * value: '2019-05-05 11:00', //默认显示时间
+   * o2m.util.calendar.chooseInterval({
+   * startDate: '2019-05-05',
+   * endDate: '2019-05-06',
    * onSuccess : function(result) {
    *     //onSuccess将在点击完成之后回调
    *     {
@@ -1067,6 +1074,47 @@
   this.o2m.util.device.location = _o2m_u_device_location;
 
 
+  //o2m.util.device.localAuth
+  this.o2m.util.device.localAuthSuccess = function (result) {
+    console.log("util device localAuth back, result:" + result);
+  };
+  /**
+   * 移动端生物识别认证
+   * @method localAuth
+   * @memberOf o2m
+   * @o2membercategory util.device
+   * @static
+   * @param {Object} obj  localAuth 需要传入对象
+   * <pre><code class='language-js'>{
+   *  "onSuccess": function,  //成功回调
+   *  "onFail": function, //失败回调
+   * }</code></pre>
+   * @example
+   * o2m.util.device.localAuth({
+   * onSuccess : function(result) {
+   *     // result 是一个 json 字符串
+   *     {
+   *      "value":  false // 是否授权成功
+   *      }
+   *  },
+   *  onFail : function(err) {}
+   *});
+   */
+  this.o2m.util.device.localAuth = function (c) {
+    var onSuccess = c && c.onSuccess ? c.onSuccess : null;
+    var onFail = c && c.onFail ? c.onFail : null;
+    if (onSuccess && typeof onSuccess === "function") {
+      o2m.util.device.localAuthSuccess = onSuccess;
+    }
+    var body = {
+      type: "device.localAuth",
+      callback: "o2m.util.device.localAuthSuccess",
+      data: {}
+    };
+    _util_post(body, onFail);
+  };
+
+
   //o2m.util.navigation.setTitle
   this.o2m.util.navigation.setTitleSuccess = function (result) {
     console.log("util calendar chooseInterval back, result:" + result);
@@ -1184,6 +1232,7 @@
     var portalFlag = c && c.portalFlag ? c.portalFlag : "";
     var portalTitle = c && c.portalTitle ? c.portalTitle : "";
     var portalPage = c && c.portalPage ? c.portalPage : "";
+    var parameters = c && c.parameters ? c.parameters : {};
     var body = {
       type: "navigation.openInnerApp",
       callback: "o2m.util.navigation.openInnerAppSuccess",
@@ -1191,7 +1240,8 @@
         appKey: appKey,
         portalFlag: portalFlag,
         portalTitle: portalTitle,
-        portalPage: portalPage
+        portalPage: portalPage,
+        parameters: parameters
       }
     };
     _util_post(body, onFail);
@@ -1289,6 +1339,112 @@
   this.o2m.util.navigation.openWindow = _o2m_u_navigation_openWindow;
    
 
+  //o2m.util.navigation.openInBrowser 手机默认浏览器打开当前页面
+  this.o2m.util.navigation.openInBrowserSuccess = function (result) {
+    console.log("util navigation openInBrowser back, result:" + result);
+  };
+  var _o2m_u_navigation_openInBrowser = function (c) {
+    var onSuccess = c && c.onSuccess ? c.onSuccess : null;
+    var onFail = c && c.onFail ? c.onFail : null;
+    if (onSuccess && typeof onSuccess === "function") {
+      o2m.util.navigation.openInBrowserSuccess = onSuccess;
+    }
+    var body = {
+      type: "navigation.openInBrowser",
+      callback: "o2m.util.navigation.openInBrowserSuccess",
+      data: {}
+    };
+    _util_post(body, onFail);
+  };
+  
+  /**
+   * 手机默认浏览器打开当前页面
+   * @method openInBrowser
+   * @memberOf o2m
+   * @o2membercategory util.navigation
+   * @static
+   * @example
+   * o2m.util.navigation.openInBrowser({
+   * onSuccess : function() {
+   *  },
+   *  onFail : function(err) {}
+   *});
+   */
+  this.o2m.util.navigation.openInBrowser = _o2m_u_navigation_openInBrowser;
+
+
+  //o2m.util.navigation.clearCache 清理缓存并刷新页面
+  this.o2m.util.navigation.clearCacheSuccess = function (result) {
+    console.log("util navigation clearCache back, result:" + result);
+  };
+  var _o2m_u_navigation_clearCache = function (c) {
+    var onSuccess = c && c.onSuccess ? c.onSuccess : null;
+    var onFail = c && c.onFail ? c.onFail : null;
+    if (onSuccess && typeof onSuccess === "function") {
+      o2m.util.navigation.clearCacheSuccess = onSuccess;
+    }
+    var body = {
+      type: "navigation.clearCache",
+      callback: "o2m.util.navigation.clearCacheSuccess",
+      data: {}
+    };
+    _util_post(body, onFail);
+  };
+  
+  /**
+   * 清理缓存并刷新页面
+   * @method clearCache
+   * @memberOf o2m
+   * @o2membercategory util.navigation
+   * @static
+   * @example
+   * o2m.util.navigation.clearCache({
+   * onSuccess : function() {
+   *  },
+   *  onFail : function(err) {}
+   *});
+   */
+  this.o2m.util.navigation.clearCache = _o2m_u_navigation_clearCache;
+
+
+  //o2m.util.navigation.share 分享图片
+  this.o2m.util.navigation.shareSuccess = function (result) {
+    console.log("util navigation share back, result:" + result);
+  };
+  var _o2m_u_navigation_share = function (c) {
+    var onSuccess = c && c.onSuccess ? c.onSuccess : null;
+    var onFail = c && c.onFail ? c.onFail : null;
+    var base64 = c && c.base64 ? c.base64 : "";
+    if (onSuccess && typeof onSuccess === "function") {
+      o2m.util.navigation.shareSuccess = onSuccess;
+    }
+    var body = {
+      type: "navigation.share",
+      callback: "o2m.util.navigation.shareSuccess",
+      data: {
+        base64: base64
+      }
+    };
+    _util_post(body, onFail);
+  };
+
+  /**
+   * 分享图片功能，目前只支持 base64 进行分享
+   * @method share
+   * @memberOf o2m
+   * @o2membercategory util.navigation
+   * @static
+   * @example
+   * o2m.util.navigation.share({
+   * base64: '图片的 base64 编码';
+   * onSuccess : function() {
+   *  },
+   *  onFail : function(err) {}
+   *});
+   */
+  this.o2m.util.navigation.share = _o2m_u_navigation_share;
+   
+
 
 
   /** ***** BEGIN BIZ BLOCK *****
@@ -1318,9 +1474,13 @@
       }
     }
     var message = JSON.stringify(body);
-    if ((window.o2mBiz && window.o2mBiz.postMessage) || (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.o2mBiz)) {
-      window.o2mBiz && window.o2mBiz.postMessage ? window.o2mBiz.postMessage(message) : window.webkit.messageHandlers.o2mBiz.postMessage(message);
-    } else {
+    if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
+      window.flutter_inappwebview.callHandler('o2mBiz', message);
+    } else if (window.o2mBiz && window.o2mBiz.postMessage) {
+      window.o2mBiz.postMessage(message)
+    } else if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.o2mBiz) {
+      window.webkit.messageHandlers.o2mBiz.postMessage(message);
+    }  else {
       if (onFail && typeof onFail === "function") {
         onFail("请在O2OA移动端使用！");
       }
@@ -1331,6 +1491,11 @@
   var _o2m_b_work_close = function () {
     if (window.o2android && window.o2android.closeWork) {
       window.o2android.closeWork("");
+    } else if (window.o2android && window.o2android.postMessage) {
+      var body = {
+        type: "closeWork"
+      };
+      window.o2android.postMessage(JSON.stringify(body));
     } else if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.closeWork) {
       window.webkit.messageHandlers.closeWork.postMessage("");
     } else {
@@ -1775,7 +1940,6 @@
 
 
 
-  //o2m.biz.contact.ComplexPicker
   this.o2m.biz.file.PreviewDocSuccess = function (result) {
     console.log("biz file preview doc back, result:" + result);
   };
@@ -1798,33 +1962,7 @@
     };
     _biz_post(body, onFail);
   };
-  /**
-   * 文件预览
-   * @method PreviewDoc
-   * @memberOf o2m
-   * @o2membercategory biz
-   * @static
-   * @param {Object} obj  PreviewDoc需要传入对象
-   * <pre><code class='language-js'>{
-   *  url: String, //文件下载地址，比如https://www.o2oa.net/file.pdf
-   *  fileName：String 预览的文件名称，比如file.pdf
-   *  "onSuccess": function,  //成功回调
-   *  "onFail": function, //失败回调
-   * }</code></pre>
-   * @example
-   * o2m.biz.file.PreviewDoc({
-   * url: "https://www.o2oa.net/file.pdf", //文件下载地址
-   * fileName: "file.pdf",//预览的文件名称
-   * onSuccess : function(result) {
-   *     //返回结果样例
-   *     {
-   *       result:true,
-   *       message:""
-   *     }
-   * },
-   * onFail : function(err) {}
-   * });
-   */
+  // 文件预览 后续要删除
   this.o2m.biz.file.PreviewDoc = _o2m_b_file_preview;
 
 })();

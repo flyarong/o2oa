@@ -34,6 +34,15 @@ MWF.xApplication.portal.PortalManager.LP = {
     "deleteElementTitle": "删除设计确认",
     "deleteElement": "是否确定要删除选中的设计元素？",
 
+    "name": "名称",
+    "alias": "别名",
+    "sorkKeyNote": "-排序-",
+    "createTime": "创建时间",
+    "updateTime": "更新时间",
+    "asc": "正序",
+    "desc": "倒序",
+    "searchPlacholder": "输入名称/别名/id搜索",
+
 	"page": {
         "create": "新建页面",
         "search": "搜索页面",
@@ -125,7 +134,16 @@ MWF.xApplication.portal.PortalManager.LP = {
         "setUsableIdentity" : "设置可用身份",
         "setUsableUnit" : "设置可用组织",
         "setAppUsableIdentity" : "设置应用可用身份",
-        "setAppUsableUnit" : "设置应用可用组织"
+        "setAppUsableUnit" : "设置应用可用组织",
+
+        "cornerMark": "角标设置",
+        "cornerMarkNote": "注：角标为移动端应用界面->门户应用右上角的数字。",
+        "selectScriptNote": "点击加号选择脚本库",
+        "selectScript": "选择脚本",
+        "cornerMarkScript": "角标脚本",
+        "run": "立即运行",
+        "openLogView": "打开日志查看器",
+        "runResult": "运行结果："
     },
     "createSelectTemplate": "新建：选择模板",
     "templateCategory": "模板分类：",

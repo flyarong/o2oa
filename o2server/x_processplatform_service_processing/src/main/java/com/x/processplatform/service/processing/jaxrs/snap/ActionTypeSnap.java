@@ -9,14 +9,12 @@ import com.x.base.core.container.EntityManagerContainer;
 import com.x.base.core.container.factory.EntityManagerContainerFactory;
 import com.x.base.core.entity.annotation.CheckPersistType;
 import com.x.base.core.project.exception.ExceptionEntityNotExist;
-import com.x.base.core.project.executor.ProcessPlatformExecutorFactory;
 import com.x.base.core.project.http.ActionResult;
 import com.x.base.core.project.http.EffectivePerson;
 import com.x.base.core.project.jaxrs.WoId;
 import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
 import com.x.base.core.project.tools.ListTools;
-import com.x.processplatform.core.entity.content.Attachment;
 import com.x.processplatform.core.entity.content.DocSign;
 import com.x.processplatform.core.entity.content.DocSignScrawl;
 import com.x.processplatform.core.entity.content.DocumentVersion;
@@ -30,6 +28,7 @@ import com.x.processplatform.core.entity.content.TaskCompleted;
 import com.x.processplatform.core.entity.content.Work;
 import com.x.processplatform.core.entity.content.WorkLog;
 import com.x.processplatform.service.processing.Business;
+import com.x.processplatform.service.processing.ProcessPlatformKeyClassifyExecutorFactory;
 import com.x.query.core.entity.Item;
 
 class ActionTypeSnap extends BaseAction {
@@ -48,7 +47,7 @@ class ActionTypeSnap extends BaseAction {
 			}
 			job = work.getJob();
 		}
-		return ProcessPlatformExecutorFactory.get(job).submit(new CallableImpl(workId)).get(300, TimeUnit.SECONDS);
+		return ProcessPlatformKeyClassifyExecutorFactory.get(job).submit(new CallableImpl(workId)).get(300, TimeUnit.SECONDS);
 	}
 
 	public class CallableImpl implements Callable<ActionResult<Wo>> {
@@ -77,14 +76,13 @@ class ActionTypeSnap extends BaseAction {
 				List<Review> reviews = new ArrayList<>();
 				List<WorkLog> workLogs = new ArrayList<>();
 				List<Record> records = new ArrayList<>();
-				List<Attachment> attachments = new ArrayList<>();
 				List<DocumentVersion> documentVersions = new ArrayList<>();
 				List<DocSign> docSigns = new ArrayList<>();
 				List<DocSignScrawl> docSignScrawls = new ArrayList<>();
 				Snap snap = new Snap(work);
 				snap.setProperties(
 						snap(business, work.getJob(), items, works, tasks, taskCompleteds, reads, readCompleteds,
-								reviews, workLogs, records, attachments, documentVersions, docSigns, docSignScrawls));
+								reviews, workLogs, records,  documentVersions, docSigns, docSignScrawls));
 
 				snap.setType(Snap.TYPE_SNAP);
 				emc.beginTransaction(Snap.class);

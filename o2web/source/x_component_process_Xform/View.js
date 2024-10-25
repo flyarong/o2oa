@@ -24,6 +24,11 @@ MWF.xApplication.process.Xform.View = MWF.APPView =  new Class(
          * @see {@link https://www.yuque.com/o2oa/ixsnyt/hm5uft#i0zTS|组件事件说明}
          */
         /**
+         * 视图设计已经获取，容器也已经准备好。可以通过this.event得到视图参数，并可修改this.event修改视图的加载。
+         * @event MWF.xApplication.process.Xform.View#loadViewLayout
+         * @see {@link https://www.yuque.com/o2oa/ixsnyt/hm5uft#i0zTS|组件事件说明}
+         */
+        /**
          * 异步加载视图后执行。
          * @event MWF.xApplication.process.Xform.View#loadView
          * @see {@link https://www.yuque.com/o2oa/ixsnyt/hm5uft#i0zTS|组件事件说明}
@@ -119,6 +124,14 @@ MWF.xApplication.process.Xform.View = MWF.APPView =  new Class(
         this.fireEvent("beforeLoadView", [viewJson]);
 
         //MWF.xDesktop.requireApp("query.Query", "Viewer", function(){
+
+        /**
+         * @summary view组件，平台使用该组件实现视图的功能
+         * @member {MWF.xApplication.query.Query.Viewer}
+         * @example
+         *  //可以在脚本中获取该组件
+         * var view = this.form.get("fieldId").view; //获取组件对象
+         */
             this.view = new MWF.xApplication.query.Query.Viewer(this.node, viewJson, {
                 "isload": (this.json.loadView!=="no"),
                 "resizeNode": (this.node.getStyle("height").toString().toLowerCase()!=="auto" && this.node.getStyle("height").toInt()>0),
@@ -200,13 +213,6 @@ MWF.xApplication.process.Xform.View = MWF.APPView =  new Class(
         };
 
         MWF.xDesktop.requireApp("process.Application", "Viewer", function(){
-            /**
-             * @summary view组件，平台使用该组件实现视图的功能
-             * @member {MWF.xApplication.process.Application.Viewer}
-             * @example
-             *  //可以在脚本中获取该组件
-             * var view = this.form.get("fieldId").view; //获取组件对象
-             */
             this.view = new MWF.xApplication.process.Application.Viewer(this.node, viewJson, {
                 "actions": {
                     "lookup": {"uri": "/jaxrs/queryview/flag/{view}/application/flag/{application}/execute", "method":"PUT"},

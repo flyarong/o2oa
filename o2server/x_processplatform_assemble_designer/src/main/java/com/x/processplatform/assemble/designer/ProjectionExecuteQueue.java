@@ -88,7 +88,7 @@ public class ProjectionExecuteQueue extends AbstractQueue<String> {
 							logger.warn("流程{}的工作job={}数据映射异常：{}", process.getId(), job, e.getMessage());
 							logger.error(e);
 						}
-					}, ThisApplication.threadPool());
+					}, ThisApplication.forkJoinPool());
 					futures.add(future);
 				}
 				for (CompletableFuture<Void> future : futures) {
@@ -160,7 +160,7 @@ public class ProjectionExecuteQueue extends AbstractQueue<String> {
 									e.getMessage());
 							logger.error(e);
 						}
-					}, ThisApplication.threadPool());
+					}, ThisApplication.forkJoinPool());
 					futures.add(future);
 				}
 				for (CompletableFuture<Void> future : futures) {
@@ -229,7 +229,7 @@ public class ProjectionExecuteQueue extends AbstractQueue<String> {
 
 	private Data data(Business business, WorkCompleted workCompleted) throws Exception {
 		if (BooleanUtils.isTrue(workCompleted.getMerged())) {
-			return workCompleted.getProperties().getData();
+			return workCompleted.getData();
 		}
 		List<Item> items = business.entityManagerContainer().listEqualAndEqual(Item.class, DataItem.bundle_FIELDNAME,
 				workCompleted.getJob(), DataItem.itemCategory_FIELDNAME, ItemCategory.pp);

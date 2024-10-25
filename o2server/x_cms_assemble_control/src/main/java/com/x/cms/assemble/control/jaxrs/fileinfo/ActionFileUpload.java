@@ -11,6 +11,7 @@ import com.x.base.core.project.jaxrs.WoId;
 import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
 import com.x.base.core.project.tools.ExtractTextTools;
+import com.x.base.core.project.tools.FileTools;
 import com.x.cms.assemble.control.ThisApplication;
 import com.x.cms.core.entity.Document;
 import com.x.cms.core.entity.FileInfo;
@@ -47,7 +48,7 @@ public class ActionFileUpload extends BaseAction {
 			throw new ExceptionStorageMappingNotExist(StorageType.cms.name());
 		}
 
-		this.verifyConstraint(bytes.length, fileName, null);
+		FileTools.verifyConstraint(bytes.length, fileName, null);
 
 		FileInfo attachment = this.concreteAttachment( mapping, document, fileName, effectivePerson, site );
 
@@ -59,7 +60,7 @@ public class ActionFileUpload extends BaseAction {
 					attachment.getText());
 		}
 
-		attachment.saveContent(mapping, bytes, fileName);
+		attachment.saveContent(mapping, bytes, fileName, Config.general().getStorageEncrypt());
 		attachment = fileInfoServiceAdv.saveAttachment( docId, attachment );
 
 		CacheManager.notify( FileInfo.class );

@@ -18,6 +18,9 @@ MWF.xApplication.query.Query.LP = {
     "no": "否",
     "and": "并且",
     "or": "或者",
+    "form": {
+        "exportExcel": "导出Excel"
+    },
     "chart": {
 	    "bar": "柱状图",
         "pie": "饼状图",
@@ -39,6 +42,12 @@ MWF.xApplication.query.Query.LP = {
         "lessThanOrEqualTo": "小于等于"
     },
     "dateFilter": {
+	    "equals": "等于",
+        "notEquals": "不等于",
+        "greaterThan": "大于",
+        "lessThan": "小于"
+    },
+    "dateTimeFilter": {
         "greaterThan": "大于",
         "lessThan": "小于"
     },
@@ -149,6 +158,7 @@ MWF.xApplication.query.Query.LP = {
     "lastPage": "最后一页",
     "viewExport" : {
         "exportRange" : "导出范围",
+        "fileName": "文件名",
         "to" : "到",
         "item" : "条",
         "description" : "注：有{count}条符合条件的数据。",
@@ -173,6 +183,7 @@ MWF.xApplication.query.Query.LP = {
     "notExistInSystem" : "在系统中不存在",
     "uploadedFilesCannotHaveSpaces" : "上传的文件不能带空格",
     "canNotBeEmpty": "不能为空",
+    "notInOptions": "不在可选值中",
     "cmsTitleLengthInfor": "标题长度不能超过70个字",
     "cmsSummaryLengthInfor": "摘要长度不能超过70个字",
     "caculateFieldValidationText": "计算字段错误:",
@@ -244,6 +255,12 @@ MWF.xApplication.query.Query.LP = {
 
     "deleteDocument": "删除后无法恢复，确定要删除该导入记录？",
     "deleteDocumentTitle": "删除导入记录确认",
-    "deleteDocumentOK": "成功删除导入记录"
+    "deleteDocumentOK": "成功删除导入记录",
+
+    "noPermission": "您无权限访问此文档。",
+    "associationSuccess": "关联成功。",
+    "associationResult": "关联结果",
+
+    "total": "合计"
 
 };

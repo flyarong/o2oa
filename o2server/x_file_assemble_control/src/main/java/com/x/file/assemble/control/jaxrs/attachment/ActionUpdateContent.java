@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import com.x.base.core.project.tools.FileTools;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -13,6 +14,7 @@ import com.x.base.core.container.EntityManagerContainer;
 import com.x.base.core.container.factory.EntityManagerContainerFactory;
 import com.x.base.core.entity.annotation.CheckPersistType;
 import com.x.base.core.project.cache.CacheManager;
+import com.x.base.core.project.config.Config;
 import com.x.base.core.project.config.StorageMapping;
 import com.x.base.core.project.http.ActionResult;
 import com.x.base.core.project.http.EffectivePerson;
@@ -56,8 +58,9 @@ class ActionUpdateContent extends BaseAction {
 					attachment.getExtension())) {
 				throw new ExceptionExtensionNotMatch(fileName, attachment.getExtension());
 			}
+			FileTools.verifyConstraint(bytes.length, fileName, null);
 			emc.beginTransaction(Attachment.class);
-			attachment.updateContent(mapping, bytes);
+			attachment.updateContent(mapping, bytes, Config.general().getStorageEncrypt());
 			emc.check(attachment, CheckPersistType.all);
 			emc.commit();
 			/** 通知所有的共享和共享编辑人员 */

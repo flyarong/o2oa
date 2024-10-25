@@ -33,7 +33,7 @@
       "styles": {}
     },
     "section": {
-      "name": "区段",
+      "name": "区段标题",
       "styles": {}
     }
   },
@@ -170,6 +170,11 @@
   "number": {
     "styles": {},
     "inputStyles": {}
+  },
+  "currency": {
+    "styles": {},
+    "inputStyles": {},
+    "symbolStyles": {}
   },
   "personfield": {
     "styles": {},

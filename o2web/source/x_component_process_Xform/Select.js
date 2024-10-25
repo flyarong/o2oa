@@ -1,5 +1,6 @@
-MWF.xDesktop.requireApp("process.Xform", "$Input", null, false);
+MWF.xDesktop.requireApp("process.Xform", "$Selector", null, false);
 /** @class Select 下拉选择组件。
+ * 在8.1之后，支持从数据字典、视图和查询获取可选项。获取过程为异步。
  * @o2cn 下拉选择
  * @example
  * //可以在脚本中获取该组件
@@ -13,7 +14,7 @@ MWF.xDesktop.requireApp("process.Xform", "$Input", null, false);
  * field.hide(); //隐藏字段
  * var id = field.json.id; //获取字段标识
  * var flag = field.isEmpty(); //字段是否为空
- * @extends MWF.xApplication.process.Xform.$Input
+ * @extends MWF.xApplication.process.Xform.$Selector
  * @o2category FormComponents
  * @o2range {Process|CMS|Portal}
  * @hideconstructor
@@ -22,8 +23,14 @@ MWF.xApplication.process.Xform.Select = MWF.APPSelect =  new Class(
 	/** @lends MWF.xApplication.process.Xform.Select# */
 	{
 	Implements: [Events],
-	Extends: MWF.APP$Input,
+	Extends: MWF.APP$Selector,
 	iconStyle: "selectIcon",
+
+		/**
+		 * 值改变时触发。可以通过this.event获取修改后的选择项（Dom对象）。
+		 * @event MWF.xApplication.process.Xform.Select#change
+		 * @see {@link https://www.yuque.com/o2oa/ixsnyt/hm5uft#i0zTS|组件事件说明}
+		 */
 
 	/**
 	 * @ignore
@@ -37,7 +44,26 @@ MWF.xApplication.process.Xform.Select = MWF.APPSelect =  new Class(
         this.form = form;
         this.field = true;
 		this.fieldModuleLoaded = false;
+		this.nodeHtml = this.node.get("html");
     },
+	/**
+	 * @summary 重新加载组件。会执行postLoad事件。
+	 * @example
+	 * this.form.get("fieldId").reload(); //重新加载事件
+	 */
+	reload: function(){
+		if (this.areaNode){
+			this.node = this.areaNode;
+			this.areaNode.empty();
+			this.areaNode = null;
+		}
+		this._beforeReloaded();
+		this._loadUserInterface();
+		this._loadStyles();
+		this._afterLoaded();
+		this._afterReloaded();
+		this.fireEvent("postLoad");
+	},
     _loadNode: function(){
         if (this.isReadonly()){
             this._loadNodeRead();
@@ -57,26 +83,25 @@ MWF.xApplication.process.Xform.Select = MWF.APPSelect =  new Class(
         var value = this.getValue();
         this._showValue( this.node, value );
     },
-	_showValue: function(node, value){
-		var optionItems = this.getOptions();
-		if (value){
-			if (typeOf(value)!=="array") value = [value];
-			var texts = [];
-			optionItems.each(function(item){
-				var tmps = item.split("|");
-				var t = tmps[0];
-				var v = tmps[1] || t;
+	__showValue: function(node, value, optionItems){
+        if (value){
+            if (typeOf(value)!=="array") value = [value];
+            var texts = [];
+            optionItems.each(function(item){
+                var tmps = item.split("|");
+                var t = tmps[0];
+                var v = tmps[1] || t;
 
-				if (v){
+                if (v){
 
-					if (value.indexOf(v)!=-1){
-						texts.push(t);
-					}
-				}
+                    if (value.indexOf(v)!=-1){
+                        texts.push(t);
+                    }
+                }
 
-			});
-			node.set("text", texts.join(", "));
-		}
+            });
+            node.set("text", texts.join(", "));
+        }
 	},
 	_loadDomEvents: function(){
 		Object.each(this.json.events, function(e, key){
@@ -133,6 +158,11 @@ MWF.xApplication.process.Xform.Select = MWF.APPSelect =  new Class(
 		if (!this.json.preprocessing) this._resetNodeEdit();
 
 		var select = this.node.getFirst();
+		if( !select && this.nodeHtml ){
+			this.node.set("html", this.nodeHtml);
+			select = this.node.getFirst();
+		}
+
 		this.areaNode = this.node;
 		this.areaNode.set({
 			"id": this.json.id,
@@ -154,72 +184,18 @@ MWF.xApplication.process.Xform.Select = MWF.APPSelect =  new Class(
 		// });
 		
 		this.setOptions();
-        this.node.addEvent("change", function(){
+        this.node.addEvent("change", function( ev ){
 			var v = this.getInputData("change");
 			this._setBusinessData(v);
             this.validationMode();
             if (this.validation()) {
 				//this._setEnvironmentData(v);
-				this.fireEvent("change");
+				this.fireEvent("change", [this._getSelectedOption()]);
 			}
         }.bind(this));
 
 	},
-	/**
-	 * @summary 刷新选择项，如果选择项是脚本，重新计算。
-	 * @example
-	 * this.form.get('fieldId').resetOption();
-	 */
-    resetOption: function(){
-        this.node.empty();
-        this.setOptions();
-		this.fireEvent("resetOption")
-    },
-	/**
-	 * @summary 获取选择项。
-	 * @return {Array} 返回选择项数组，如果使用选择项脚本，根据脚本返回决定，如：<pre><code class='language-js'>[
-	 *  "女|female",
-	 *  "男|male"
-	 * ]</code></pre>
-	 * @example
-	 * this.form.get('fieldId').getOptions();
-	 */
-	getOptions: function(){
-		if (this.json.itemType == "values"){
-			return this.json.itemValues;
-		}else{
-			return this.form.Macro.exec(((this.json.itemScript) ? this.json.itemScript.code : ""), this);
-		}
-		return [];
-	},
 
-	/**
-	 * @summary 获取整理后的选择项。
-	 * @return {Object} 返回整理后的选择项，如：
-	 * <pre><code class='language-js'>{"valueList": ["","female","male"], "textList": ["","女","男"]}
-	 * </code></pre>
-	 * @example
-	 * var optionData = this.form.get('fieldId').getOptionsObj();
-	 */
-	getOptionsObj : function(){
-		var textList = [];
-		var valueList = [];
-		var optionItems = this.getOptions();
-		if (!optionItems) optionItems = [];
-		if (o2.typeOf(optionItems)==="array"){
-			optionItems.each(function(item){
-				var tmps = item.split("|");
-				textList.push( tmps[0] );
-				valueList.push( tmps[1] || tmps[0] );
-			}.bind(this));
-		}
-		return { textList : textList, valueList : valueList };
-	},
-
-	setOptions: function(){
-		var optionItems = this.getOptions();
-		this._setOptions(optionItems);
-	},
 	_setOptions: function(optionItems){
 		var p = o2.promiseAll(optionItems).then(function(options){
 			this.moduleSelectAG = null;
@@ -381,43 +357,29 @@ MWF.xApplication.process.Xform.Select = MWF.APPSelect =  new Class(
 	// 	//this.node.set("value", value);
 	// },
 
-	/**
-	 * @summary 获取选中项的value和text。
-	 * @return {Object} 返回选中项的value和text，如：
-	 * <pre><code class='language-js'>{"value": ["male"], "text": ["男"]}
-	 * {"value": [""], "text": [""]}
-	 * </code></pre>
-	 * @example
-	 * var data = this.form.get('fieldId').getTextData();
-	 * var text = data.text[0] //获取选中项的文本
-	 */
-	getTextData: function(){
-		var value = [];
-		var text = [];
-		if (this.isReadonly()){
-			var ops = this.getOptionsObj();
-			var data = this._getBusinessData();
-			var d = typeOf(data) === "array" ? data : [data];
-			d.each( function (v) {
-				var idx = ops.valueList.indexOf( v );
-				value.push( v || "" );
-				text.push( idx > -1 ? ops.textList[idx] : (v || "") );
-			});
-		}else{
-			var ops = this.node.getElements("option");
-			ops.each(function(op){
-				if (op.selected){
-					var v = op.get("value");
-					var t = op.get("text");
-					value.push(v || "");
-					text.push(t || v || "");
-				}
-			});
+	_getSelectedOption: function(){
+		var ops = this.node.getElements("option");
+		for( var i=0; i<ops.length; i++ ){
+			if( ops[i].selected )return ops[i];
 		}
-		if (!value.length) value = [""];
-		if (!text.length) text = [""];
-		return {"value": value, "text": text};
+		return null;
 	},
+	_getInputTextData: function(){
+	    var value = [], text = [];
+        var ops = this.node.getElements("option");
+        ops.each(function(op){
+            if (op.selected){
+                var v = op.get("value");
+                var t = op.get("text");
+                value.push(v || "");
+                text.push(t || v || "");
+            }
+        });
+        if (!value.length) value = [""];
+        if (!text.length) text = [""];
+        return {"value": value, "text": text};
+	},
+
 	/**
 	 * @summary 获取选中项的text。
 	 * @return {String} 返回选中项的text
@@ -425,8 +387,16 @@ MWF.xApplication.process.Xform.Select = MWF.APPSelect =  new Class(
 	 * var text = this.form.get('fieldId').getText(); //获取选中项的文本
 	 */
 	getText: function(){
-		var texts = this.getTextData().text;
-		return (texts && texts.length) ? texts[0] : "";
+		var d = this.getTextData();
+		if( typeOf(d.then) === "function" ){
+			return d.then(function( d1 ){
+				var texts = d1.text;
+				return (texts && texts.length) ? texts[0] : "";
+			})
+		}else{
+			var texts = d.text;
+			return (texts && texts.length) ? texts[0] : "";
+		}
 	},
     getInputData: function(){
 		if( this.isReadonly()){
@@ -445,7 +415,6 @@ MWF.xApplication.process.Xform.Select = MWF.APPSelect =  new Class(
 		}
 	},
     resetData: function(){
-
         this.setData(this.getValue());
     },
 
@@ -473,27 +442,40 @@ MWF.xApplication.process.Xform.Select = MWF.APPSelect =  new Class(
 	__setData: function(data, fireChange){
 		var old = this.getInputData();
         this._setBusinessData(data);
+        var selectedOption = null;
 		if (this.isReadonly()){
 			var d = typeOf(data) === "array" ? data : [data];
 			var ops = this.getOptionsObj();
 			var result = [];
-			d.each( function (v) {
-				var idx = ops.valueList.indexOf( v );
-				result.push( idx > -1 ? ops.textList[idx] : v);
-			})
-			this.node.set("text", result.join(","));
+			if( typeOf(ops.then) === "function" ){
+                this.moduleSelectAG = Promise.resolve(ops).then(function(){
+                    d.each( function (v) {
+                        var idx = ops.valueList.indexOf( v );
+                        result.push( idx > -1 ? ops.textList[idx] : v);
+                    })
+                    this.node.set("text", result.join(","));
+                }.bind(this))
+			}else{
+			    d.each( function (v) {
+                    var idx = ops.valueList.indexOf( v );
+                    result.push( idx > -1 ? ops.textList[idx] : v);
+                })
+                this.node.set("text", result.join(","));
+			}
 		}else{
 			var ops = this.node.getElements("option");
 			ops.each(function(op){
-				if (typeOf(data)=="array"){
+				if (typeOf(data)==="array"){
 					if (data.indexOf(op.get("value"))!=-1){
 						op.set("selected", true);
+						selectedOption = op;
 					}else{
 						op.set("selected", false);
 					}
 				}else{
 					if (data == op.get("value")){
 						op.set("selected", true);
+						selectedOption = op;
 					}else{
 						op.set("selected", false);
 					}
@@ -503,23 +485,34 @@ MWF.xApplication.process.Xform.Select = MWF.APPSelect =  new Class(
 		}
 		this.fieldModuleLoaded = true;
 		this.fireEvent("setData", [data]);
-		if (fireChange && old!==data) this.fireEvent("change");
+		if (fireChange && old!==data) this.fireEvent("change", [selectedOption]);
 	},
 
-		getExcelData: function(){
-			var value = this.getData();
-			var options = this.getOptionsObj();
-			var idx = options.valueList.indexOf( value );
-			var text = idx > -1 ? options.textList[ idx ] : "";
+	getExcelData: function( type ){
+		var value = this.getData();
+		if( type === "value" )return value;
+
+		var options = this.getOptionsObj();
+		return Promise.resolve(options).then(function (opts) {
+			var idx = opts.valueList.indexOf( value );
+			var text = idx > -1 ? opts.textList[ idx ] : "";
 			return text;
-		},
-		setExcelData: function(d){
-			var value = d.replace(/&#10;/g,""); //换行符&#10;
-			this.excelData = value;
-			var options = this.getOptionsObj();
-			var idx = options.textList.indexOf( value );
-			value = idx > -1 ? options.valueList[ idx ] : "";
+		});
+	},
+	setExcelData: function(d, type){
+		var value = d.replace(/&#10;/g,""); //换行符&#10;
+		this.excelData = value;
+		if( type === "value" ){
 			this.setData(value, true);
+		}else{
+			var options = this.getOptionsObj();
+			this.moduleExcelAG = Promise.resolve(options).then(function (opts) {
+				var idx = opts.textList.indexOf( value );
+				value = idx > -1 ? opts.valueList[ idx ] : "";
+				this.setData(value, true);
+				this.moduleExcelAG = null;
+			}.bind(this));
 		}
+	}
 	
 }); 

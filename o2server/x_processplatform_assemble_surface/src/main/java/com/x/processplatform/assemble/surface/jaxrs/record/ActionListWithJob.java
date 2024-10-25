@@ -4,6 +4,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.BooleanUtils;
+
 import com.x.base.core.container.EntityManagerContainer;
 import com.x.base.core.container.factory.EntityManagerContainerFactory;
 import com.x.base.core.entity.JpaObject;
@@ -17,6 +19,8 @@ import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
 import com.x.base.core.project.tools.ListTools;
 import com.x.processplatform.assemble.surface.Business;
+import com.x.processplatform.assemble.surface.Control;
+import com.x.processplatform.assemble.surface.JobControlBuilder;
 import com.x.processplatform.core.entity.content.Record;
 import com.x.processplatform.core.entity.content.Task;
 
@@ -48,18 +52,19 @@ class ActionListWithJob extends BaseAction {
 				}
 			}
 
-			if (!business.readableWithWorkOrWorkCompleted(effectivePerson, workOrWorkCompleted)) {
-				throw new ExceptionAccessDenied(effectivePerson);
+			Control control = new JobControlBuilder(effectivePerson, business, workOrWorkCompleted).enableAllowVisit()
+					.build();
+			if (BooleanUtils.isNotTrue(control.getAllowVisit())) {
+				throw new ExceptionAccessDenied(effectivePerson, workOrWorkCompleted);
 			}
 
-			List<Wo> wos = emc.fetchEqual(Record.class, Wo.copier, Record.job_FIELDNAME, job);
+			List<Wo> wos = Wo.copier.copy(emc.listEqual(Record.class, Record.job_FIELDNAME, job));
 
 			wos = wos.stream().sorted(Comparator.comparing(Wo::getOrder)).collect(Collectors.toList());
 
 			for (Task task : emc.listEqual(Task.class, Task.job_FIELDNAME, job).stream()
 					.sorted(Comparator.comparing(Task::getStartTime)).collect(Collectors.toList())) {
-				Record record = this.taskToRecord(task);
-				wos.add(Wo.copier.copy(record));
+				wos.add(Wo.copier.copy(this.taskToRecord(task)));
 			}
 
 			result.setData(wos);
@@ -73,8 +78,8 @@ class ActionListWithJob extends BaseAction {
 
 		private static final long serialVersionUID = -7666329770246726197L;
 
-		static WrapCopier<Record, Wo> copier = WrapCopierFactory.wo(Record.class, Wo.class,
-				JpaObject.singularAttributeField(Record.class, true, false), JpaObject.FieldsInvisible);
+		static WrapCopier<Record, Wo> copier = WrapCopierFactory.wo(Record.class, Wo.class, null,
+				JpaObject.FieldsInvisible);
 
 	}
 

@@ -16,6 +16,7 @@ import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,9 +28,6 @@ import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.DESKeySpec;
 import javax.crypto.spec.SecretKeySpec;
-import javax.script.CompiledScript;
-import javax.script.ScriptContext;
-import javax.script.SimpleScriptContext;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -37,10 +35,10 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.commons.text.StringEscapeUtils;
+import org.graalvm.polyglot.Source;
 
 import com.x.base.core.project.config.Config;
-import com.x.base.core.project.scripting.JsonScriptingExecutor;
-import com.x.base.core.project.scripting.ScriptingFactory;
+import com.x.base.core.project.scripting.GraalvmScriptingFactory;
 
 public class Crypto {
 
@@ -49,15 +47,14 @@ public class Crypto {
 
 	private static final String DES = "DES";
 
-	private static final String AES = "AES";
-
 	private static final String RSA = "RSA";
 
 	private static final String NEVERCHANGEKEY = "NEVERCHANGEKEY";
 
 	private static Class<?> classSm4 = null;
 
-	private static final String TYPE_SM4 = "sm4";
+	private static final String TYPE_AES = "AES";
+	private static final String TYPE_SM4 = "SM4";
 
 	private static final Pattern PLAINTEXT_TRANSFORM_REGEX = Pattern.compile("^\\((ENCRYPT:|SCRIPT:)(.+?)\\)$");
 
@@ -75,6 +72,8 @@ public class Crypto {
 		byte[] bt = null;
 		if (StringUtils.equalsIgnoreCase(type, TYPE_SM4)) {
 			bt = encryptSm4(data.getBytes(StandardCharsets.UTF_8), key);
+		} else if (StringUtils.equalsIgnoreCase(type, TYPE_AES)) {
+			bt = encryptAes(data.getBytes(), DigestUtils.md5(key));
 		} else {
 			bt = encrypt(data.getBytes(), key.getBytes());
 		}
@@ -101,7 +100,7 @@ public class Crypto {
 	private static byte[] encryptAes(byte[] text, byte[] key) throws NoSuchPaddingException, NoSuchAlgorithmException,
 			InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
 
-		SecretKeySpec aesKey = new SecretKeySpec(key, AES);
+		SecretKeySpec aesKey = new SecretKeySpec(key, TYPE_AES);
 
 		Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
 
@@ -111,11 +110,10 @@ public class Crypto {
 
 	}
 
-
 	private static byte[] decryptAes(byte[] text, byte[] key) throws NoSuchPaddingException, NoSuchAlgorithmException,
 			InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
 
-		SecretKeySpec aesKey = new SecretKeySpec(key, AES);
+		SecretKeySpec aesKey = new SecretKeySpec(key, TYPE_AES);
 
 		Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
 
@@ -154,9 +152,12 @@ public class Crypto {
 		if (StringUtils.equalsIgnoreCase(type, TYPE_SM4)) {
 			bt = decryptSm4(buf, key);
 			return new String(bt, StandardCharsets.UTF_8);
+		} else if (StringUtils.equalsIgnoreCase(type, TYPE_AES)) {
+			bt = decryptAes(buf, DigestUtils.md5(key));
+			return new String(bt, StandardCharsets.UTF_8);
 		} else {
 			bt = decrypt(buf, key.getBytes());
-			return new String(bt);
+			return new String(bt, StandardCharsets.UTF_8);
 		}
 	}
 
@@ -236,10 +237,12 @@ public class Crypto {
 				if (StringUtils.startsWithIgnoreCase(matcher.group(1), ENCRYPT_PREFIX)) {
 					return decrypt(matcher.group(2), NEVERCHANGEKEY, null);
 				} else if (StringUtils.startsWithIgnoreCase(matcher.group(1), SCRIPT_PREFIX)) {
-					CompiledScript cs = ScriptingFactory
-							.functionalizationCompile(StringEscapeUtils.unescapeJson(matcher.group(2)));
-					ScriptContext scriptContext = new SimpleScriptContext();
-					return JsonScriptingExecutor.evalString(cs, scriptContext);
+					Source source = GraalvmScriptingFactory
+							.functionalization(StringEscapeUtils.unescapeJson(matcher.group(2)));
+					Optional<String> opt = GraalvmScriptingFactory.evalAsString(source, null);
+					if (opt.isPresent()) {
+						return opt.get();
+					}
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -247,7 +250,6 @@ public class Crypto {
 		} else {
 			return text;
 		}
-
 		return null;
 	}
 
@@ -275,8 +277,9 @@ public class Crypto {
 
 	/**
 	 * AES加密
+	 *
 	 * @param data 明文
-	 * @param key 秘钥
+	 * @param key  秘钥
 	 * @return
 	 * @throws Exception
 	 */
@@ -292,11 +295,11 @@ public class Crypto {
 
 	}
 
-
 	/**
 	 * AES解密
+	 *
 	 * @param data 密文
-	 * @param key 秘钥
+	 * @param key  秘钥
 	 * @return
 	 * @throws Exception
 	 */

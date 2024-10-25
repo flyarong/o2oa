@@ -2,9 +2,6 @@ package com.x.program.center.andfx;
 
 import com.x.base.core.project.gson.GsonPropertyObject;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-
 public class User extends GsonPropertyObject {
 
 	private String uid;
@@ -13,6 +10,8 @@ public class User extends GsonPropertyObject {
 	private Long seq;
 	private String name;
 	private Long departmentId;
+
+	private Boolean isAdmin;
 
 	public String getUid() {
 		return uid;
@@ -60,6 +59,14 @@ public class User extends GsonPropertyObject {
 
 	public void setDepartmentId(Long departmentId) {
 		this.departmentId = departmentId;
+	}
+
+	public Boolean getIsAdmin() {
+		return isAdmin;
+	}
+
+	public void setIsAdmin(Boolean isAdmin) {
+		this.isAdmin = isAdmin;
 	}
 
 	@Override

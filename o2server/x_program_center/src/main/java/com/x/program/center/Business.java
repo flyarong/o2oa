@@ -4,10 +4,12 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-import com.x.base.core.project.tools.DateTools;
-import com.x.program.center.factory.*;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -26,7 +28,15 @@ import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
 import com.x.base.core.project.organization.OrganizationDefinition;
 import com.x.base.core.project.tools.Crypto;
+import com.x.base.core.project.tools.DateTools;
 import com.x.organization.core.express.Organization;
+import com.x.program.center.factory.ApplicationDictFactory;
+import com.x.program.center.factory.ApplicationDictItemFactory;
+import com.x.program.center.factory.GroupFactory;
+import com.x.program.center.factory.PersonFactory;
+import com.x.program.center.factory.RoleFactory;
+import com.x.program.center.factory.ScriptFactory;
+import com.x.program.center.factory.UnitFactory;
 
 public class Business {
 
@@ -172,6 +182,15 @@ public class Business {
 		return group;
 	}
 
+	private RoleFactory role;
+
+	public RoleFactory role() throws Exception {
+		if (null == this.role) {
+			this.role = new RoleFactory(this);
+		}
+		return role;
+	}
+
 	private ScriptFactory script;
 
 	public ScriptFactory script() throws Exception {
@@ -240,7 +259,6 @@ public class Business {
 		List<String> list = new ArrayList<>();
 		Nodes nodes = Config.nodes();
 		for (String node : nodes.keySet()){
-			boolean flag = false;
 
 			try (Socket socket = new Socket(node, nodes.get(node).nodeAgentPort())) {
 				socket.setKeepAlive(true);
@@ -273,9 +291,8 @@ public class Business {
 					}
 
 					String result = dis.readUTF();
-					logger.print("socket dispatch resource {} to {}:{} result={}", fileName, node, nodes.get(node).nodeAgentPort(), result);
+					logger.info("socket dispatch resource {} to {}:{} result={}", fileName, node, nodes.get(node).nodeAgentPort(), result);
 					if("success".equals(result)){
-						flag = true;
 						list.add(node+":success");
 					}else{
 						list.add(node + ":failure");
@@ -284,7 +301,7 @@ public class Business {
 
 			} catch (Exception ex) {
 				list.add(node + ":failure-"+ex.getMessage());
-				logger.print("socket dispatch resource to {}:{} error={}", node, nodes.get(node).nodeAgentPort(), ex.getMessage());
+				logger.warn("socket dispatch resource to {}:{} error={}", node, nodes.get(node).nodeAgentPort(), ex.getMessage());
 			}
 
 		}

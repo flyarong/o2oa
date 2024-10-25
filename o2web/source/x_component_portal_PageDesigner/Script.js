@@ -200,6 +200,8 @@ MWF.xApplication.portal.PageDesigner.Script = new Class({
                 this.loadMonitorScript(v); break;
             case "Number":
                 this.loadNumberScript(v); break;
+            case "Currency":
+                this.loadCurrencyScript(v); break;
             case "Office":
                 this.loadOfficeScript(v); break;
             case "Opinion":
@@ -220,6 +222,8 @@ MWF.xApplication.portal.PageDesigner.Script = new Class({
                 this.loadImporterScript(v); break;
             case "Relatedlink":
                 this.loadRelatedlinkScript(v); break;
+            case "AssociatedDocument":
+                this.loadAssociatedDocumentScript(v); break;
             case "Documenteditor":
                 this.loadDocumenteditorScript(v); break;
             case "Common":
@@ -479,6 +483,11 @@ MWF.xApplication.portal.PageDesigner.Script = new Class({
         this.addScriptItem(data.displayScript, "code", data, "displayScript");
         this.loadEventsScript(data);
     },
+    loadAssociatedDocumentScript:function(data){
+        this.addScriptItem(data.textStyleScript, "code", data, "textStyleScript");
+        this.addScriptItem(data.displayScript, "code", data, "displayScript");
+        this.loadEventsScript(data);
+    },
     loadImporterScript: function(data){
         this.addScriptItem(data.excelName, "code", data, "excelName");
         this.loadEventsScript(data);
@@ -635,6 +644,12 @@ MWF.xApplication.portal.PageDesigner.Script = new Class({
     loadMonitorScript: function(data){  this.loadEventsScript(data); },
 
     loadNumberScript: function(data){
+        this.addScriptItem(data.defaultValue, "code", data, "defaultValue");
+        this.addScriptItem(data.validation, "code", data, "validation");
+        this.addScriptItem(data.sectionByScript, "code", data, "sectionByScript");
+        this.loadEventsScript(data);
+    },
+    loadCurrencyScript: function(data){
         this.addScriptItem(data.defaultValue, "code", data, "defaultValue");
         this.addScriptItem(data.validation, "code", data, "validation");
         this.addScriptItem(data.sectionByScript, "code", data, "sectionByScript");

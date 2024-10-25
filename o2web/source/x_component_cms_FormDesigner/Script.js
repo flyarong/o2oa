@@ -92,6 +92,8 @@ MWF.xApplication.cms.FormDesigner.Script = new Class({
                 this.loadMonitorScript(v); break;
             case "Number":
                 this.loadNumberScript(v); break;
+            case "Currency":
+                this.loadCurrencyScript(v); break;
             case "Office":
                 this.loadOfficeScript(v); break;
             case "Opinion":
@@ -122,6 +124,8 @@ MWF.xApplication.cms.FormDesigner.Script = new Class({
                 this.loadImporterScript(v); break;
             case "Relatedlink":
                 this.loadRelatedlinkScript(v); break;
+            case "AssociatedDocument":
+                this.loadAssociatedDocumentScript(v); break;
             case "WpsOffice":
                 this.addScriptItem(v.readScript, "code", v, "readScript");
                 this.loadEventsScript(v);

@@ -22,6 +22,8 @@ import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
 import com.x.base.core.project.tools.ListTools;
 import com.x.processplatform.assemble.surface.Business;
+import com.x.processplatform.assemble.surface.Control;
+import com.x.processplatform.assemble.surface.JobControlBuilder;
 import com.x.processplatform.assemble.surface.ThisApplication;
 import com.x.processplatform.core.entity.content.Record;
 import com.x.processplatform.core.entity.content.Task;
@@ -66,8 +68,8 @@ class ActionListWithWorkOrWorkCompletedPaging extends BaseAction {
 				} else {
 					job = business.job().findWithWorkCompleted(flag);
 					WorkCompleted workCompleted = emc.firstEqual(WorkCompleted.class, WorkCompleted.job_FIELDNAME, job);
-					if (ListTools.isNotEmpty(workCompleted.getProperties().getRecordList())) {
-						List<Record> os = workCompleted.getProperties().getRecordList();
+					if (ListTools.isNotEmpty(workCompleted.getRecordList())) {
+						List<Record> os = workCompleted.getRecordList();
 						int start = (page - 1) * size;
 						start = Math.min(start, os.size());
 						wos = Wo.copier.copy(os.stream().sorted(Comparator.comparing(Record::getOrder)).skip(start)
@@ -84,7 +86,7 @@ class ActionListWithWorkOrWorkCompletedPaging extends BaseAction {
 				LOGGER.error(e);
 			}
 			return wos;
-		}, ThisApplication.threadPool());
+		}, ThisApplication.forkJoinPool());
 	}
 
 	private CompletableFuture<Boolean> checkControlFuture(EffectivePerson effectivePerson, String flag) {
@@ -92,12 +94,13 @@ class ActionListWithWorkOrWorkCompletedPaging extends BaseAction {
 			Boolean value = false;
 			try (EntityManagerContainer emc = EntityManagerContainerFactory.instance().create()) {
 				Business business = new Business(emc);
-				value = business.readableWithWorkOrWorkCompleted(effectivePerson, flag);
+				Control control = new JobControlBuilder(effectivePerson, business, flag).enableAllowVisit().build();
+				value = control.getAllowVisit();
 			} catch (Exception e) {
 				LOGGER.error(e);
 			}
 			return value;
-		}, ThisApplication.threadPool());
+		}, ThisApplication.forkJoinPool());
 	}
 
 	@Schema(name = "com.x.processplatform.assemble.surface.jaxrs.record.ActionListWithWorkOrWorkCompletedPaging$Wo")

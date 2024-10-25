@@ -65,7 +65,7 @@ public class AttendanceV2CheckInRecord extends SliceJpaObject {
 
 
     public static final String userId_FIELDNAME = "userId";
-    @FieldDescribe("打卡的用户标识")
+    @FieldDescribe("打卡的用户标识DN")
     @Column(length = length_96B, name = ColumnNamePrefix + userId_FIELDNAME)
     @CheckPersist(allowEmpty = false)
     private String userId;
@@ -105,7 +105,7 @@ public class AttendanceV2CheckInRecord extends SliceJpaObject {
     public static final String SOURCE_TYPE_FAST_CHECK = "FAST_CHECK"; // 极速打卡
     public static final String SOURCE_TYPE_SYSTEM_IMPORT = "SYSTEM_IMPORT"; // 系统倒入
     public static final String sourceType_FIELDNAME = "sourceType";
-    @FieldDescribe("打卡数据来源")
+    @FieldDescribe("打卡数据来源：USER_CHECK|AUTO_CHECK|FAST_CHECK|SYSTEM_IMPORT")
     @Column(length = length_128B, name = ColumnNamePrefix + sourceType_FIELDNAME)
     private String sourceType;
 
@@ -140,7 +140,7 @@ public class AttendanceV2CheckInRecord extends SliceJpaObject {
     private String checkInType;
 
     public static final String sourceDevice_FIELDNAME = "sourceDevice";
-    @FieldDescribe("来源设备：Mac|Windows|IOS|Android|其他")
+    @FieldDescribe("来源设备")
     @Column( length = JpaObject.length_128B, name = ColumnNamePrefix + sourceDevice_FIELDNAME )
     private String sourceDevice;
 
@@ -217,6 +217,11 @@ public class AttendanceV2CheckInRecord extends SliceJpaObject {
     private String placeName;
 
 
+    public static final String offDutyNextDay_FIELDNAME = "offDutyNextDay";
+    @FieldDescribe("是否次日")
+    @Column(name = ColumnNamePrefix + offDutyNextDay_FIELDNAME)
+    private Boolean offDutyNextDay = false; // 下班打卡是否是次日 下班打卡可跨天
+
 
     public static final String appealId_FIELDNAME = "appealId";
     @FieldDescribe("考勤申诉信息记录ID(申诉成功后记录).")
@@ -251,7 +256,16 @@ public class AttendanceV2CheckInRecord extends SliceJpaObject {
     }
 
 
+    
 
+
+    public Boolean getOffDutyNextDay() {
+        return offDutyNextDay;
+    }
+
+    public void setOffDutyNextDay(Boolean offDutyNextDay) {
+        this.offDutyNextDay = offDutyNextDay;
+    }
 
     public String getLeaveDataId() {
         return leaveDataId;

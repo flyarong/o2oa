@@ -16,6 +16,19 @@ MWF.xApplication.cms.Xform.AttachmentController = new Class({
             }
         }
     },
+    setAttachmentSecurityConfig: function(select){
+        if (this.selectedAttachments.length) {
+            var security = select.options[select.selectedIndex].value;
+
+            var loadedCount = 0;
+            this.selectedAttachments.each(function (att) {
+                att.data.objectSecurityClearance = security.toInt();
+
+                o2.Actions.get("x_cms_assemble_control").configAttachment(att.data.id, this.module.form.businessData.document.id, att.data);
+            }.bind(this));
+        }
+    },
+
     setAttachmentConfig: function (readInput, editInput, controllerInput) {
         if (this.selectedAttachments.length) {
             var readList = readInput.retrieve("data-value");
@@ -130,6 +143,7 @@ MWF.xApplication.cms.Xform.Attachment = MWF.CMSAttachment = new Class({
             "toolbarGroupHidden": this.json.toolbarGroupHidden || [],
             "onOrder": function () {
                 this.fireEvent("change");
+                this.save();
             }.bind(this)
             //"downloadEvent" : this.json.downloadEvent
         };
@@ -153,6 +167,12 @@ MWF.xApplication.cms.Xform.Attachment = MWF.CMSAttachment = new Class({
             //if (att.fileType.toLowerCase()==this.json.id.toLowerCase()) this.attachmentController.addAttachment(att);
         }.bind(this));
         this.setAttachmentBusinessData();
+
+
+        this.addEvent("change", function () {
+            if(this.validationMode)this.validationMode();
+        }.bind(this))
+
         //}.bind(this));
     },
     loadAttachmentSelecter: function (option, callback) {
@@ -262,6 +282,8 @@ MWF.xApplication.cms.Xform.Attachment = MWF.CMSAttachment = new Class({
                     this.setAttachmentBusinessData();
                     this.fireEvent("upload", [json.data]);
                     this.fireEvent("change");
+
+                    this.save();
                 }.bind(this))
             }
             this.attachmentController.checkActions();
@@ -332,7 +354,7 @@ MWF.xApplication.cms.Xform.Attachment = MWF.CMSAttachment = new Class({
         }.bind(this));
 
         var _self = this;
-        this.form.confirm("warn", e, MWF.xApplication.cms.Xform.LP.deleteAttachmentTitle, MWF.xApplication.cms.Xform.LP.deleteAttachment + "( " + names.join(", ") + " )", 300, 120, function () {
+        this.form.confirm("warn", e, MWF.xApplication.cms.Xform.LP.deleteAttachmentTitle, MWF.xApplication.cms.Xform.LP.deleteAttachment + "( " + o2.txt(names.join(", ")) + " )", 300, 120, function () {
             while (attachments.length) {
                 var attachment = attachments.shift();
                 _self.deleteAttachment(attachment);
@@ -370,6 +392,8 @@ MWF.xApplication.cms.Xform.Attachment = MWF.CMSAttachment = new Class({
             this.setAttachmentBusinessData();
             this.fireEvent("afterDelete", [attachment.data]);
             this.fireEvent("change");
+
+            this.save();
         }.bind(this));
     },
 
@@ -432,6 +456,8 @@ MWF.xApplication.cms.Xform.Attachment = MWF.CMSAttachment = new Class({
                     }
 
                     this.attachmentController.checkActions();
+
+                    this.save();
                 }.bind(this))
             }.bind(this), null, true, accept, size, function (o) { //错误的回调
                 if (o.messageId && this.attachmentController.messageItemList) {
@@ -480,6 +506,9 @@ MWF.xApplication.cms.Xform.Attachment = MWF.CMSAttachment = new Class({
     downloadAttachment: function (e, node, attachments) {
         if (this.form.businessData.document) {
             attachments.each(function (att) {
+
+                if( !this.queryDownload( att ) )return;
+
                 if (window.o2android && window.o2android.postMessage) {
                     var body = {
                     type: "downloadAttachment",
@@ -500,7 +529,7 @@ MWF.xApplication.cms.Xform.Attachment = MWF.CMSAttachment = new Class({
                     if (layout.mobile) {
                         //移动端 企业微信 钉钉 用本地打开 防止弹出自带浏览器 无权限问题
                         this.form.documentAction.getAttachmentUrl(att.data.id, this.form.businessData.document.id, function (url) {
-                            var xtoken = Cookie.read(o2.tokenName);
+                            var xtoken = layout.session.token;
                             window.location = o2.filterUrl(url + "?"+o2.tokenName+"=" + xtoken);
                         });
                     } else {
@@ -514,6 +543,9 @@ MWF.xApplication.cms.Xform.Attachment = MWF.CMSAttachment = new Class({
     openAttachment: function (e, node, attachments) {
         if (this.form.businessData.document) {
             attachments.each(function (att) {
+
+                if( !this.queryOpen( att ) )return;
+
                 if (window.o2android && window.o2android.downloadAttachment) {
                     window.o2android.downloadAttachment(att.data.id);
                 } else if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.downloadAttachment) {
@@ -526,7 +558,7 @@ MWF.xApplication.cms.Xform.Attachment = MWF.CMSAttachment = new Class({
                     if (layout.mobile) {
                         //移动端 企业微信 钉钉 用本地打开 防止弹出自带浏览器 无权限问题
                         this.form.documentAction.getAttachmentUrl(att.data.id, this.form.businessData.document.id, function (url) {
-                            var xtoken = Cookie.read(o2.tokenName);
+                            var xtoken = layout.session.token;
                             window.location = o2.filterUrl(url + "?"+o2.tokenName+"=" + xtoken);
                         });
                     } else {
@@ -563,6 +595,27 @@ MWF.xApplication.cms.Xform.Attachment = MWF.CMSAttachment = new Class({
         });
         return data;
     },
+
+    save: function(){
+        if( this.json.id.indexOf("..") > 0 )return;
+        if (this.attachmentController) {
+            var values = [];
+            if (this.attachmentController.attachments.length) {
+                values = this.attachmentController.attachments.map(function (d) {
+                    return d.data.name;
+                });
+            }
+            var modifedData = {};
+            modifedData[ this.json.id ] = values;
+            modifedData.id = this.form.businessData.document.id;
+
+            debugger;
+            this.form.documentAction.saveData(null, function(){
+                return true;
+            }, this.form.businessData.document.id, modifedData, false);
+        }
+    },
+
     validationConfigItem: function (routeName, data) {
         var flag = (data.status == "all") ? true : (routeName == "publish");
         if (flag) {

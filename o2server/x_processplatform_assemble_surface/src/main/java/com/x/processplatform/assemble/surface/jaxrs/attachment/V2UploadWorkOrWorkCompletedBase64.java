@@ -23,8 +23,9 @@ import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
 import com.x.base.core.project.tools.ExtractTextTools;
 import com.x.processplatform.assemble.surface.Business;
+import com.x.processplatform.assemble.surface.Control;
 import com.x.processplatform.assemble.surface.ThisApplication;
-import com.x.processplatform.assemble.surface.WorkControl;
+import com.x.processplatform.assemble.surface.WorkControlBuilder;
 import com.x.processplatform.core.entity.content.Attachment;
 import com.x.processplatform.core.entity.content.Work;
 import com.x.processplatform.core.entity.content.WorkCompleted;
@@ -50,8 +51,7 @@ class V2UploadWorkOrWorkCompletedBase64 extends BaseAction {
 
 		byte[] bytes = Base64.decode(wi.getContent());
 
-		CompletableFuture<Boolean> checkControlFuture = this.readableWithWorkOrWorkCompletedFuture(effectivePerson,
-				workOrWorkCompleted);
+		CompletableFuture<Boolean> checkControlFuture = this.checkControlFuture(effectivePerson, workOrWorkCompleted);
 
 		if (BooleanUtils
 				.isFalse(checkControlFuture.get(Config.processPlatform().getAsynchronousTimeout(), TimeUnit.SECONDS))) {
@@ -78,7 +78,7 @@ class V2UploadWorkOrWorkCompletedBase64 extends BaseAction {
 
 	private String uploadWork(Business business, EffectivePerson effectivePerson, Work work, String site,
 			String fileName, byte[] bytes) throws Exception {
-		Control control = business.getControl(effectivePerson, work, Control.class);
+		Control control = new WorkControlBuilder(effectivePerson, business, work).enableAllowSave().build();
 		if (BooleanUtils.isNotTrue(control.getAllowSave())) {
 			throw new ExceptionAccessDenied(effectivePerson, work);
 		}
@@ -89,7 +89,7 @@ class V2UploadWorkOrWorkCompletedBase64 extends BaseAction {
 		if (null != attachment) {
 			StorageMapping mapping = ThisApplication.context().storageMappings().get(Attachment.class,
 					attachment.getStorage());
-			attachment.updateContent(mapping, bytes);
+			attachment.updateContent(mapping, bytes, Config.general().getStorageEncrypt());
 			attachment.setType((new Tika()).detect(bytes));
 			this.updateText(attachment, bytes);
 			business.entityManagerContainer().beginTransaction(Attachment.class);
@@ -98,7 +98,7 @@ class V2UploadWorkOrWorkCompletedBase64 extends BaseAction {
 		} else {
 			StorageMapping mapping = ThisApplication.context().storageMappings().random(Attachment.class);
 			attachment = this.concreteAttachmentOfWork(work, effectivePerson, site);
-			attachment.saveContent(mapping, bytes, fileName);
+			attachment.saveContent(mapping, bytes, fileName, Config.general().getStorageEncrypt());
 			attachment.setType((new Tika()).detect(bytes, fileName));
 			this.updateText(attachment, bytes);
 			business.entityManagerContainer().beginTransaction(Attachment.class);
@@ -110,7 +110,7 @@ class V2UploadWorkOrWorkCompletedBase64 extends BaseAction {
 
 	private String uploadWorkCompleted(Business business, EffectivePerson effectivePerson, WorkCompleted workCompleted,
 			String site, String fileName, byte[] bytes) throws Exception {
-		if (BooleanUtils.isNotTrue(business.canManageApplicationOrProcess(effectivePerson,
+		if (BooleanUtils.isNotTrue(business.ifPersonCanManageApplicationOrProcess(effectivePerson,
 				workCompleted.getApplication(), workCompleted.getProcess()))) {
 			throw new ExceptionAccessDenied(effectivePerson);
 		}
@@ -121,7 +121,7 @@ class V2UploadWorkOrWorkCompletedBase64 extends BaseAction {
 		if (null != attachment) {
 			StorageMapping mapping = ThisApplication.context().storageMappings().get(Attachment.class,
 					attachment.getStorage());
-			attachment.updateContent(mapping, bytes);
+			attachment.updateContent(mapping, bytes, Config.general().getStorageEncrypt());
 			attachment.setType((new Tika()).detect(bytes));
 			this.updateText(attachment, bytes);
 			business.entityManagerContainer().beginTransaction(Attachment.class);
@@ -139,7 +139,7 @@ class V2UploadWorkOrWorkCompletedBase64 extends BaseAction {
 			}
 			StorageMapping mapping = ThisApplication.context().storageMappings().random(Attachment.class);
 			attachment = this.concreteAttachmentOfWorkCompleted(workCompleted, effectivePerson, site, ends.get(0));
-			attachment.saveContent(mapping, bytes, fileName);
+			attachment.saveContent(mapping, bytes, fileName, Config.general().getStorageEncrypt());
 			attachment.setType((new Tika()).detect(bytes, fileName));
 			business.entityManagerContainer().beginTransaction(Attachment.class);
 			business.entityManagerContainer().persist(attachment, CheckPersistType.all);
@@ -192,20 +192,6 @@ class V2UploadWorkOrWorkCompletedBase64 extends BaseAction {
 		return attachment;
 	}
 
-	protected CompletableFuture<Boolean> readableWithWorkOrWorkCompletedFuture(EffectivePerson effectivePerson,
-			String flag) {
-		return CompletableFuture.supplyAsync(() -> {
-			Boolean value = false;
-			try (EntityManagerContainer emc = EntityManagerContainerFactory.instance().create()) {
-				Business business = new Business(emc);
-				value = business.readableWithWorkOrWorkCompleted(effectivePerson, flag);
-			} catch (Exception e) {
-				LOGGER.error(e);
-			}
-			return value;
-		}, ThisApplication.threadPool());
-	}
-
 	@Schema(name = "com.x.processplatform.assemble.surface.jaxrs.attachment.V2UploadWorkOrWorkCompletedBase64$Wi")
 	public static class Wi extends V2UploadWorkOrWorkCompletedBase64Wi {
 
@@ -217,12 +203,6 @@ class V2UploadWorkOrWorkCompletedBase64 extends BaseAction {
 	public static class Wo extends WoId {
 
 		private static final long serialVersionUID = 5006428868911776455L;
-
-	}
-
-	public static class Control extends WorkControl {
-
-		private static final long serialVersionUID = -658513470457661262L;
 
 	}
 

@@ -21,8 +21,8 @@ MWF.xApplication.process.workcenter.Main = new Class({
 			this.setLayout();
 			this.loadCount();
 			var list = (this.status) ? (this.status.navi || "task") : "task";
-			this.loadList(list);
-			if (callback) callback();
+			this.loadList(list, null, callback);
+			// if (callback) callback();
 		}.bind(this));
 	},
 	setLayout: function(){
@@ -52,6 +52,8 @@ MWF.xApplication.process.workcenter.Main = new Class({
 				"read": createDefineObject("read"),
 				"readCompleted": createDefineObject("readCompleted"),
 				"draft": createDefineObject("draft"),
+				"review": createDefineObject("review"),
+				"myCreated": createDefineObject("myCreated"),
 			};
 			MWF.defineProperties(this.countData, o);
 		}
@@ -64,6 +66,7 @@ MWF.xApplication.process.workcenter.Main = new Class({
 			this.countData.taskCompleted = json.data.taskCompleted;
 			this.countData.read = json.data.read;
 			this.countData.readCompleted = json.data.readCompleted;
+			this.countData.review = json.data.review;
 
 			// this.pageData = Object.assign(this.pageData, json.data);
 			// this.taskCountNode.set("text", json.data.task);
@@ -76,15 +79,20 @@ MWF.xApplication.process.workcenter.Main = new Class({
 			// this.pageData = Object.assign(this.pageData, {"draft": json.size});
 			// this.draftCountNode.set("text", json.size);
 		}.bind(this));
+		this.action.ReviewAction.countWithPerson(layout.session.user.id, {
+			creatorPersonList: [layout.session.user.id]
+		}).then(function(json){
+			this.countData.myCreated = json.data.count;
+		}.bind(this));
 	},
-	loadList: function(type){
+	loadList: function(type, e, callback){
 		if (this.currentMenu) this.setMenuItemStyleDefault(this.currentMenu);
 		this.setMenuItemStyleCurrent(this[type+"MenuNode"]);
 		this.currentMenu = this[type+"MenuNode"];
 
 		if (this.currentList) this.currentList.hide();
 		this.showSkeleton();
-		this._loadListContent(type);
+		this._loadListContent(type, callback);
 		this.loadCount();
 		//if (this.currentList) this.currentList.loadPage();
 	},
@@ -94,14 +102,15 @@ MWF.xApplication.process.workcenter.Main = new Class({
 	hideSkeleton: function(){
 		if (this.skeletonNode) this.skeletonNode.dispose();
 	},
-	_loadListContent: function(type){
+	_loadListContent: function(type, callback){
 		var list = this[(type+"-list").camelCase()];
 		if (!list){
+			console.log('MWF.xApplication.process.workcenter.'+type.capitalize()+"List");
 			list = new MWF.xApplication.process.workcenter[type.capitalize()+"List"](this, { "onLoadData": this.hideSkeleton.bind(this) });
 			this[(type+"-list").camelCase()] = list;
 		}
 		list.init();
-		list.load();
+		list.load(callback);
 		this.currentList = list;
 	},
 	setMenuItemStyleDefault: function(node){
@@ -151,8 +160,15 @@ MWF.xApplication.process.workcenter.Main = new Class({
 	},
 	getFilterData: function(){
 		var type = this.currentList.options.type.capitalize();
-		var action = type+"Action";
-		return this.action[action].filterAttribute().then(function(json){return json.data});
+		switch (type) {
+			case "MyCreated":
+				return this.action.ReviewAction.filterCreateEntry().then(function(json){return json.data});
+			case "Review":
+				return this.action.ReviewAction.filterEntry().then(function(json){return json.data});
+			default:
+				var action = type+"Action";
+				return this.action[action].filterAttribute().then(function(json){return json.data});
+		}
 	},
 	showFilter: function(e){
 		//console.log(this.filterDlg);
@@ -167,8 +183,14 @@ MWF.xApplication.process.workcenter.Main = new Class({
 		var filterContent = new Element("div");
 		var url = this.path+this.options.style+"/view/dlg/filter.html";
 		this.getFilterData().then(function(data){
+			if (data.completedList) {
+				data.completedList.forEach(function (item) {
+					item.name = (item.name === "completed") ? this.lp.completed : this.lp.processing;
+				}.bind(this));
+			}
 			this.currentList.filterAttribute = data;
-			filterContent.loadHtml(url, {"bind": {"lp": this.lp, "type": this.options.type, "data": data, filter: this.currentList.filterList}, "module": this})
+			var filterCategoryList = ['review','myCreated'].contains(this.currentList.options.type) ? this.lp.filterCategoryListReview : this.lp.filterCategoryList;
+			filterContent.loadHtml(url, {"bind": {"lp": this.lp, "type": this.options.type, "data": data, filter: this.currentList.filterList, filterCategoryList: filterCategoryList}, "module": this})
 		}.bind(this));
 
 		var _self = this;
@@ -176,6 +198,7 @@ MWF.xApplication.process.workcenter.Main = new Class({
 			_self.filterDlg.close();
 		}
 		this.filterDlg = o2.DL.open({
+			"container": this.content,
 			"mask": false,
 			"title": "",
 			"style": "user",
@@ -286,19 +309,36 @@ MWF.xApplication.process.workcenter.Main = new Class({
 		var startContent = new Element("div.st_area");
 		var url = this.path+this.options.style+"/view/dlg/start.html";
 		this.getStartData().then(function(data){
-			var map = {};
+
+			var map = {}, mapById = {};
 			data[0].each(function (d) {
-                if (d.processList && d.processList.length){
-                    var type = d.applicationCategory || "未分类";
-                    if( !map[type] )map[type] = [];
-                    map[type].push(d);
-                }
+				if (d.processList && d.processList.length){
+					var type = d.applicationCategory || "未分类";
+					if( !map[type] )map[type] = [];
+					map[type].push(d);
+
+					d.processList.each(function (process) {
+						mapById[ process.id ] = process;
+					});
+				}
 			});
 			data[2].each(function (d) {
 				var type = d.appType || "未分类";
 				if( !map[type] )map[type] = [];
 				map[type].push(d);
+
 			});
+			data[1] = (data[1] || []).filter(function (d) {
+				if( mapById[ d.id ] ){
+					d.name = mapById[ d.id ].name;
+					return true;
+				}else{
+					return false;
+				}
+			});
+
+
+
 			var array = [];
 			Object.each(map, function (list, key) {
 				array.push({ key: key, appList: list })
@@ -584,7 +624,7 @@ MWF.xApplication.process.workcenter.Main = new Class({
 						}
 					}
 				}
-                if( o2.typeOf( process.applicationName ) === "object")process.applicationName = process.applicationName.name || "";
+				if( o2.typeOf( process.applicationName ) === "object")process.applicationName = process.applicationName.name || "";
 			}
 			if (recordProcess) {
 				recordProcess.lastStartTime = new Date();
@@ -728,7 +768,7 @@ MWF.xApplication.process.workcenter.List = new Class({
 	setLayout: function(){
 
 	},
-	load: function(){
+	load: function(callback){
 		this.total = null;
 		var _self = this;
 		this.loadFilterFlag();
@@ -738,6 +778,7 @@ MWF.xApplication.process.workcenter.List = new Class({
 			_self.hide();
 			_self.loadPage();
 			_self.loadItems(data);
+			if(callback)callback();
 		});
 	},
 	refresh: function(){
@@ -869,7 +910,7 @@ MWF.xApplication.process.workcenter.List = new Class({
 	},
 	openTask: function(e, data){
 		o2.api.form.openWork(data.work, "", data.title, {
-            "taskId": data.id,
+			"taskId": data.id,
 			"onPostClose": function(){
 				if (this.refresh) this.refresh();
 			}.bind(this)
@@ -989,6 +1030,7 @@ MWF.xApplication.process.workcenter.List = new Class({
 		var processNode = new Element("div.processNode").inject(this.content);
 		this.setProcessNode(task, form, processNode, "process", function (processor) {
 			this.processDlg = o2.DL.open({
+				"container": this.app.content,
 				"title": this.lp.process,
 				"style": form.json.dialogStyle || "user",
 				"isResize": false,
@@ -1265,6 +1307,15 @@ MWF.xApplication.process.workcenter.List = new Class({
 		delete data._;
 		e.currentTarget.store("task", data);
 	},
+	batchProcess: function(e){
+		if(this.options.type === "read"){
+			this.batchProcessRead(e);
+		}else {
+			this.batchProcessTask(e);
+
+		}
+
+	},
 	batchProcessTask: function(e){
 		if (this.selectedTaskList && this.selectedTaskList.length){
 			var data = this.selectedTaskList[0];
@@ -1320,6 +1371,9 @@ MWF.xApplication.process.workcenter.ReadList = new Class({
 		return this.action.ReadAction.listMyFilterPaging(this.page, this.size, this.filterList||{}).then(function(json){
 			_self.fireEvent("loadData");
 			_self.total = json.count;
+			json.data.each(function (d){
+				d.allowRapid = true;
+			})
 			return json.data;
 		}.bind(this));
 
@@ -1344,6 +1398,90 @@ MWF.xApplication.process.workcenter.ReadList = new Class({
 			iconNode.setStyle("background-image", "url("+"../x_component_process_workcenter/$Main/default/icons/pic_new.png)");
 		}
 	},
+	selectTask: function(e, data){
+		if (e.currentTarget.get("disabled").toString()!="true"){
+			var itemNode = e.currentTarget.getParent(".listItem");
+			var iconNode = e.currentTarget.getElement(".selectFlagIcon");
+
+			if (itemNode){
+				if (itemNode.hasClass("mainColor_bg_opacity")){
+					itemNode.removeClass("mainColor_bg_opacity");
+					iconNode.removeClass("o2icon-xuanzhong");
+					iconNode.removeClass("selectFlagIcon_select");
+					iconNode.removeClass("mainColor_color");
+					this.unSelectedTask(data);
+					this.showBatchAction();
+				}else{
+					itemNode.addClass("mainColor_bg_opacity");
+					iconNode.addClass("o2icon-xuanzhong");
+					iconNode.addClass("selectFlagIcon_select");
+					iconNode.addClass("mainColor_color");
+					this.selectedTask(data);
+					this.showBatchAction(itemNode);
+				}
+			}
+		}
+	},
+	batchProcessRead: function(e){
+		if (this.selectedTaskList && this.selectedTaskList.length){
+			var data = this.selectedTaskList[0];
+			this.editRead();
+		}
+	},
+	editRead : function(){
+		var _self = this;
+		var text = this.lp.readConfirm;
+		var url = this.app.path+this.app.options.style+"/view/dlg/read.html";
+		o2.loadHtml(url, {"bind": {"lp": this.lp, "readedConfirmContent": text}, "module": this}, function(o){
+			var html = o2.bindJson(o[0].data, {"lp": this.lp, "readedConfirmContent": text});
+			//var p = o2.dlgPosition(null, this.app.content, 550, 260)
+			var readDlg = o2.DL.open({
+				"title": this.lp.setReadedConfirmTitle,
+				"style": "user",
+				"isResize": false,
+				"height": "260",
+				"width": "550",
+				"html": html,
+				"maskNode": this.app.content,
+				"minTop": 5,
+				"buttonList": [
+					{
+						"type": "ok",
+						"text": MWF.LP.process.button.ok,
+						"action": function () {
+							debugger;
+							var opinion = this.content.getElement("textarea").get("value");
+							_self.batchSubmitRead(opinion);
+							this.close();
+						}
+					},
+					{
+						"type": "cancel",
+						"text": MWF.LP.process.button.cancel,
+						"action": function () {
+							this.close();
+						}
+					}
+				]
+			});
+		}.bind(this));
+	},
+	batchSubmitRead: function(opinion){
+		if (this.selectedTaskList && this.selectedTaskList.length){
+			var p = [];
+			this.selectedTaskList.forEach(function(task){
+				if (!opinion) opinion = "";
+
+				p.push(this.action.ReadAction.processing(task.id, {"opinion": opinion}, function(json){
+
+				}.bind(this)));
+			}.bind(this));
+			Promise.all(p).then(function(){
+				this.app.content.unmask();
+				this.refresh();
+			}.bind(this));
+		}
+	},
 	setReadCompleted: function(e, data){
 		if (data.item) data = data.item;
 		var _self = this;
@@ -1353,6 +1491,7 @@ MWF.xApplication.process.workcenter.ReadList = new Class({
 			var html = o2.bindJson(o[0].data, {"lp": this.lp, "readedConfirmContent": text});
 			var p = o2.dlgPosition(e, this.app.content, 550, 260)
 			var readDlg = o2.DL.open({
+				"container": this.app.content,
 				"title": this.lp.setReadedConfirmTitle,
 				"style": "user",
 				"isResize": false,
@@ -1413,6 +1552,7 @@ MWF.xApplication.process.workcenter.ReadList = new Class({
 		this.infoDlg = o2.DL.open({
 			// "top": p.y,
 			// "left": p.x,
+			"container": this.app.content,
 			"title": this.lp.processInfo,
 			"style": "user",
 			"isResize": true,
@@ -1558,6 +1698,7 @@ MWF.xApplication.process.workcenter.ReadCompletedList = new Class({
 		// }.bind(this));
 	}
 });
+
 MWF.xApplication.process.workcenter.DraftList = new Class({
 	Extends: MWF.xApplication.process.workcenter.ReadList,
 	options: {
@@ -1575,7 +1716,7 @@ MWF.xApplication.process.workcenter.DraftList = new Class({
 		var _self = this;
 		return this.action.DraftAction.listMyPaging(this.page, this.size, {}).then(function(json){
 			_self.fireEvent("loadData");
-			_self.total = json.size;
+			_self.total = json.count;
 			return json.data;
 		}.bind(this));
 	},
@@ -1588,6 +1729,73 @@ MWF.xApplication.process.workcenter.DraftList = new Class({
 		this.app.desktop.openApplication(e, "process.Work", options);
 	}
 });
+
+MWF.xApplication.process.workcenter.ReviewList = new Class({
+	Extends: MWF.xApplication.process.workcenter.ReadList,
+	options: {
+		"itemHeight": 60,
+		"type": "review"
+	},
+	loadData: function(){
+		// this.app.filterActionNode.hide();
+		var _self = this;
+		return this.action.ReviewAction.V2ListPaging(this.page, this.size, this.filterList||{}).then(function(json){
+			_self.fireEvent("loadData");
+			_self.total = json.count;
+			return json.data;
+		}.bind(this));
+	},
+	openTask: function(e, data){
+		o2.api.form.openWork(data.work, "", data.title, {
+			"onPostClose": function(){
+				if (this.refresh) this.refresh();
+			}.bind(this)
+		});
+	},
+	loadFilterFlag: function(){
+		this.filterNode.empty();
+		var filterItemHtml = "<div class='ft_filterItem'>" +
+			"<div class='ft_filterItemTitle mainColor_color'>{{$.title}}:</div>" +
+			"<div class='ft_filterItemName'>{{$.name}}</div>"+
+			"<icon class='o2icon-clear ft_filterItemDel' data-key='{{$.key}}' data-name='{{$.name}}'/>"+
+			"</div>";
+		var _self = this;
+		this.lp.filterCategoryShortListReview.forEach(function(list){
+			if (_self.filterNameList && _self.filterNameList[list.key] && _self.filterNameList[list.key].length){
+				_self.filterNameList[list.key].forEach(function(i){
+					var html = o2.bindJson(filterItemHtml, {"title": list.name, "name": i, "key": list.key});
+					_self.filterNode.appendHTML(html);
+				});
+			}
+		});
+		this.filterNode.getElements(".ft_filterItemDel").addEvent("click", this.clearFilterItem.bind(this));
+	}
+});
+
+MWF.xApplication.process.workcenter.MyCreatedList = new Class({
+	Extends: MWF.xApplication.process.workcenter.ReviewList,
+	options: {
+		"itemHeight": 60,
+		"type": "myCreated"
+	},
+	loadData: function(){
+		// this.app.filterActionNode.hide();
+		var _self = this;
+		return this.action.ReviewAction.V2ListCreatePaging(this.page, this.size, this.filterList||{}).then(function(json){
+			_self.fireEvent("loadData");
+			_self.total = json.count;
+			return json.data;
+		}.bind(this));
+	},
+	openTask: function(e, data){
+		o2.api.form.openWork(data.work, "", data.title, {
+			"onPostClose": function(){
+				if (this.refresh) this.refresh();
+			}.bind(this)
+		});
+	}
+});
+
 
 MWF.xDesktop.requireApp("Template", "MTooltips", null, false);
 MWF.xApplication.process.workcenter.List.Tooltip = new Class({

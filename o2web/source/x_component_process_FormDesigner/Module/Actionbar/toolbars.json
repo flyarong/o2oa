@@ -24,13 +24,39 @@
     "type": "MWFToolBarButton",
     "img": "submit.png",
     "title": "{{$.lp.flowTitle}}",
-    "action": "processWork",
+    "action": "flowWork",
     "text": "{{$.lp.flow}}",
-    "id": "action_processWork",
-    "control": "allowProcessing",
+    "id": "action_flowWork",
+    "control": "allowFlow",
     "condition": "",
     "read": false
   },
+  {
+    "type": "MWFToolBarButton",
+    "img": "submit.png",
+    "title": "{{$.lp.submitTitle}}",
+    "action": "processWork",
+    "text": "{{$.lp.submit}}",
+    "id": "action_processWork",
+    "control": "allowProcessing",
+    "condition": "",
+    "read": false,
+    "hidden": true
+  },
+
+  {
+    "type": "MWFToolBarButton",
+    "img": "goback.png",
+    "title": "{{$.lp.goBackTitle}}",
+    "action": "goBack",
+    "text": "{{$.lp.goBack}}",
+    "id": "action_goBack",
+    "control": "allowGoBack",
+    "condition": "",
+    "read": false,
+    "hidden": true
+  },
+
   {
     "type": "MWFToolBarButton",
     "img": "reroute.png",
@@ -51,7 +77,8 @@
     "id": "action_reset",
     "control": "allowReset",
     "condition": "",
-    "read": true
+    "read": true,
+    "hidden": true
   },
   {
     "type": "MWFToolBarButton",
@@ -60,9 +87,10 @@
     "action": "addTask",
     "text": "{{$.lp.addTask}}",
     "id": "action_addTask",
-    "control": "allowReset",
+    "control": "allowAddTask",
     "condition": "",
-    "read": true
+    "read": true,
+    "hidden": true
   },
   {
     "type": "MWFToolBarButton",
@@ -105,6 +133,17 @@
     "text": "{{$.lp.delete}}",
     "id": "action_delete",
     "control": "allowDelete",
+    "condition": "",
+    "read": false
+  },
+  {
+    "type": "MWFToolBarButton",
+    "img": "stop.png",
+    "title": "{{$.lp.terminateTitle}}",
+    "action": "terminate",
+    "text": "{{$.lp.terminate}}",
+    "id": "action_terminate",
+    "control": "allowTerminate",
     "condition": "",
     "read": false
   },
@@ -159,6 +198,17 @@
     "action": "downloadAll",
     "text": "{{$.lp.downloadAll}}",
     "id": "action_downloadAll",
+    "control": "",
+    "condition": "",
+    "read": true
+  },
+  {
+    "type": "MWFToolBarButton",
+    "img": "monitor.png",
+    "title": "{{$.lp.monitorTitle}}",
+    "action": "monitor",
+    "text": "{{$.lp.monitor}}",
+    "id": "action_monitor",
     "control": "",
     "condition": "",
     "read": true

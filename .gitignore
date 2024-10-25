@@ -1,10 +1,10 @@
 #o2oa
-**/src/test/
 **/command.swap
 **/version.o2
 **/bin/
 **/target/
 /target/**
+/o2server/webroot/
 /o2server/servers/
 /o2server/store/jars/*.jar
 /o2server/store/*.war
@@ -27,6 +27,7 @@
 **/.settings/
 **/.classpath
 **/.project
+**/.VSCodeCounter
 /o2custom/
 /o2cloud/
 /.svn/
@@ -178,3 +179,8 @@ typings/
 *.lock
 *.checkstyle
 o2server/test.sh
+**/dest/
+**/dest_*/
+**/dist/
+*_bak.*
+*.bak

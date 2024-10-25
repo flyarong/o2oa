@@ -467,12 +467,12 @@ MWF.xApplication.Common.Main = new Class({
 	setUncurrent: function () {
 		if (this.desktop.currentApp == this) {
 			this.window.setUncurrent();
-			this.taskitem.unSelected();
+			if (this.taskitem) this.taskitem.unSelected();
 			this.desktop.currentApp = null;
 			this.fireAppEvent("uncurrent");
 		}else{
 			this.window.setUncurrent();
-			this.taskitem.unSelected();
+			if (this.taskitem) this.taskitem.unSelected();
 		}
 	},
 	minSize: function () {
@@ -672,8 +672,8 @@ MWF.xApplication.Common.Main = new Class({
 					y = position.y;
 				} else {
 					if (Browser.name == "firefox") {
-						x = parseFloat(e.event.clientX || e.event.x);
-						y = parseFloat(e.event.clientY || e.event.y);
+						x = parseFloat(e.event ? (e.event.clientX || e.event.x) : e.clientX);
+						y = parseFloat(e.event ? (e.event.clientY || e.event.y) : e.clientY);
 					} else {
 						x = parseFloat(e.x || e.event.x);
 						y = parseFloat(e.y || e.event.y);
@@ -821,10 +821,9 @@ MWF.xApplication.Common.Main = new Class({
 			dlg.show();
 		}.bind(this));
 	},
-	alert: function (type, e, title, text, width, height) {
+	alert: function (type, e, title, text, width, height, callback) {
 		MWF.require("MWF.widget.Dialog", function () {
 			var size = $(document.body).getSize();
-			debugger;
 			var x = 0, y = 0;
 			if (e === "center") {
 				if( layout.mobile ){
@@ -877,12 +876,13 @@ MWF.xApplication.Common.Main = new Class({
 				"height": height,
 				"text": ctext,
 				"html": chtml,
-				"maskNode": this.content,
-				"container": this.content,
+				"maskNode": layout.mobile ? $(document.body) : this.content,
+				"container": layout.mobile ? $(document.body) : this.content,
 				"buttonList": [
 					{
 						"text": MWF.LP.process.button.ok,
 						"action": function () {
+							if( typeOf(callback) === "function" )callback();
 							this.close();
 						}
 					}

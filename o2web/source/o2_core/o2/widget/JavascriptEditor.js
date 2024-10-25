@@ -104,11 +104,12 @@ o2.widget.JavascriptEditor = new Class({
                 window.setTimeout(this.setMonacoLayout.bind(this), 500);
         }
 
-	    if (this.editor && this.editor.getDomNode()){
-
-        }
+	    // if (this.editor && this.editor.getDomNode()){
+        //
+        // }
     },
     loadMonaco: function(callback){
+        MWF.require("MWF.xDesktop.shortcut");
         if (o2.editorData.javascriptEditor){
             this.theme = o2.editorData.javascriptEditor.monaco_theme;
             this.fontSize = o2.editorData.javascriptEditor.fontSize;

@@ -3,7 +3,7 @@ o2.xDesktop.Dialog = o2.DDL = new Class({
 	Extends: o2.widget.Dialog,
     options : {
 	    "zindex": null,
-        maxHeightPercent : "98%"
+        "maxHeightPercent": "98%"
     },
 //	_markShow: function(){
 //
@@ -359,6 +359,15 @@ o2.xDesktop.Dialog = o2.DDL = new Class({
     getMarginX : function(node){
         return (node.getStyle("margin-left").toInt() || 0 ) +
             (node.getStyle("margin-right").toInt() || 0 );
+    },
+    getContentMaxHeight: function(){
+        var maxHeight = this.getMaxHeight();
+        var offsetY = 0;
+        if( this.title )offsetY = offsetY + this.getOffsetY( this.title ) + this.title.getSize().y;
+        if( this.bottom )offsetY = offsetY + this.getOffsetY( this.bottom ) + this.bottom.getSize().y;
+        if( this.button && !this.buttonDisable )offsetY = offsetY + this.getOffsetY( this.button ) + this.button.getSize().y;
+        if( this.content )offsetY = offsetY + this.getMarginY( this.content );
+        return maxHeight - offsetY;
     },
     setContentHeightAuto : function(){
         var maxHeight = this.getMaxHeight();

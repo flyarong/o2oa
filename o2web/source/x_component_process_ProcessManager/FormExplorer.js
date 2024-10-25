@@ -6,7 +6,8 @@ MWF.xApplication.process.ProcessManager.FormExplorer = new Class({
         "create": MWF.APPPM.LP.form.create,
         "search": MWF.APPPM.LP.form.search,
         "searchText": MWF.APPPM.LP.form.searchText,
-        "noElement": MWF.APPPM.LP.form.noFormNoticeText
+        "noElement": MWF.APPPM.LP.form.noFormNoticeText,
+        "name": 'process.FormExplorer'
     },
 
     //ev.dataTransfer.setData("text/plain", ev.target.id);
@@ -159,6 +160,8 @@ MWF.xApplication.process.ProcessManager.FormExplorer = new Class({
         var pcdata = JSON.decode(MWF.decodeJsonString(form.data));
         var mobiledata = JSON.decode(MWF.decodeJsonString(form.mobileData));
 
+        var isSameApp = pcdata.application === id;
+
         var oldName = pcdata.json.name;
 
         var i=1;
@@ -167,9 +170,9 @@ MWF.xApplication.process.ProcessManager.FormExplorer = new Class({
             mobiledata.json.name = oldName+"_copy"+i;
             i++;
         }
-        pcdata.id = "";
+        if (!isSameApp) pcdata.id = "";
         pcdata.isNewForm = true;
-        pcdata.json.id = "";
+        if (!isSameApp) pcdata.json.id = "";
         pcdata.json.application = id;
         pcdata.json.applicationName = name;
         pcdata.json.alias = "";
@@ -190,11 +193,12 @@ MWF.xApplication.process.ProcessManager.FormExplorer = new Class({
         this.formTemplateList = null;
         this.defalutFormTemplateList = null;
         var _self = this;
-        var createDefaultForm = function(e, template){
+        var createDefaultForm = function(e, template, templateCode){
             layout.desktop.getFormDesignerStyle(function(){
                 var options = {
                     "style": layout.desktop.formDesignerStyle,
                     "template": template,
+                    "templateCode": templateCode,
                      "application":{
                         "name": _self.app.options.application.name,
                          "id": _self.app.options.application.id
@@ -292,6 +296,7 @@ MWF.xApplication.process.ProcessManager.FormExplorer = new Class({
                     var templateIconNode = new Element("div", {"styles": this.css.formTemplateIconNode}).inject(templateNode);
                     var templateTitleNode = new Element("div", {"styles": this.css.formTemplateTitleNode, "text": template.title}).inject(templateNode);
                     templateNode.store("template", template.name);
+                    templateNode.store("templateCode", template.code);
 
                     var templateIconImgNode = new Element("img", {"styles": this.css.formTemplateIconImgNode}).inject(templateIconNode);
                     templateIconImgNode.set("src", "../x_component_process_FormDesigner/Module/Form/template/"+template.icon);
@@ -302,7 +307,7 @@ MWF.xApplication.process.ProcessManager.FormExplorer = new Class({
                         "mousedown": function(){this.setStyles(_self.css.formTemplateNode_down)},
                         "mouseup": function(){this.setStyles(_self.css.formTemplateNode_over)},
                         "click": function(e){
-                            createDefaultForm(e, this.retrieve("template"));
+                            createDefaultForm(e, this.retrieve("template"), this.retrieve("templateCode"));
                             _self.app.removeEvent("resize", resize);
                             createTemplateAreaNode.destroy();
                             createTemplateMaskNode.destroy();
@@ -313,14 +318,14 @@ MWF.xApplication.process.ProcessManager.FormExplorer = new Class({
         }.bind(this);
 
         var getFormTemplateList = function(callback){
-            if (this.formTemplateList){
-                if (callback) callback();
-            }else{
+            // if (this.formTemplateList){
+            //     if (callback) callback();
+            // }else{
                 this.app.restActions.listFormTemplate(function(json){
                     this.formTemplateList = json.data;
                     if (callback) callback();
                 }.bind(this));
-            }
+            // }
         }.bind(this);
         var loadTemplates = function(category){
             getFormTemplateList(function(){

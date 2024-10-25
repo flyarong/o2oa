@@ -45,7 +45,9 @@ public class ActionImportExcel extends BaseAction {
     ActionResult<Wo> execute(EffectivePerson effectivePerson, byte[] bytes, FormDataContentDisposition disposition)
             throws Exception {
         lock.lock();
-        LOGGER.info("开始导入请假数据。。。。。。。。。。");
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("开始导入请假数据！！！！！！");
+        }
         try (InputStream is = new ByteArrayInputStream(bytes);
              XSSFWorkbook workbook = new XSSFWorkbook(is);
              ByteArrayOutputStream os = new ByteArrayOutputStream();
@@ -120,15 +122,15 @@ public class ActionImportExcel extends BaseAction {
                 }
                 try {
                     ActionPost.Wo postResult = ThisApplication.context().applications().postQuery(x_attendance_assemble_control.class, "v2/leave", wi).getData(ActionPost.Wo.class);
-                    if (postResult != null) {
-                        LOGGER.info("保持数据结果：" + postResult.getValue());
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("处理结果，{}", postResult.toString());
                     }
                 } catch (Exception e) {
                     setExcelCellError(row, e.getLocalizedMessage());
                 }
             }
             ActionResult<Wo> result = new ActionResult<>();
-            String name = "attendance_leave_data_input_" + DateTools.formatDate(new Date()) + ".xlsx";
+            String name = "attendance_leave_data_input_" + DateTools.format(new Date(), DateTools.formatCompact_yyyyMMddHHmmss) + ".xlsx";
             workbook.write(os);
             String flag = saveAttachment(os.toByteArray(), name, effectivePerson);
             Wo wo = new Wo();
@@ -137,7 +139,9 @@ public class ActionImportExcel extends BaseAction {
             return result;
         } finally {
             lock.unlock();
-            LOGGER.info("导入结束。。。。。。。。。。。。");
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("导入结束！！！！！！");
+            }
         }
     }
 

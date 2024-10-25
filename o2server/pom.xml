@@ -1,8 +1,10 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>net.o2oa</groupId>
 	<artifactId>o2server</artifactId>
-	<version>8.0</version>
+	<version>9.1</version>
 	<packaging>pom</packaging>
 	<description>O2OA企业应用开发平台 OpenSource OA Platform</description>
 	<url>https://github.com/o2oa/o2oa</url>
@@ -32,6 +34,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8
 		</project.reporting.outputEncoding>
+		<graalvm.version>22.3.4</graalvm.version>
 	</properties>
 	<modules>
 		<module>x_base_core_project</module>
@@ -52,10 +55,12 @@
 		<module>x_organization_core_entity</module>
 		<module>x_portal_core_entity</module>
 		<module>x_processplatform_core_entity</module>
+		<module>x_correlation_core_entity</module>
 		<module>x_program_center_core_entity</module>
 		<module>x_organization_core_express</module>
 		<module>x_query_core_express</module>
 		<module>x_processplatform_core_express</module>
+		<module>x_correlation_core_express</module>
 		<module>x_bbs_assemble_control</module>
 		<module>x_calendar_assemble_control</module>
 		<module>x_cms_core_express</module>
@@ -79,10 +84,12 @@
 		<module>x_processplatform_assemble_designer</module>
 		<module>x_processplatform_assemble_surface</module>
 		<module>x_processplatform_service_processing</module>
+		<module>x_correlation_service_processing</module>
 		<module>x_query_assemble_designer</module>
 		<module>x_query_assemble_surface</module>
 		<module>x_query_service_processing</module>
 		<module>x_program_center</module>
+		<module>x_program_init</module>
 		<module>x_console</module>
 	</modules>
 	<dependencies>
@@ -333,6 +340,10 @@
 			<artifactId>commons-email</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>commons-fileupload</groupId>
+			<artifactId>commons-fileupload</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>javax.activation</groupId>
 			<artifactId>activation</artifactId>
 		</dependency>
@@ -422,12 +433,44 @@
 		</dependency>
 		<dependency>
 			<groupId>org.apache.solr</groupId>
-			<artifactId>solr-core</artifactId>
+			<artifactId>solr-hdfs</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.solr</groupId>
+			<artifactId>solr-solrj</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>com.github.jsqlparser</groupId>
 			<artifactId>jsqlparser</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-engine</artifactId>
+		</dependency>
+			<dependency>
+				<groupId>org.graalvm.sdk</groupId>
+				<artifactId>graal-sdk</artifactId>
+			</dependency>
+			<dependency>
+				<groupId>org.graalvm.js</groupId>
+				<artifactId>js</artifactId>
+			</dependency>
+			<dependency>
+				<groupId>org.graalvm.js</groupId>
+				<artifactId>js-scriptengine</artifactId>
+			</dependency>
+			<dependency>
+				<groupId>org.graalvm.tools</groupId>
+				<artifactId>profiler</artifactId>
+			</dependency>
+			<dependency>
+				<groupId>org.graalvm.tools</groupId>
+				<artifactId>chromeinspector</artifactId>
+			</dependency>
 	</dependencies>
 	<build>
 		<finalName>${project.artifactId}</finalName>
@@ -463,12 +506,6 @@
 					<version>3.8.1</version>
 					<configuration>
 						<target>11</target>
-						<compilerArgs>
-							<arg>--add-exports</arg>
-							<arg>jdk.scripting.nashorn/jdk.nashorn.internal.runtime=ALL-UNNAMED</arg>
-							<arg>--add-exports</arg>
-							<arg>jdk.scripting.nashorn/jdk.nashorn.internal.runtime.arrays=ALL-UNNAMED</arg>
-						</compilerArgs>
 					</configuration>
 				</plugin>
 				<plugin>
@@ -528,7 +565,8 @@
 						<docencoding>UTF-8</docencoding>
 						<additionalOptions>
 							<!-- 解决jdk1.8以后编译出错问题-->
-							<!--							<additionalOption>-Xdoclint:none</additionalOption>-->
+							<!--
+							<additionalOption>-Xdoclint:none</additionalOption>-->
 							<additionalparam>-Xdoclint:none</additionalparam>
 						</additionalOptions>
 					</configuration>
@@ -553,12 +591,6 @@
 							<goals>
 								<goal>sign</goal>
 							</goals>
-							<!--							<configuration>-->
-							<!--								<gpgArguments>-->
-							<!--									<arg>&#45;&#45;pinentry-mode</arg>-->
-							<!--									<arg>loopback</arg>-->
-							<!--								</gpgArguments>-->
-							<!--							</configuration>-->
 						</execution>
 					</executions>
 				</plugin>
@@ -616,7 +648,7 @@
 			<dependency>
 				<groupId>org.apache.openjpa</groupId>
 				<artifactId>openjpa</artifactId>
-				<version>3.2.0</version>
+				<version>3.2.2</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.commons</groupId>
@@ -671,7 +703,7 @@
 			<dependency>
 				<groupId>org.apache.commons</groupId>
 				<artifactId>commons-text</artifactId>
-				<version>1.8</version>
+				<version>1.10.0</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.maven</groupId>
@@ -682,6 +714,16 @@
 				<groupId>org.apache.commons</groupId>
 				<artifactId>commons-compress</artifactId>
 				<version>1.20</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.commons</groupId>
+				<artifactId>commons-configuration2</artifactId>
+				<version>2.9.0</version>
+			</dependency>
+			<dependency>
+				<groupId>commons-fileupload</groupId>
+				<artifactId>commons-fileupload</artifactId>
+				<version>1.5</version>
 			</dependency>
 			<dependency>
 				<groupId>org.eclipse.jetty</groupId>
@@ -726,47 +768,47 @@
 			<dependency>
 				<groupId>org.apache.cxf</groupId>
 				<artifactId>cxf-core</artifactId>
-				<version>3.5.2</version>
+				<version>3.6.4</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.cxf</groupId>
 				<artifactId>cxf-rt-frontend-jaxws</artifactId>
-				<version>3.5.2</version>
+				<version>3.6.4</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.cxf</groupId>
 				<artifactId>cxf-rt-frontend-simple</artifactId>
-				<version>3.5.2</version>
+				<version>3.6.4</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.cxf</groupId>
 				<artifactId>cxf-rt-wsdl</artifactId>
-				<version>3.5.2</version>
+				<version>3.6.4</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.cxf</groupId>
 				<artifactId>cxf-rt-databinding-jaxb</artifactId>
-				<version>3.5.2</version>
+				<version>3.6.4</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.cxf</groupId>
 				<artifactId>cxf-rt-transports-http</artifactId>
-				<version>3.5.2</version>
+				<version>3.6.4</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.cxf</groupId>
 				<artifactId>cxf-rt-bindings-soap</artifactId>
-				<version>3.5.2</version>
+				<version>3.6.4</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.cxf</groupId>
 				<artifactId>cxf-rt-bindings-xml</artifactId>
-				<version>3.5.2</version>
+				<version>3.6.4</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.cxf</groupId>
 				<artifactId>cxf-rt-ws-addr</artifactId>
-				<version>3.5.2</version>
+				<version>3.6.4</version>
 			</dependency>
 			<dependency>
 				<groupId>com.fasterxml.woodstox</groupId>
@@ -876,17 +918,17 @@
 			<dependency>
 				<groupId>org.apache.lucene</groupId>
 				<artifactId>lucene-queryparser</artifactId>
-				<version>9.4.1</version>
+				<version>9.4.2</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.lucene</groupId>
 				<artifactId>lucene-highlighter</artifactId>
-				<version>9.4.1</version>
+				<version>9.4.2</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.lucene</groupId>
 				<artifactId>lucene-grouping</artifactId>
-				<version>9.4.1</version>
+				<version>9.4.2</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.lucene</groupId>
@@ -895,14 +937,13 @@
 			</dependency>
 			<dependency>
 				<groupId>org.apache.solr</groupId>
-				<artifactId>solr-core</artifactId>
-				<version>8.11.2</version>
-				<exclusions>
-					<exclusion>
-						<groupId>*</groupId>
-						<artifactId>*</artifactId>
-					</exclusion>
-				</exclusions>
+				<artifactId>solr-hdfs</artifactId>
+				<version>9.2.1</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.solr</groupId>
+				<artifactId>solr-solrj</artifactId>
+				<version>9.2.1</version>
 			</dependency>
 			<dependency>
 				<groupId>de.vandermeer</groupId>
@@ -1017,117 +1058,127 @@
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_base_core_project</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_attendance_core_entity</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_bbs_core_entity</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_calendar_core_entity</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_cms_core_entity</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_cms_core_express</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_component_core_entity</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_file_core_entity</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_general_core_entity</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_hotpic_core_entity</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_meeting_core_entity</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_message_core_entity</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_mind_core_entity</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_organization_core_entity</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_jpush_core_entity</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_organization_core_express</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_portal_core_entity</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_processplatform_core_entity</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_processplatform_core_express</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_query_core_entity</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
+			</dependency>
+			<dependency>
+				<groupId>net.o2oa</groupId>
+				<artifactId>x_correlation_core_entity</artifactId>
+				<version>9.1</version>
+			</dependency>
+			<dependency>
+				<groupId>net.o2oa</groupId>
+				<artifactId>x_correlation_core_express</artifactId>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_query_core_express</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_program_center</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.o2oa</groupId>
 				<artifactId>x_program_center_core_entity</artifactId>
-				<version>8.0</version>
+				<version>9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.lingala.zip4j</groupId>
@@ -1157,7 +1208,7 @@
 			<dependency>
 				<groupId>org.apache.hadoop</groupId>
 				<artifactId>hadoop-client</artifactId>
-				<version>3.3.4</version>
+				<version>3.3.5</version>
 			</dependency>
 			<dependency>
 				<groupId>com.sun.mail</groupId>
@@ -1205,6 +1256,41 @@
 				<artifactId>SparseBitSet</artifactId>
 				<version>1.2</version>
 			</dependency>
+			<dependency>
+				<groupId>org.junit.jupiter</groupId>
+				<artifactId>junit-jupiter-api</artifactId>
+				<version>5.10.0</version>
+			</dependency>
+			<dependency>
+				<groupId>org.junit.jupiter</groupId>
+				<artifactId>junit-jupiter-engine</artifactId>
+				<version>5.10.0</version>
+			</dependency>
+			<dependency>
+				<groupId>org.graalvm.sdk</groupId>
+				<artifactId>graal-sdk</artifactId>
+				<version>${graalvm.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.graalvm.js</groupId>
+				<artifactId>js</artifactId>
+				<version>${graalvm.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.graalvm.js</groupId>
+				<artifactId>js-scriptengine</artifactId>
+				<version>${graalvm.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.graalvm.tools</groupId>
+				<artifactId>profiler</artifactId>
+				<version>${graalvm.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.graalvm.tools</groupId>
+				<artifactId>chromeinspector</artifactId>
+				<version>${graalvm.version}</version>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 	<!--	中心仓库发布地址-->
@@ -1234,7 +1320,7 @@
 	<distributionManagement>
 		<repository>
 			<id>o2oa-release</id>
-			<url>http://maven.o2oa.net/repository/o2oa-release/</url>
+			<url>https://maven.o2oa.net/repository/o2oa-release/</url>
 		</repository>
 	</distributionManagement>
 </project>

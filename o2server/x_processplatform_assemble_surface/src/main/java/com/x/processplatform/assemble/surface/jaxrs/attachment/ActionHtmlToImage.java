@@ -32,8 +32,9 @@ import com.x.base.core.project.tools.DateTools;
 import com.x.base.core.project.tools.FileTools;
 import com.x.general.core.entity.GeneralFile;
 import com.x.processplatform.assemble.surface.Business;
+import com.x.processplatform.assemble.surface.Control;
 import com.x.processplatform.assemble.surface.ThisApplication;
-import com.x.processplatform.assemble.surface.WorkControl;
+import com.x.processplatform.assemble.surface.WorkControlBuilder;
 import com.x.processplatform.core.entity.content.Attachment;
 import com.x.processplatform.core.entity.content.Work;
 import com.x.processplatform.core.express.assemble.surface.jaxrs.attachment.ActionHtmlToImageWi;
@@ -70,7 +71,7 @@ class ActionHtmlToImage extends BaseAction {
 			if (null == work) {
 				throw new ExceptionEntityNotExist(wi.getWorkId(), Work.class);
 			}
-			Control control = business.getControl(effectivePerson, work, Control.class);
+			Control control = new WorkControlBuilder(effectivePerson, business, work).enableAllowSave().build();
 			if (BooleanUtils.isNotTrue(control.getAllowSave())) {
 				throw new ExceptionAccessDenied(effectivePerson, work);
 			}
@@ -98,7 +99,7 @@ class ActionHtmlToImage extends BaseAction {
 		if (work != null) {
 			StorageMapping mapping = ThisApplication.context().storageMappings().random(Attachment.class);
 			Attachment attachment = this.concreteAttachment(work, effectivePerson, wi.getSite());
-			attachment.saveContent(mapping, bytes, name);
+			attachment.saveContent(mapping, bytes, name, Config.general().getStorageEncrypt());
 			attachment.setType((new Tika()).detect(bytes, name));
 			emc.beginTransaction(Attachment.class);
 			emc.persist(attachment, CheckPersistType.all);
@@ -109,7 +110,7 @@ class ActionHtmlToImage extends BaseAction {
 			StorageMapping gfMapping = ThisApplication.context().storageMappings().random(GeneralFile.class);
 			GeneralFile generalFile = new GeneralFile(gfMapping.getName(), name,
 					effectivePerson.getDistinguishedName());
-			generalFile.saveContent(gfMapping, bytes, name);
+			generalFile.saveContent(gfMapping, bytes, name, Config.general().getStorageEncrypt());
 			emc.beginTransaction(GeneralFile.class);
 			emc.persist(generalFile, CheckPersistType.all);
 			emc.commit();
@@ -179,12 +180,6 @@ class ActionHtmlToImage extends BaseAction {
 	public static class Wi extends ActionHtmlToImageWi {
 
 		private static final long serialVersionUID = -4349899902435225796L;
-
-	}
-
-	public static class Control extends WorkControl {
-
-		private static final long serialVersionUID = -2434594947861029787L;
 
 	}
 

@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -19,6 +20,8 @@ import org.apache.commons.lang3.StringUtils;
 import com.google.gson.reflect.TypeToken;
 import com.x.base.core.project.bean.NameValuePair;
 import com.x.base.core.project.config.Config;
+import com.x.base.core.project.exception.ExceptionNotSupportProtocol;
+import com.x.base.core.project.exception.ExceptionUnlawfulAddress;
 import com.x.base.core.project.gson.XGsonBuilder;
 import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
@@ -34,6 +37,8 @@ public class HttpConnection {
 
 	public static final int DEFAULT_CONNECTTIMEOUT = 2000;
 	public static final int DEFAULT_READTIMEOUT = 5 * 60 * 1000;
+	public static final String HTTP_PROTOCOL = "http";
+	public static final String HTTPS_PROTOCOL = "https";
 
 	public static HttpConnectionResponse get(String address, List<NameValuePair> heads, int connectTimeout,
 			int readTimeout, Supplier<HttpConnectionResponse> supplier) {
@@ -62,15 +67,24 @@ public class HttpConnection {
 
 	public static String getAsString(String address, List<NameValuePair> heads, int connectTimeout, int readTimeout)
 			throws Exception {
-		HttpURLConnection connection = prepare(address, heads);
-		connection.setRequestMethod(ConnectionAction.METHOD_GET);
-		connection.setDoOutput(false);
-		connection.setDoInput(true);
-		connection.setConnectTimeout(connectTimeout);
-		connection.setReadTimeout(readTimeout);
-		String str = readResultString(connection);
-		connection.disconnect();
-		return str;
+		checkAddress(address);
+		HttpURLConnection connection = null;
+		try {
+			connection = prepare(address, heads);
+			connection.setRequestMethod(ConnectionAction.METHOD_GET);
+			connection.setDoOutput(false);
+			connection.setDoInput(true);
+			connection.setConnectTimeout(connectTimeout);
+			connection.setReadTimeout(readTimeout);
+			return readResultString(connection);
+		} catch (Exception e) {
+			LOGGER.error(e);
+		} finally {
+			if (null != connection) {
+				connection.disconnect();
+			}
+		}
+		return null;
 	}
 
 	public static <T> T getAsObject(String address, List<NameValuePair> heads, Class<T> cls) throws Exception {
@@ -114,17 +128,26 @@ public class HttpConnection {
 
 	public static String postAsString(String address, List<NameValuePair> heads, String body, int connectTimeout,
 			int readTimeout) throws Exception {
-		HttpURLConnection connection = prepare(address, heads);
-		connection.setRequestMethod(ConnectionAction.METHOD_POST);
-		connection.setDoOutput(true);
-		connection.setDoInput(true);
-		connection.setConnectTimeout(connectTimeout);
-		connection.setReadTimeout(readTimeout);
-		connection.connect();
-		doOutput(connection, body);
-		String str = readResultString(connection);
-		connection.disconnect();
-		return str;
+		checkAddress(address);
+		HttpURLConnection connection = null;
+		try {
+			connection = prepare(address, heads);
+			connection.setRequestMethod(ConnectionAction.METHOD_POST);
+			connection.setDoOutput(true);
+			connection.setDoInput(true);
+			connection.setConnectTimeout(connectTimeout);
+			connection.setReadTimeout(readTimeout);
+			connection.connect();
+			doOutput(connection, body);
+			return readResultString(connection);
+		} catch (Exception e) {
+			LOGGER.error(e);
+		} finally {
+			if (null != connection) {
+				connection.disconnect();
+			}
+		}
+		return null;
 	}
 
 	public static <T> T postAsObject(String address, List<NameValuePair> heads, String body, Class<T> cls)
@@ -170,17 +193,26 @@ public class HttpConnection {
 
 	public static String putAsString(String address, List<NameValuePair> heads, String body, int connectTimeout,
 			int readTimeout) throws Exception {
-		HttpURLConnection connection = prepare(address, heads);
-		connection.setRequestMethod(ConnectionAction.METHOD_PUT);
-		connection.setDoOutput(true);
-		connection.setDoInput(true);
-		connection.setConnectTimeout(connectTimeout);
-		connection.setReadTimeout(readTimeout);
-		connection.connect();
-		doOutput(connection, body);
-		String str = readResultString(connection);
-		connection.disconnect();
-		return str;
+		checkAddress(address);
+		HttpURLConnection connection = null;
+		try {
+			connection = prepare(address, heads);
+			connection.setRequestMethod(ConnectionAction.METHOD_PUT);
+			connection.setDoOutput(true);
+			connection.setDoInput(true);
+			connection.setConnectTimeout(connectTimeout);
+			connection.setReadTimeout(readTimeout);
+			connection.connect();
+			doOutput(connection, body);
+			return readResultString(connection);
+		} catch (Exception e) {
+			LOGGER.error(e);
+		} finally {
+			if (null != connection) {
+				connection.disconnect();
+			}
+		}
+		return null;
 	}
 
 	public static <T> T putAsObject(String address, List<NameValuePair> heads, String body, Class<T> cls)
@@ -224,15 +256,25 @@ public class HttpConnection {
 
 	public static String deleteAsString(String address, List<NameValuePair> heads, int connectTimeout, int readTimeout)
 			throws Exception {
-		HttpURLConnection connection = prepare(address, heads);
-		connection.setRequestMethod(ConnectionAction.METHOD_DELETE);
-		connection.setDoOutput(false);
-		connection.setDoInput(true);
-		connection.setConnectTimeout(connectTimeout);
-		connection.setReadTimeout(readTimeout);
-		String str = readResultString(connection);
-		connection.disconnect();
-		return str;
+		checkAddress(address);
+		HttpURLConnection connection = null;
+		try {
+			connection = prepare(address, heads);
+
+			connection.setRequestMethod(ConnectionAction.METHOD_DELETE);
+			connection.setDoOutput(false);
+			connection.setDoInput(true);
+			connection.setConnectTimeout(connectTimeout);
+			connection.setReadTimeout(readTimeout);
+			return readResultString(connection);
+		} catch (Exception e) {
+			LOGGER.error(e);
+		} finally {
+			if (null != connection) {
+				connection.disconnect();
+			}
+		}
+		return null;
 	}
 
 	public static <T> T deleteAsObject(String address, List<NameValuePair> heads, Class<T> cls) throws Exception {
@@ -259,7 +301,7 @@ public class HttpConnection {
 			map.put(ConnectionAction.ACCESS_CONTROL_ALLOW_HEADERS,
 					ConnectionAction.ACCESS_CONTROL_ALLOW_HEADERS_VALUE + ", " + Config.person().getTokenName());
 		} catch (Exception e) {
-			if(LOGGER.isDebugEnabled()) {
+			if (LOGGER.isDebugEnabled()) {
 				LOGGER.debug(e.getMessage());
 			}
 		}
@@ -279,11 +321,15 @@ public class HttpConnection {
 
 	public static String readResultString(HttpURLConnection connection) throws Exception {
 		String result = "";
-		try (InputStream input = connection.getInputStream()) {
-			result = IOUtils.toString(input, StandardCharsets.UTF_8);
-		}
 		int code = connection.getResponseCode();
-		if (code != 200) {
+		if (code == HttpURLConnection.HTTP_OK) {
+			try (InputStream input = connection.getInputStream()) {
+				result = IOUtils.toString(input, StandardCharsets.UTF_8);
+			}
+		} else {
+			try (InputStream input = connection.getErrorStream()) {
+				result = IOUtils.toString(input, StandardCharsets.UTF_8);
+			}
 			throw new IllegalStateException("connection{url:" + connection.getURL() + "}, response error{responseCode:"
 					+ code + "}, response:" + result + ".");
 		}
@@ -296,6 +342,27 @@ public class HttpConnection {
 				IOUtils.write(body, output, StandardCharsets.UTF_8);
 				output.flush();
 			}
+		}
+	}
+
+	public static void checkAddress(String address) throws Exception {
+		final String addressLower = address.toLowerCase();
+		if (addressLower.startsWith(HTTP_PROTOCOL) || addressLower.startsWith(HTTPS_PROTOCOL)) {
+			List<String> httpWhiteList = null;
+			try {
+				httpWhiteList = Config.general().getHttpWhiteList();
+			} catch (Exception e) {
+				LOGGER.debug(e.getMessage());
+			}
+			if (ListTools.isNotEmpty(httpWhiteList)) {
+				Optional<String> optional = httpWhiteList.stream().filter(o -> addressLower.indexOf("://" + o) > -1)
+						.findFirst();
+				if (!optional.isPresent()) {
+					throw new ExceptionUnlawfulAddress(address);
+				}
+			}
+		} else {
+			throw new ExceptionNotSupportProtocol(address);
 		}
 	}
 

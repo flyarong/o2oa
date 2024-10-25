@@ -9,45 +9,51 @@
 		"display": "inline-block"
 	},
 	"personfieldIcon": {
-		"background": "url("+"../x_component_process_Xform/$Form/default/icon/selectperson.png) center center no-repeat",
+		"background": "url(../x_component_process_Xform/$Form/default/icon/selectperson.png) center center no-repeat",
 		"width": "18px",
 		"height": "18px",
 		"float": "right",
 		"cursor": "pointer" 
 	},
 	"orgfieldIcon": {
-        "background": "url("+"../x_component_process_Xform/$Form/default/icon/selectorg.png) center center no-repeat",
+        "background": "url(../x_component_process_Xform/$Form/default/icon/selectorg.png) center center no-repeat",
         "width": "18px",
         "height": "18px",
         "float": "right"
     },
     "orgIcon": {
-        "background": "url("+"../x_component_process_Xform/$Form/default/icon/selectperson.png) center center no-repeat",
+        "background": "url(../x_component_process_Xform/$Form/default/icon/selectperson.png) center center no-repeat",
         "width": "18px",
         "height": "18px",
         "float": "right"
     },
 	"textFieldIcon": {
-	    "background": "url("+"../x_component_process_Xform/$Form/default/icon/inputtext.png) center center no-repeat",
+	    "background": "url(../x_component_process_Xform/$Form/default/icon/inputtext.png) center center no-repeat",
         "width": "18px",
         "height": "18px",
         "float": "right"
 	},
 	"numberIcon": {
-	    "background": "url("+"../x_component_process_Xform/$Form/default/icon/number.png) center center no-repeat",
+	    "background": "url(../x_component_process_Xform/$Form/default/icon/number.png) center center no-repeat",
         "width": "18px",
         "height": "18px",
         "float": "right"
 	},
+    "currencyIcon": {
+      "background": "url(../x_component_process_Xform/$Form/default/icon/currency.png) center center no-repeat",
+      "width": "18px",
+      "height": "18px",
+      "float": "right"
+    },
 	"calendarIcon": {
-		"background": "url("+"../x_component_process_Xform/$Form/default/icon/calendar.png) center center no-repeat",
+		"background": "url(../x_component_process_Xform/$Form/default/icon/calendar.png) center center no-repeat",
 		"width": "18px",
 		"height": "18px",
 		"float": "right",
 		"cursor": "pointer" 
 	},
 	"selectIcon": {
-		"background": "url("+"../x_component_process_Xform/$Form/default/icon/pull.png) center center no-repeat",
+		"background": "url(../x_component_process_Xform/$Form/default/icon/pull.png) center center no-repeat",
 		"width": "18px",
 		"height": "18px",
 		"float": "right",
@@ -94,28 +100,28 @@
 	"addLineAction": {
 		"width": "20px",
 		"height": "20px",
-		"background": "url("+"../x_component_process_Xform/$Form/default/icon/addline.png) center center no-repeat",
+		"background": "url(../x_component_process_Xform/$Form/default/icon/addline.png) center center no-repeat",
 		"cursor": "pointer",
 		"float": "left"
 	},
 	"delLineAction": {
 		"width": "20px",
 		"height": "20px",
-		"background": "url("+"../x_component_process_Xform/$Form/default/icon/delline.png) center center no-repeat",
+		"background": "url(../x_component_process_Xform/$Form/default/icon/delline.png) center center no-repeat",
 		"cursor": "pointer",
 		"float": "left"
 	},
 	"completeLineAction": {
 		"width": "20px",
 		"height": "20px",
-		"background": "url("+"../x_component_process_Xform/$Form/default/icon/check.png) center center no-repeat",
+		"background": "url(../x_component_process_Xform/$Form/default/icon/check.png) center center no-repeat",
 		"cursor": "pointer",
 		"float": "left"
 	},
 	"moveLineAction": {
 		"width": "5px",
 		"height": "20px",
-		"background": "url("+"../x_component_process_Xform/$Form/default/icon/move.png) center center no-repeat",
+		"background": "url(../x_component_process_Xform/$Form/default/icon/move.png) center center no-repeat",
 		"cursor": "move",
 		"float": "left"
 	},
@@ -286,11 +292,10 @@
         "background-position": "center center",
         "margin-left": "10px",
         "background-repeat": "no-repeat",
-        "float": "left",
-        "cursor": "pointer"
+        "float": "left",        "cursor": "pointer"
     },
     "logMediaOpinionContent": {
-        //"position": "absolute",
+        "position": "relative",
         "background": "#ffffff",
         "border": "1px solid #cccccc",
         //"border-radius": "6px",
@@ -300,8 +305,11 @@
     "logMediaOpinionContentClose": {
         "height": "20px",
         "width": "20px",
-        "float": "right",
-        "background": "url("+"../x_component_process_Xform/$Form/default/icon/close.png) center center no-repeat",
+        "position": "absolute",
+        "top": "0px",
+        "right": "0px",
+        //"float": "right",
+        "background": "url(../x_component_process_Xform/$Form/default/icon/close.png) center center no-repeat",
         "cursor": "pointer"
     },
     "logMediaOpinionContentArea": {
@@ -520,7 +528,7 @@
     "mobileGridHelpNode": {
         "width": "30px",
         "height": "30px",
-        "background": "url("+"../x_component_process_Xform/$Form/default/icon/help.png) center center no-repeat",
+        "background": "url(../x_component_process_Xform/$Form/default/icon/help.png) center center no-repeat",
         "cursor": "pointer"
     },
     "mobileDatagridActionNode": {
@@ -540,7 +548,7 @@
         "padding-right": "5px",
         "border": "1px solid #CCCCCC",
         "border-radius": "3px",
-        "background": "url("+"../x_component_process_Xform/$Form/default/icon/del.png) 5px center no-repeat",
+        "background": "url(../x_component_process_Xform/$Form/default/icon/del.png) 5px center no-repeat",
         "float": "right",
         "cursor": "pointer"
     },
@@ -555,7 +563,7 @@
         "padding-right": "5px",
         "border": "1px solid #CCCCCC",
         "border-radius": "3px",
-        "background": "url("+"../x_component_process_Xform/$Form/default/icon/edit.png) 5px center no-repeat",
+        "background": "url(../x_component_process_Xform/$Form/default/icon/edit.png) 5px center no-repeat",
         "float": "right",
         "cursor": "pointer"
     },
@@ -570,7 +578,7 @@
         "padding-right": "5px",
         "border": "1px solid #CCCCCC",
         "border-radius": "3px",
-        "background": "url("+"../x_component_process_Xform/$Form/default/icon/add.png) 5px center no-repeat",
+        "background": "url(../x_component_process_Xform/$Form/default/icon/add.png) 5px center no-repeat",
         "float": "right",
         "cursor": "pointer"
     },
@@ -585,7 +593,7 @@
       "padding-right": "5px",
       "border": "1px solid #CCCCCC",
       "border-radius": "3px",
-      "background": "url("+"../x_component_process_Xform/$Form/default/icon/del.png) 5px center no-repeat",
+      "background": "url(../x_component_process_Xform/$Form/default/icon/del.png) 5px center no-repeat",
       "float": "right",
       "cursor": "pointer",
       "display": "none"
@@ -601,7 +609,7 @@
         "padding-right": "5px",
         "border": "1px solid #CCCCCC",
         "border-radius": "3px",
-        "background": "url("+"../x_component_process_Xform/$Form/default/icon/completed.png) 5px center no-repeat",
+        "background": "url(../x_component_process_Xform/$Form/default/icon/completed.png) 5px center no-repeat",
         "float": "right",
         "cursor": "pointer",
         "display": "none"
@@ -680,7 +688,7 @@
         "padding-right": "5px",
         "margin-left": "5px",
         "cursor": "pointer",
-        "background": "url("+"../x_component_process_Work/$Processor/default/write.png) no-repeat 5px center"
+        "background": "url(../x_component_process_Work/$Processor/default/write.png) no-repeat 5px center"
     },
     "handwritingNode": {
         "position": "absolute",
@@ -712,7 +720,7 @@
         "padding-right": "5px",
         "margin-left": "5px",
         "cursor": "pointer",
-        "background": "url("+"../x_component_process_Work/$Processor/default/audioRecord.png) no-repeat 5px center"
+        "background": "url(../x_component_process_Work/$Processor/default/audioRecord.png) no-repeat 5px center"
     },
   "selectIdeaNode": {
     "height": "130px",
@@ -735,7 +743,7 @@
     "background-color": "#FFF",
     "margin-top": "2px",
     "padding": "2px 2px 2px 12px",
-    "background": "url("+"../x_component_process_Work/$Processor/process/point.png) no-repeat 3px center",
+    "background": "url(../x_component_process_Work/$Processor/process/point.png) no-repeat 3px center",
     "overflow": "hidden"
   },
   "selectIdeaItemNode_over": {
@@ -948,10 +956,10 @@
         "width": "30px",
         "float": "right",
         "overflow": "hidden",
-        "background": "url("+"../x_component_process_Xform/$Form/default/icon/rollback_uncheck.png) no-repeat center center"
+        "background": "url(../x_component_process_Xform/$Form/default/icon/rollback_uncheck.png) no-repeat center center"
     },
     "rollbackItemIconNode_current": {
-        "background": "url("+"../x_component_process_Xform/$Form/default/icon/rollback_check.png) no-repeat center center"
+        "background": "url(../x_component_process_Xform/$Form/default/icon/rollback_check.png) no-repeat center center"
     },
     "rollbackItemContentNode": {
         "margin-right": "30px",
@@ -982,10 +990,10 @@
         "width": "30px",
         "float": "right",
         "overflow": "hidden",
-        "background": "url("+"../x_component_process_Xform/$Form/default/icon/rollback_uncheck.png) no-repeat center center"
+        "background": "url(../x_component_process_Xform/$Form/default/icon/rollback_uncheck.png) no-repeat center center"
     },
     "rollbackItemIconNode_current": {
-        "background": "url("+"../x_component_process_Xform/$Form/default/icon/rollback_check.png) no-repeat center center"
+        "background": "url(../x_component_process_Xform/$Form/default/icon/rollback_check.png) no-repeat center center"
     },
     "rollbackItemContentNode": {
         "margin-right": "30px",
@@ -1066,10 +1074,10 @@
         "width": "50px",
         "float": "right",
         "overflow": "hidden",
-        "background": "url("+"../x_component_process_Xform/$Form/default/icon/open.png) no-repeat center center"
+        "background": "url(../x_component_process_Xform/$Form/default/icon/open.png) no-repeat center center"
     },
     "officeRecoverItemActionNode_current": {
-        "background": "url("+"../x_component_process_Xform/$Form/default/icon/open_current.png) no-repeat center center"
+        "background": "url(../x_component_process_Xform/$Form/default/icon/open_current.png) no-repeat center center"
     },
     "officeRecoverItemTitleNode": {
         "margin-right": "50px",
@@ -1152,7 +1160,7 @@
         "height": "100%",
         "float": "left",
         "font-size": "16px",
-        "color": "#fb4747",
+        "color": "transparent",
         "text-align": "center",
         "background": "#ffffff",
         "line-height": "50px"
@@ -1312,5 +1320,107 @@
      "el-container-footer": {
          "background-color": "#B3C0D1",
          "height": "60px"
-      }
+     },
+     "goBack_activityArea": {
+
+     },
+     "goBack_activity_mobile": {
+         "padding": "6px 0",
+         "overflow": "hidden",
+         "display": "flex",
+         "width": "97%",
+         "justify-content": "space-between",
+         "cursor": "pointer",
+         "border-bottom": "1px solid #cccccc",
+         "border-radius": "10px"
+       },
+  "goBack_activity": {
+    "padding": "6px 0",
+    "overflow": "hidden",
+    "height": "48px",
+    "display": "flex",
+    "width": "97%",
+    "justify-content": "space-between",
+    "cursor": "pointer",
+    "border-bottom": "1px solid #cccccc",
+    "border-radius": "10px"
+  },
+  "goBack_activity_content": {
+    "overflow": "hidden",
+    "width": "calc(100% - 40px)",
+    "display": "flex",
+    "align-items": "flex-start",
+    "justify-content": "center",
+    "flex-direction": "column"
+  },
+  "goBack_activity_way": {
+    "width": "140px",
+    "color": "#666666",
+    "font-size": "12px",
+    "display": "flex",
+    "align-items": "center",
+    "justify-content": "center",
+    "padding-right": "20px"
+  },
+  "goBack_activity_way_mobile": {
+    "color": "#666666",
+    "font-size": "12px"
+  },
+  "goBack_activity_check": {
+    "width": "40px",
+    "display": "flex",
+    "align-items": "center",
+    "justify-content": "center"
+  },
+  "goBack_activity_name": {
+    "color": "#000000",
+    "font-size": "14px"
+  },
+  "goBack_activity_info": {
+    "color": "#999999",
+    "font-size": "12px"
+  },
+  "associatedDocumentItem":{
+    "overflow": "hidden",
+    "cursor": "pointer",
+    "line-height": "30px",
+    "min-height": "30px",
+    "background": "#fff"
+  },
+  "associatedDocumentItem_over":{
+    "background": "#eaf0f5"
+},
+  "associatedDocumentCmsIcon":{
+    "margin-top": "3px",
+    "margin-left": "4px",
+    "width": "21px",
+    "height": "24px",
+    "background": "url(../x_component_process_Xform/$Form/default/icon/doc_cms.png) no-repeat center center",
+    "background-size": "21px 24px",
+    "float": "left"
+  },
+  "associatedDocumentWorkIcon":{
+    "margin-top": "3px",
+    "margin-left": "4px",
+    "width": "21px",
+    "height": "24px",
+    "background": "url(../x_component_process_Xform/$Form/default/icon/doc_work.png) no-repeat center center",
+    "background-size": "21px 24px",
+    "float": "left"
+  },
+  "associatedDocumentText": {
+    "margin-left": "32px",
+    "margin-right": "30px"
+  },
+  "associatedDocumentDelete": {
+    "margin-top": "7px",
+    "margin-left": "5px",
+    "width": "16px",
+    "height": "16px",
+    "margin-right": "5px",
+    "background": "url(../x_component_process_Xform/$Form/default/icon/delete1.png) no-repeat center center",
+    "background-size": "16px 16px",
+    "float": "right"
+  }
+
 }

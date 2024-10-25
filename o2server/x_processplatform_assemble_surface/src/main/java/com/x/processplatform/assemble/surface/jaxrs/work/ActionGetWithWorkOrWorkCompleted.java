@@ -58,7 +58,8 @@ class ActionGetWithWorkOrWorkCompleted extends BaseAction {
 			}
 		}
 
-		CompletableFuture<Boolean> checkControlFuture = this.checkControlFuture(effectivePerson, workOrWorkCompleted);
+		CompletableFuture<Boolean> checkControlFuture = this.checkControlVisitFuture(effectivePerson,
+				workOrWorkCompleted);
 
 		if (null != work) {
 			CompletableFuture<Data> dataFuture = this.dataFuture(work);
@@ -114,13 +115,13 @@ class ActionGetWithWorkOrWorkCompleted extends BaseAction {
 				LOGGER.error(e);
 			}
 			return null;
-		}, ThisApplication.threadPool());
+		}, ThisApplication.forkJoinPool());
 	}
 
 	private CompletableFuture<Data> dataFuture(WorkCompleted workCompleted) {
 		return CompletableFuture.supplyAsync(() -> {
 			if (BooleanUtils.isTrue(workCompleted.getMerged())) {
-				return workCompleted.getProperties().getData();
+				return workCompleted.getData();
 			} else {
 				try (EntityManagerContainer emc = EntityManagerContainerFactory.instance().create()) {
 					Business business = new Business(emc);
@@ -147,7 +148,7 @@ class ActionGetWithWorkOrWorkCompleted extends BaseAction {
 				}
 			}
 			return null;
-		}, ThisApplication.threadPool());
+		}, ThisApplication.forkJoinPool());
 	}
 
 	private CompletableFuture<List<WoTask>> taskFuture(String job) {
@@ -159,7 +160,7 @@ class ActionGetWithWorkOrWorkCompleted extends BaseAction {
 				LOGGER.error(e);
 			}
 			return list;
-		}, ThisApplication.threadPool());
+		}, ThisApplication.forkJoinPool());
 	}
 
 	private CompletableFuture<List<WoRead>> readFuture(String job) {
@@ -171,7 +172,7 @@ class ActionGetWithWorkOrWorkCompleted extends BaseAction {
 				LOGGER.error(e);
 			}
 			return list;
-		}, ThisApplication.threadPool());
+		}, ThisApplication.forkJoinPool());
 	}
 
 	private void setCurrentTaskIndex(EffectivePerson effectivePerson, Wo wo) {

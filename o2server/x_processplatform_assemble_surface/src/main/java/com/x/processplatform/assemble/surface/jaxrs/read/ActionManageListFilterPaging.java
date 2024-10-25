@@ -27,7 +27,7 @@ import com.x.base.core.project.tools.ListTools;
 import com.x.processplatform.assemble.surface.Business;
 import com.x.processplatform.core.entity.content.Read;
 import com.x.processplatform.core.entity.content.Read_;
-import com.x.processplatform.core.express.service.processing.jaxrs.read.ActionManageListFilterPagingWi;
+import com.x.processplatform.core.express.assemble.surface.jaxrs.read.ActionManageListFilterPagingWi;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -43,7 +43,7 @@ class ActionManageListFilterPaging extends BaseAction {
 		try (EntityManagerContainer emc = EntityManagerContainerFactory.instance().create()) {
 			Business business = new Business(emc);
 			ActionResult<List<Wo>> result = new ActionResult<>();
-			if (business.canManageApplication(effectivePerson, null)) {
+			if (business.ifPersonCanManageApplicationOrProcess(effectivePerson, "", "")) {
 				Wi wi = this.convertToWrapIn(jsonElement, Wi.class);
 				Predicate p = this.toFilterPredicate(effectivePerson, business, wi);
 				List<Wo> wos = emc.fetchDescPaging(Read.class, Wo.copier, p, page, size, Read.startTime_FIELDNAME);

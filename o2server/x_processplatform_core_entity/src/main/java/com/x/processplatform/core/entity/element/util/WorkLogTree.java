@@ -20,7 +20,7 @@ public class WorkLogTree {
 	private Node root;
 
 	public static final List<String> RELY_WORKLOG_ITEMS = ListUtils.unmodifiableList(ListTools.toList(
-			WorkLog.FROMACTIVITYTOKEN_FIELDNAME, WorkLog.ARRIVEDACTIVITYTOKEN_FIELDNAME,
+			WorkLog.SPLITTOKEN_FIELDNAME, WorkLog.FROMACTIVITYTOKEN_FIELDNAME, WorkLog.ARRIVEDACTIVITYTOKEN_FIELDNAME,
 			WorkLog.FROMACTIVITYTYPE_FIELDNAME, WorkLog.ARRIVEDACTIVITYTYPE_FIELDNAME,
 			WorkLog.FROMACTIVITYNAME_FIELDNAME, WorkLog.ARRIVEDACTIVITYNAME_FIELDNAME, WorkLog.CONNECTED_FIELDNAME));
 
@@ -197,6 +197,12 @@ public class WorkLogTree {
 		return os;
 	}
 
+	/**
+	 * 不包含当前节点
+	 * 
+	 * @param node
+	 * @return
+	 */
 	public Nodes down(Node node) {
 		Nodes ns = new Nodes();
 		for (Node o : node.children) {
@@ -236,6 +242,12 @@ public class WorkLogTree {
 		return nodes;
 	}
 
+	/**
+	 * 包含当前节点
+	 * 
+	 * @param n
+	 * @return
+	 */
 	public Nodes rootTo(Node n) {
 		Nodes os = new Nodes();
 		Nodes loop = new Nodes();

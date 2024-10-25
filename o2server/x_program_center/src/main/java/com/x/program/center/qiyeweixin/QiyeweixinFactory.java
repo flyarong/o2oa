@@ -1,7 +1,13 @@
 package com.x.program.center.qiyeweixin;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.StringUtils;
 
 import com.x.base.core.project.config.Config;
 import com.x.base.core.project.connection.HttpConnection;
@@ -9,7 +15,6 @@ import com.x.base.core.project.gson.GsonPropertyObject;
 import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
 import com.x.base.core.project.tools.ListTools;
-import org.apache.commons.lang3.StringUtils;
 
 public class QiyeweixinFactory {
 
@@ -30,8 +35,8 @@ public class QiyeweixinFactory {
 		users = ListTools.trim(users, true, true);
 	}
 
-	public List<Department> getOrgs(){
-		return this.orgs;
+	public List<User> getUsers() {
+		return this.users;
 	}
 
 	// 2023-03-14 新的api根据应用的权限来同步组织，组织不一定是根节点，根节点id==1的判断已经失效

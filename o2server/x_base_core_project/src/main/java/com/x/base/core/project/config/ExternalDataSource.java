@@ -12,7 +12,9 @@ import com.x.base.core.project.tools.Crypto;
 
 public class ExternalDataSource extends ConfigObject {
 
-    // 无需保存
+    private static final long serialVersionUID = -2098883883740436217L;
+
+	// 无需保存
     private transient String _password;
 
     public ExternalDataSource() {
@@ -61,8 +63,9 @@ public class ExternalDataSource extends ConfigObject {
     public static final Integer DEFAULT_MAXIDLETIME = 300;
 
     public static final Boolean DEFAULT_AUTOCOMMIT = false;
-
-    public static final String DEFAULT_SCHEMA = "X";
+    // 20240428修改为空值,取消默认的SCHEMA这样可以手工适陪各种postgres变种版本.
+    // public static final String DEFAULT_SCHEMA = "X";
+    public static final String DEFAULT_SCHEMA = "";
 
     public static ExternalDataSource defaultInstance() {
 
@@ -204,7 +207,7 @@ public class ExternalDataSource extends ConfigObject {
         if ((this.maxIdle == null) || (this.maxIdle < 1)) {
             return DEFAULT_MAXIDLE;
         } else {
-            return this.maxTotal;
+            return this.maxIdle;
         }
     }
 

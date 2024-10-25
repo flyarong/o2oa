@@ -880,6 +880,14 @@
 		"line-height": "24px",
 		"border-bottom": "1px dashed #CCC"
 	},
+	"editTableTitle80": {
+		"width": "80px",
+		"font-weight": "bold",
+		"font-size": "12px",
+		"height": "24px",
+		"line-height": "24px",
+		"border-bottom": "1px dashed #CCC"
+	},
 	"editTableHeadTitle": {
         "color": "#bf6364",
         "font-weight": "bold",
@@ -926,13 +934,20 @@
 		"text-decoration": "underline",
 		"color": "#0000FF"
 	},
-    propertyRefreshFormNode: {
+    "propertyRefreshFormNode": {
         "width": "24px",
         "height": "24px",
         "float": "right",
-        "background": "url("+"../x_component_process_ProcessDesigner/$Process/flat/icon/refresh.png) no-repeat center center",
+        "background": "url(../x_component_process_ProcessDesigner/$Process/flat/icon/refresh.png) no-repeat center center",
         "cursor": "pointer"
     },
+	"propertyOpenFormNode": {
+		"width": "24px",
+		"height": "24px",
+		"float": "right",
+		"background": "url(../x_component_process_ProcessDesigner/$Process/flat/icon/form.png) no-repeat center center",
+		"cursor": "pointer"
+	},
     "applicationSelectTitle": {
         "height": "30px",
         "line-height": "30px",
@@ -990,5 +1005,40 @@
         "margin-top": "4px",
         "margin-right": "5px",
         "cursor": "pointer"
-    }
+    },
+	"selectDataTraceFieldArea": {
+		"padding": "10px",
+		"display": "flex",
+		"height": "100%",
+		"justify-content": "space-between"
+	},
+	"selectDataTraceArea": {
+		"width": "32%",
+		"display": "flex",
+		"flex-direction": "column",
+		"border": "1px solid #cccccc"
+	},
+	"selectDataTraceAreaTitle": {
+		"text-align": "center",
+		"font-weight": "bold",
+		"height": "26px",
+		"line-height": "26px",
+		"background-color": "#f3f3f3",
+		"border-bottom": "1px solid #cccccc"
+	},
+	"selectDataTraceAreaContent": {
+		"height": "calc(100% - 26px)",
+		"overflow": "auto"
+	},
+	"selectFormItemNode": {
+		"padding": "5px",
+		"cursor": "pointer",
+		"transition": "background-color 0.3s"
+	},
+	"selectFieldItemNode": {
+		"padding": "5px",
+		"cursor": "pointer",
+		"transition": "background-color 0.3s",
+		"display": "flex"
+	}
 }

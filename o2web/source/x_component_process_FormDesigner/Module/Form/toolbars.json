@@ -14,13 +14,39 @@
     "type": "MWFToolBarButton",
     "img": "submit.png",
     "title": "{{$.lp.flowTitle}}",
-    "action": "processWork",
+    "action": "flowWork",
     "text": "{{$.lp.flow}}",
-    "id": "action_processWork",
-    "control": "allowProcessing",
+    "id": "action_flowWork",
+    "control": "allowFlow",
     "condition": "",
     "read": false
   },
+  {
+    "type": "MWFToolBarButton",
+    "img": "submit.png",
+    "title": "{{$.lp.submitTitle}}",
+    "action": "processWork",
+    "text": "{{$.lp.submit}}",
+    "id": "action_processWork",
+    "control": "allowProcessing",
+    "condition": "",
+    "read": false,
+    "hidden": true
+  },
+
+  {
+    "type": "MWFToolBarButton",
+    "img": "addTask.png",
+    "title": "{{$.lp.addTaskTitle}}",
+    "action": "addTask",
+    "text": "{{$.lp.addTask}}",
+    "id": "action_addTask",
+    "control": "allowAddTask",
+    "condition": "",
+    "read": true,
+    "hidden": true
+  },
+
   {
     "type": "MWFToolBarButton",
     "img": "retract.png",

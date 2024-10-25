@@ -45,5 +45,22 @@ MWF.xApplication.cms.DictionaryDesigner.LP = {
             "jsonParseError" : "json格式错误，请先修正"
 		},
         "isSave": "正在保存，请稍候...",
-        "selectOrganizationByDblclick" : "双击从选择组织"
+        "selectOrganizationByDblclick" : "双击从选择组织",
+        "formToolbar":{
+            "save": "保存数据字典",
+            "saveas": "数据字典另存为",
+            "help": "帮助",
+            "search": "搜索",
+            "autoSave": "自动保存",
+            "add": "新建",
+            "gotoApp": "打开所在应用"
+        },
+        "sorkKeyNote": "-排序-",
+        "createTime": "创建时间",
+        "updateTime": "更新时间",
+        "asc": "正序",
+        "desc": "倒序",
+        "searchPlacholder": "输入名称/别名/id搜索",
+        "searchAndSort": "排序和搜索",
+        "duplicateNewNote": "已有新数据字典，请先保存"
 };

@@ -33,6 +33,12 @@
       <BaseInput :label="lp._integrationConfig.qywenxinText.apiAddress" v-model:value="configData.apiAddress"
                  :label-style="labelStyle"></BaseInput>
       <div class="item_el_info"></div>
+       <BaseInput :label="lp._integrationConfig.qywenxinText.oauth2Address" v-model:value="configData.oauth2Address"
+                 :label-style="labelStyle"></BaseInput>
+      <div class="item_el_info"></div>
+       <BaseInput :label="lp._integrationConfig.qywenxinText.qrConnectAddress" v-model:value="configData.qrConnectAddress"
+                 :label-style="labelStyle"></BaseInput>
+      <div class="item_el_info"></div>
 
       <BaseInput :label="lp._integrationConfig.qywenxinText.syncSecret" v-model:value="configData.syncSecret"
                  :label-style="labelStyle"></BaseInput>
@@ -75,6 +81,9 @@
                    :label-style="labelStyle"></BaseInput>
         <div class="item_el_info"></div>
       </div>
+      <BaseBoolean :label="lp._integrationConfig.qywenxinText.bindEnable" v-model:value="configData.bindEnable"
+                   :label-style="labelStyle"></BaseBoolean>
+      <div class="item_el_info">{{lp._integrationConfig.qywenxinText.bindEnableInfo}}</div>
 
       <div style="text-align: center; margin-bottom: 50px">
         <button class="mainColor_bg" @click="saveDingDing">{{lp._integrationConfig.qywenxinText.saveText}}</button>

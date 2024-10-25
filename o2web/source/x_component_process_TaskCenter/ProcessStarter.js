@@ -9,7 +9,8 @@ MWF.xApplication.process.TaskCenter.ProcessStarter = new Class({
 		"style": "default",
         "workData" : null,
         "identity": null,
-        "latest": false
+        "latest": false,
+        "skipDraftCheck": null
 	},
     initialize: function(data, app, options){
         this.setOptions(options);
@@ -52,7 +53,8 @@ MWF.xApplication.process.TaskCenter.ProcessStarter = new Class({
                                 var data = {
                                     "title": this.data.name+"-"+this.lp.unnamed,
                                     "identity": this.identitys[0].distinguishedName,
-                                    "latest": this.options.latest
+                                    "latest": this.options.latest,
+                                    "skipDraftCheck": this.options.skipDraftCheck
                                 };
                                 if( this.options.workData ){
                                     data.data = this.options.workData;
@@ -129,13 +131,14 @@ MWF.xApplication.process.TaskCenter.ProcessStarter = new Class({
     },
 
     createMarkNode: function(){
+        var app = (this.app.embeded && this.app.eventTarget) ? this.app.eventTarget : this.app;
         this.markNode = new Element("div#mark", {
             "styles": this.css.markNode,
             "events": {
                 "mouseover": function(e){e.stopPropagation();},
                 "mouseout": function(e){e.stopPropagation();}
             }
-        }).inject(this.app.content);
+        }).inject(app.content);
     },
     createAreaNode: function(){
         this.areaNode = new Element("div#area", {
@@ -238,8 +241,9 @@ MWF.xApplication.process.TaskCenter.ProcessStarter = new Class({
     },
     setStartNodeSize: function(){
         if (!layout.mobile){
-            var size = this.app.content.getSize();
-            var allSize = this.app.content.getSize();
+            var app = (this.app.embeded && this.app.eventTarget) ? this.app.eventTarget : this.app;
+            var size = app.content.getSize();
+            var allSize = app.content.getSize();
             this.markNode.setStyles({
                 "width": ""+allSize.x+"px",
                 "height": ""+allSize.y+"px"
@@ -273,7 +277,8 @@ MWF.xApplication.process.TaskCenter.ProcessStarter = new Class({
     okStartProcess: function(identity){
         var data = {
             "title": this.data.name+"-"+this.lp.unnamed,
-            //"identity": this.identityArea.get("value")
+            "latest": this.options.latest,
+            "skipDraftCheck": this.options.skipDraftCheck,
             "identity": identity
         };
         if( this.options.workData ){
@@ -335,6 +340,7 @@ MWF.xApplication.process.TaskCenter.ProcessStarter = new Class({
     }
 
 });
+
 MWF.xApplication.process.TaskCenter.ProcessStarter.Identity = new Class({
     initialize: function(container, data, starter, style){
         this.container = $(container);

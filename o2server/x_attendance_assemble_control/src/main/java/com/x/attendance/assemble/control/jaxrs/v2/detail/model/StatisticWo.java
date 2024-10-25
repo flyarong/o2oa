@@ -1,5 +1,7 @@
 package com.x.attendance.assemble.control.jaxrs.v2.detail.model;
 
+import java.util.List;
+
 import com.x.base.core.project.annotation.FieldDescribe;
 import com.x.base.core.project.gson.GsonPropertyObject;
 
@@ -40,6 +42,11 @@ public class StatisticWo extends GsonPropertyObject {
     @FieldDescribe("申诉次数")
     private Integer appealNums = 0;
 
+    @FieldDescribe("每日数据")
+    private List<DetailWo> detailList;
+
+
+    
 
     public Integer getFieldWorkTimes() {
         return fieldWorkTimes;
@@ -135,5 +142,13 @@ public class StatisticWo extends GsonPropertyObject {
 
     public void setAppealNums(Integer appealNums) {
         this.appealNums = appealNums;
+    }
+
+    public List<DetailWo> getDetailList() {
+        return detailList;
+    }
+
+    public void setDetailList(List<DetailWo> detailList) {
+        this.detailList = detailList;
     }
 }

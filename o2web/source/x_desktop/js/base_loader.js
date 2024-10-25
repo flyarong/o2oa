@@ -109,22 +109,27 @@ if (!layout.isReady) {
             var options = uri.get("data");
             if (options[o2.tokenName]) {
                 // 删除
-                Cookie.dispose(o2.tokenName);
-                // 写入
-                var host = window.location.hostname; // 域名
-                var domain = null;
-                if (_isIp(host)) {
-                    domain = host;
-                } else {
-                    if (host.indexOf(".") > 0) {
-                        domain = host.substring(host.indexOf(".")); // 上级域名 如 .o2oa.net
-                    }
+                // Cookie.dispose(o2.tokenName);
+                // // 写入
+                // var host = window.location.hostname; // 域名
+                // var domain = null;
+                // if (_isIp(host)) {
+                //     domain = host;
+                // } else {
+                //     if (host.indexOf(".") > 0) {
+                //         domain = host.substring(host.indexOf(".")); // 上级域名 如 .o2oa.net
+                //     }
+                // }
+                // if (domain) {
+                //     Cookie.write(o2.tokenName, options[o2.tokenName], {domain: domain, path: "/"});
+                // } else {
+                //     Cookie.write(o2.tokenName, options[o2.tokenName]);
+                // }
+                if (window.layout) {
+                    if (!layout.session) layout.session = {};
+                    layout.session.token = options[o2.tokenName];
                 }
-                if (domain) {
-                    Cookie.write(o2.tokenName, options[o2.tokenName], {domain: domain, path: "/"});
-                } else {
-                    Cookie.write(o2.tokenName, options[o2.tokenName]);
-                }
+                if (layout.config && layout.config.sessionStorageEnable && window.sessionStorage) window.sessionStorage.setItem("o2LayoutSessionToken", options[o2.tokenName]);
             }
 
             layout.sessionPromise = new Promise(function (resolve, reject) {
@@ -132,7 +137,7 @@ if (!layout.isReady) {
                     if (json.data.language && (json.data.language !== o2.languageName)) {
                         o2.language = json.data.language.toLowerCase();
                         o2.languageName = json.data.language;
-                        var lp = "../x_desktop/js/base_lp_" + o2.language + ((o2.session.isDebugger) ? "" : ".min") + ".js";
+                        var lp = "../x_desktop/js/base_lp_" + o2.language + ((o2.session.isDebugger) ? "" : ".min") + ".js?v="+o2.version.v;;
                         o2.load(lp, {"reload": true}, function () {
                             if (resolve) resolve(json.data);
                         });
@@ -227,7 +232,7 @@ if (!layout.isReady) {
         var lpLoaded = false;
         var commonLoaded = false;
         //var lp = o2.session.path + "/lp/" + o2.language + ".js";
-        var lp = "../x_desktop/js/base_lp_" + o2.language + ((o2.session.isDebugger) ? "" : ".min") + ".js";
+        // var lp = "../x_desktop/js/base_lp_" + o2.language + ((o2.session.isDebugger) ? "" : ".min") + ".js?v="+o2.version.v;;
 
         if (o2.session.isDebugger && (o2.session.isMobile || layout.mobile)) o2.load("../o2_lib/eruda/eruda.js");
         var loadAllModules = function(error){
@@ -297,20 +302,29 @@ if (!layout.isReady) {
             loadAllModules(loadO2Modules);
         };
 
-        debugger;
-        if (!o2.LP) {
-            o2.load(lp, function(m){
-                if (!m.length){
-                    var lp = "../o2_core/o2/lp/" + o2.language + ((o2.session.isDebugger) ? "" : ".min") + ".js";
-                    o2.load(lp,loadModuls);
-                }else{
-                    loadModuls();
-                }
-            });
-        } else {
-            loadModuls();
-        }
+
         o2.getJSON("../x_desktop/res/config/config.json", function (config) {
+            var supportedLanguages = Object.keys(config.supportedLanguages);
+
+            if (supportedLanguages.indexOf(o2.language) === -1){
+                o2.language = o2.language.substring(0, o2.language.indexOf('-'));
+            }
+            if (supportedLanguages.indexOf(o2.language) === -1) o2.language = "zh-cn";
+
+            if (!o2.LP) {
+                var lp = "../x_desktop/js/base_lp_" + o2.language + ((o2.session.isDebugger) ? "" : ".min") + ".js?v="+o2.version.v;
+                o2.load(lp, function(m){
+                    if (!m.length){
+                        var lp = "../o2_core/o2/lp/" + o2.language + ((o2.session.isDebugger) ? "" : ".min") + ".js?v="+o2.version.v;
+                        o2.load(lp,loadModuls);
+                    }else{
+                        loadModuls();
+                    }
+                });
+            } else {
+                loadModuls();
+            }
+
             _loadProgressBar();
             if (config.proxyCenterEnable){
                 if (o2.typeOf(config.center)==="array"){

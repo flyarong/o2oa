@@ -88,6 +88,8 @@ if (!window.o2) {
         var _debug = (_href.indexOf("debugger") !== -1);
         var _par = _href.substr(_href.lastIndexOf("?") + 1, _href.length);
 
+        // var supportedLanguages = ["zh-cn", "en", "es", "ko", "zh-tw", "zh-hk", "ja"];
+
         var _lp = _language || navigator.language || "zh-cn";
         //if (!_lp) _lp = "zh-cn";
 
@@ -146,8 +148,11 @@ if (!window.o2) {
          */
         this.o2.languageName = _lp;
         _lp = _lp.toLocaleLowerCase();
-        var supportedLanguages = ["zh-CN", "en"];
-        if (supportedLanguages.indexOf(_lp) == -1) _lp = "zh-cn";
+
+        // if (supportedLanguages.indexOf(_lp) == -1){
+        //     _lp = _lp.substring(0, _lp.indexOf('-'));
+        // }
+        // if (supportedLanguages.indexOf(_lp) == -1) _lp = "zh-cn";
         this.o2.language = _lp;
         this.o2.splitStr = /\s*(?:,|;)\s*/;
 
@@ -171,6 +176,25 @@ if (!window.o2) {
          * o2.debug();
          */
         this.o2.debug = debug;
+
+
+        this.o2.runningRequestsList = [];
+        var o2 = this.o2;
+        var requestSend = XMLHttpRequest.prototype.send;
+        var requestOpen = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.send = function(){
+            var request = this;
+            o2.runningRequestsList.push(request);
+            request.addEventListener("loadend", function(){
+                o2.runningRequestsList.splice(o2.runningRequestsList.indexOf(request, 1));
+            });
+            requestSend.apply(this, arguments);
+        }
+        XMLHttpRequest.prototype.open = function(){
+            var request = this;
+            request.requestOptions = Array.from(arguments);
+            requestOpen.apply(this, arguments);
+        }
 
         var _attempt = function () {
             for (var i = 0, l = arguments.length; i < l; i++) {
@@ -421,7 +445,7 @@ if (!window.o2) {
         };
         /**
          * @summary 解析平台内的url，如果配置了反向代理的路径转发，平台内的url需要通过filterUrl解析后，才能得到正确的url。
-         * @see {@link https://www.o2oa.net/course/lskrtn.html?h=urlmapping|基于nginx快速集群部署-上下文分发}
+         * @see {@link https://www.o2oa.net/search.html?q=urlmapping|基于nginx快速集群部署-上下文分发}
          * @function filterUrl
          * @memberOf o2
          * @param {String} [url] 要解析的url
@@ -845,11 +869,12 @@ if (!window.o2) {
                             //nothing
                         } else {
                             if (rulesStr.indexOf(",") != -1) {
-                                var rules = rulesStr.split(/\s*,\s*/g);
+                                //var rules = rulesStr.split(/\s*,\s*/g);
+                                var rules = rulesStr.split(/,/g);
                                 rules = rules.map(function (r) {
                                     return prefix + r;
                                 });
-                                var rule = rules.join(", ");
+                                var rule = rules.join(",");
                                 cssText = cssText.substring(0, match.index) + rule + cssText.substring(rex.lastIndex, cssText.length);
                                 rex.lastIndex = rex.lastIndex + (prefix.length * rules.length);
 
@@ -1085,6 +1110,7 @@ if (!window.o2) {
 
                     var events = el.getAttribute("data-o2-events").toString();
                     if (events) _bindToEvents(op.module, el, events, bindDataId);
+                    el.removeAttribute("data-o2-events");
                 }
             }
 
@@ -3196,8 +3222,8 @@ if (!window.o2) {
                     if (!layout || !layout.userLayout || !layout.userLayout.scale || layout.userLayout.scale == 1) {
 
                     } else {
-                        boundLeft = boundLeft / layout.userLayout.scale;
-                        boundTop = boundTop / layout.userLayout.scale;
+                        // boundLeft = boundLeft / layout.userLayout.scale;
+                        // boundTop = boundTop / layout.userLayout.scale;
                     }
 
 

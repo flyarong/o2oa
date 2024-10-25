@@ -7,7 +7,11 @@ MWF.xApplication.portal.PageDesigner.Module.Page = MWF.PCPage = new Class({
 		"style": "default",
 		"propertyPath": "../x_component_portal_PageDesigner/Module/Page/page.html",
         "mode": "PC",
-        "fields": ["Calendar", "Checkbox", "Datagrid", "Datagrid$Title", "Datagrid$Data", "Datatable", "Datatable$Title", "Datatable$Data", "Datatemplate","Htmleditor", "Number", "Office", "Orgfield", "Org", "Personfield", "Radio", "Select", "Textarea", "Textfield","Address","Combox"],
+        "fields": [
+        	"Calendar", "Checkbox", "Datagrid", "Datagrid$Title", "Datagrid$Data", "Datatable", "Datatable$Title", "Datatable$Data",
+    		"Datatemplate","Htmleditor", "TinyMCEEditor","Number", "Currency", "Office", "Orgfield", "Org", "Personfield", "Radio", "Select", "Textarea", "Textfield","Address","Combox",
+    		"Elcascader", "Elcheckbox", "Elcolorpicker", "Eldate", "Eldatetime", "Elinput", "Elnumber", "Elradio", "Elrate", "Elselect", "Elslider", "Elswitch", "ElTime"
+    	],
 		"injectActions" : [
 			{
 				"name" : "top",
@@ -985,9 +989,9 @@ MWF.xApplication.portal.PageDesigner.Module.Page = MWF.PCPage = new Class({
                 var host1 = MWF.Actions.getHost("x_processplatform_assemble_surface");
                 var host2 = MWF.Actions.getHost("x_portal_assemble_surface");
                 if (pic.indexOf("/x_processplatform_assemble_surface")!==-1){
-                    pic = pic.replace("/x_processplatform_assemble_surface", pic+"/x_processplatform_assemble_surface");
+                    pic = pic.replace("/x_processplatform_assemble_surface", host1+"/x_processplatform_assemble_surface");
                 }else if (pic.indexOf("x_processplatform_assemble_surface")!==-1){
-                    pic = pic.replace("x_processplatform_assemble_surface", pic+"/x_processplatform_assemble_surface");
+                    pic = pic.replace("x_processplatform_assemble_surface", host1+"/x_processplatform_assemble_surface");
                 }
                 if (pic.indexOf("/x_portal_assemble_surface")!==-1){
                     pic = pic.replace("/x_portal_assemble_surface", host2+"/x_portal_assemble_surface");
@@ -1011,6 +1015,10 @@ MWF.xApplication.portal.PageDesigner.Module.Page = MWF.PCPage = new Class({
         var styleNode = $("design_style"+this.json.id);
         if (styleNode) styleNode.destroy();
         if (cssText){
+
+            //删除注释
+            cssText = cssText.replace(/\/\*[\s\S]*?\*\/\n|([^:]|^)\/\/.*\n$/g, '').replace(/\\n/, '');
+
             cssText = this.parseCSS(cssText);
             var rex = new RegExp("(.+)(?=\\{)", "g");
             var match;
@@ -1019,19 +1027,27 @@ MWF.xApplication.portal.PageDesigner.Module.Page = MWF.PCPage = new Class({
 
             while ((match = rex.exec(cssText)) !== null) {
             var rulesStr = match[0];
-				if (rulesStr.indexOf(",")!=-1){
-					var rules = rulesStr.split(/\s*,\s*/g);
-					rules = rules.map(function(r){
-						return prefix + r;
-					});
-					var rule = rules.join(", ");
-					cssText = cssText.substring(0, match.index) + rule + cssText.substring(rex.lastIndex, cssText.length);
-					rex.lastIndex = rex.lastIndex + (prefix.length*rules.length);
+            var startWith = rulesStr.substring(0, 1);
+            if (startWith === "@" || startWith === ":" || rulesStr.indexOf("%") !== -1) {
 
-				}else{
-                    var rule = prefix + match[0];
-                    cssText = cssText.substring(0, match.index) + rule + cssText.substring(rex.lastIndex, cssText.length);
-                    rex.lastIndex = rex.lastIndex + prefix.length;
+            }else if (rulesStr.trim()==='from' || rulesStr.trim()==='to'){
+
+            } else {
+                    if (rulesStr.indexOf(",")!=-1){
+                        //var rules = rulesStr.split(/\s*,\s*/g);
+                        var rules = rulesStr.split(/,/g);
+                        rules = rules.map(function(r){
+                            return prefix + r;
+                        });
+                        var rule = rules.join(",");
+                        cssText = cssText.substring(0, match.index) + rule + cssText.substring(rex.lastIndex, cssText.length);
+                        rex.lastIndex = rex.lastIndex + (prefix.length*rules.length);
+
+                    }else{
+                        var rule = prefix + match[0];
+                        cssText = cssText.substring(0, match.index) + rule + cssText.substring(rex.lastIndex, cssText.length);
+                        rex.lastIndex = rex.lastIndex + prefix.length;
+                    }
                 }
             }
 
@@ -1092,6 +1108,100 @@ MWF.xApplication.portal.PageDesigner.Module.Page = MWF.PCPage = new Class({
         //     }.bind(this));
         // }
         return {"fieldConflict": fieldConflict, "elementConflict": elementConflict};
-    }
+    },
+	//脚本附签上的脚本编辑器
+	addScriptJsEditor: function (propertyName, jsEditor) {
+		if( !this.scriptJsEditors )this.scriptJsEditors = {};
+		this.scriptJsEditors[propertyName] = jsEditor;
+	},
+	getScriptJsEditor: function (propertyName) {
+		if( !this.scriptJsEditors ){
+			return null;
+		}else{
+			return this.scriptJsEditors[propertyName];
+		}
+	},
+	showFormVersion: function(){
+		this.versionNode = new Element("div");
+		this.dlg = o2.DL.open({
+			"title": MWF.APPFD.LP.version["title"],
+			"content": this.versionNode,
+			"offset": {"y": -100},
+			"isMax": false,
+			"width": 500,
+			"height": 300,
+			"buttonList": [
+				{
+					"type": "cancel",
+					"text": MWF.APPFD.LP.version["close"],
+					"action": function(){ this.close(); }
+				}
+			],
+			"onPostShow": function(){
+				this.loadVersionList();
+			}.bind(this),
+			"onPostClose": function(){
+				this.dlg = null;
+			}.bind(this)
+		});
+	},
+	loadVersionList : function(){
+		var tableHtml = "<table width='100%' cellspacing='0' cellpadding='3' style='margin-top: 1px'><tr>" +
+			"<th>"+MWF.APPPOD.LP.version["no"]+"</th>" +
+			"<th>"+MWF.APPPOD.LP.version["person"]+"</th>" +
+			"<th>"+MWF.APPPOD.LP.version["updateTime"]+"</th>" +
+			"<th>"+MWF.APPPOD.LP.version["op"]+"</th>" +
+			"</tr></table>";
+		this.versionNode.set("html", tableHtml);
+		this.versionTable = this.versionNode.getElement("table");
+		o2.Actions.load("x_portal_assemble_designer").PageVersionAction.listWithPage(this.form.json.id, function(json){
+			this.versionList = json.data;
+			this.versionList.sort(function (a, b) {
+				return new Date(b.updateTime) - new Date(a.updateTime)
+			});
+			this.versionList.each(function (version,index) {
+				var node = new Element("tr").inject(this.versionTable);
+				var html = "<td>"+(index+1)+"</td>" +
+					"<td>"+version.person+"</td>" +
+					"<td>"+version.updateTime+"</td>" +
+					"<td></td>";
+				node.set("html", html);
+				var actionNode = new Element("div",{"styles":{
+						"width": "60px",
+						"padding": "0px 3px",
+						"border-radius": "20px",
+						"cursor" : "pointer",
+						"color": "#ffffff",
+						"background-color": "#4A90E2",
+						"float": "left",
+						"margin-right": "2px",
+						"text-align": "center",
+						"font-weight": "100"
+					}}).inject(node.getLast("td"));
+				actionNode.set("text", MWF.APPPOD.LP.version["resume"]);
+				actionNode.addEvent("click",function (e) {
+					var _self = this;
+					this.designer.confirm("warn", e,  MWF.APPPOD.LP.version["resumeConfirm"], MWF.APPPOD.LP.version["resumeInfo"], 460, 120, function(){
+						_self.resumeForm(version);
+						this.close();
+					}, function(){
+						this.close();
+					});
+				}.bind(this));
+			}.bind(this))
+		}.bind(this));
+	},
+	resumeForm : function(version){
+		o2.Actions.load("x_portal_assemble_designer").PageVersionAction.get(version.id, function( json ){
+			var formData = JSON.parse(json.data.data);
+			//this.action.FormAction.update(version.form, formData,function( json ){
+			this.designer.notice(MWF.APPPOD.LP.version["resumeSuccess"]);
+			var data = JSON.decode(MWF.decodeJsonString(formData.data));
+			data.isNewForm = false;
+			this.reload(data);
+			this.dlg.close();
+			//}.bind(this), null, false);
+		}.bind(this), null, false);
+	}
 	
 });

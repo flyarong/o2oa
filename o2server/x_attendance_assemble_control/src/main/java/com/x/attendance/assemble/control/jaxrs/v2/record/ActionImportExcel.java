@@ -1,16 +1,23 @@
 package com.x.attendance.assemble.control.jaxrs.v2.record;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.util.Date;
+import java.util.concurrent.locks.ReentrantLock;
+
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
+
 import com.x.attendance.assemble.control.Business;
 import com.x.attendance.assemble.control.ThisApplication;
 import com.x.attendance.assemble.control.jaxrs.v2.AttendanceV2Helper;
-import com.x.attendance.assemble.control.schedule.v2.QueueAttendanceV2DetailModel;
-import com.x.attendance.entity.v2.AttendanceV2CheckInRecord;
-import com.x.attendance.entity.v2.AttendanceV2Group;
-import com.x.attendance.entity.v2.AttendanceV2Shift;
-import com.x.attendance.entity.v2.AttendanceV2ShiftCheckTime;
 import com.x.base.core.container.EntityManagerContainer;
 import com.x.base.core.container.factory.EntityManagerContainerFactory;
 import com.x.base.core.entity.annotation.CheckPersistType;
+import com.x.base.core.project.x_attendance_assemble_control;
 import com.x.base.core.project.annotation.FieldDescribe;
 import com.x.base.core.project.config.StorageMapping;
 import com.x.base.core.project.exception.ExceptionAccessDenied;
@@ -20,21 +27,7 @@ import com.x.base.core.project.http.EffectivePerson;
 import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
 import com.x.base.core.project.tools.DateTools;
-import com.x.base.core.project.x_attendance_assemble_control;
 import com.x.general.core.entity.GeneralFile;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Created by fancyLou on 2023/4/24.
@@ -49,7 +42,9 @@ public class ActionImportExcel extends BaseAction {
     ActionResult<Wo> execute(EffectivePerson effectivePerson, byte[] bytes, FormDataContentDisposition disposition)
             throws Exception {
         lock.lock();
-        LOGGER.info("开始导入打卡记录数据。。。。。。。。。。");
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("开始导入打卡记录数据！！！！！！");
+        }
         try (InputStream is = new ByteArrayInputStream(bytes);
              XSSFWorkbook workbook = new XSSFWorkbook(is);
              ByteArrayOutputStream os = new ByteArrayOutputStream();
@@ -72,13 +67,13 @@ public class ActionImportExcel extends BaseAction {
                 try {
                     ActionPostDailyRecord.Wi thisWi = new ActionPostDailyRecord.Wi();
                     thisWi.setPerson(AttendanceV2Helper.getExcelCellStringValue(row.getCell(0)));
-                    thisWi.setDate(AttendanceV2Helper.getExcelCellStringValue(row.getCell(1)));
-                    thisWi.setOnDutyTime1(AttendanceV2Helper.getExcelCellStringValue(row.getCell(2)));
-                    thisWi.setOffDutyTime1(AttendanceV2Helper.getExcelCellStringValue(row.getCell(3)));
-                    thisWi.setOnDutyTime2(AttendanceV2Helper.getExcelCellStringValue(row.getCell(4)));
-                    thisWi.setOffDutyTime2(AttendanceV2Helper.getExcelCellStringValue(row.getCell(5)));
-                    thisWi.setOnDutyTime3(AttendanceV2Helper.getExcelCellStringValue(row.getCell(6)));
-                    thisWi.setOffDutyTime3(AttendanceV2Helper.getExcelCellStringValue(row.getCell(7)));
+                    thisWi.setDate(AttendanceV2Helper.getExcelCellDateFormat(row.getCell(1), DateTools.format_yyyyMMdd));
+                    thisWi.setOnDutyTime1(AttendanceV2Helper.getExcelCellDateFormat(row.getCell(2), DateTools.format_HHmm));
+                    thisWi.setOffDutyTime1(AttendanceV2Helper.getExcelCellDateFormat(row.getCell(3), DateTools.format_HHmm));
+                    thisWi.setOnDutyTime2(AttendanceV2Helper.getExcelCellDateFormat(row.getCell(4), DateTools.format_HHmm));
+                    thisWi.setOffDutyTime2(AttendanceV2Helper.getExcelCellDateFormat(row.getCell(5), DateTools.format_HHmm));
+                    thisWi.setOnDutyTime3(AttendanceV2Helper.getExcelCellDateFormat(row.getCell(6), DateTools.format_HHmm));
+                    thisWi.setOffDutyTime3(AttendanceV2Helper.getExcelCellDateFormat(row.getCell(7), DateTools.format_HHmm));
                     ActionPostDailyRecord.Wo result = ThisApplication.context().applications().postQuery(x_attendance_assemble_control.class, "v2/record/import/daily", thisWi).getData(ActionPostDailyRecord.Wo.class);
                     if (LOGGER.isDebugEnabled()) {
                         LOGGER.debug("处理结果，{}", result.toString());
@@ -90,7 +85,7 @@ public class ActionImportExcel extends BaseAction {
             }
             ActionResult<Wo> result = new ActionResult<>();
             // 存储 excel 文件
-            String name = "attendance_record_data_input_" + DateTools.formatDate(new Date()) + ".xlsx";
+            String name = "attendance_record_data_input_" + DateTools.format(new Date(), DateTools.formatCompact_yyyyMMddHHmmss) + ".xlsx";
             workbook.write(os);
             StorageMapping gfMapping = ThisApplication.context().storageMappings().random(GeneralFile.class);
             GeneralFile generalFile = new GeneralFile(gfMapping.getName(), name,
@@ -106,12 +101,15 @@ public class ActionImportExcel extends BaseAction {
             return result;
         } finally {
             lock.unlock();
-            LOGGER.info("导入结束。。。。。。。。。。。。");
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("导入结束！！！！！！");
+            }
         }
     }
 
     public static class Wo extends GsonPropertyObject {
 
+        private static final long serialVersionUID = 6022979308455360363L;
         @FieldDescribe("返回的结果标识，下载结果文件使用")
         private String flag;
         @FieldDescribe("异常错误数据条目数")

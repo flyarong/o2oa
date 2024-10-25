@@ -1,15 +1,28 @@
 package com.x.program.center;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.x.base.core.project.ApplicationForkJoinWorkerThreadFactory;
 import com.x.base.core.project.cache.CacheManager;
 import com.x.base.core.project.config.Config;
-import com.x.program.center.schedule.*;
-import org.apache.commons.lang3.BooleanUtils;
-import org.apache.commons.lang3.StringUtils;
-
+import com.x.program.center.schedule.AndFxSyncOrganization;
+import com.x.program.center.schedule.Area;
+import com.x.program.center.schedule.Cleanup;
+import com.x.program.center.schedule.CleanupCode;
+import com.x.program.center.schedule.CollectPerson;
+import com.x.program.center.schedule.DingdingSyncOrganization;
+import com.x.program.center.schedule.DingdingSyncOrganizationTrigger;
+import com.x.program.center.schedule.FireSchedule;
+import com.x.program.center.schedule.QiyeweixinSyncOrganization;
+import com.x.program.center.schedule.QiyeweixinSyncOrganizationTrigger;
+import com.x.program.center.schedule.TriggerAgent;
+import com.x.program.center.schedule.WeLinkSyncOrganization;
+import com.x.program.center.schedule.WeLinkSyncOrganizationTrigger;
+import com.x.program.center.schedule.ZhengwuDingdingSyncOrganization;
+import com.x.program.center.schedule.ZhengwuDingdingSyncOrganizationTrigger;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.ForkJoinPool;
+import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
 
 public class ThisApplication {
 
@@ -17,19 +30,13 @@ public class ThisApplication {
 		// nothing
 	}
 
-	private static ExecutorService threadPool;
+	private static final ForkJoinPool FORKJOINPOOL = new ForkJoinPool(Runtime.getRuntime().availableProcessors(),
+			new ApplicationForkJoinWorkerThreadFactory(ThisApplication.class.getPackage()), null, false);
 
-	public static ExecutorService threadPool() {
-		return threadPool;
+	public static ForkJoinPool forkJoinPool() {
+		return FORKJOINPOOL;
 	}
 
-	private static void initThreadPool() {
-		int maximumPoolSize = Runtime.getRuntime().availableProcessors() + 1;
-		ThreadFactory threadFactory = new ThreadFactoryBuilder()
-				.setNameFormat(ThisApplication.class.getPackageName() + "-threadpool-%d").build();
-		threadPool = new ThreadPoolExecutor(0, maximumPoolSize, 120, TimeUnit.SECONDS, new ArrayBlockingQueue<>(1000),
-				threadFactory);
-	}
 
 	protected static Context context;
 
@@ -51,7 +58,6 @@ public class ThisApplication {
 
 	public static void init() {
 		try {
-			initThreadPool();
 			CacheManager.init(context.clazz().getSimpleName());
 			context().startQueue(centerQueue);
 			context().startQueue(logQueue);
@@ -99,7 +105,6 @@ public class ThisApplication {
 			context().scheduleLocal(CleanupCode.class, 10, 60 * 30);
 			context().scheduleLocal(Cleanup.class, 10, 60 * 30);
 			context().scheduleLocal(CollectPerson.class, 10, 60 * 30);
-			context().scheduleLocal(CollectLog.class, 10, 60 * 30);
 			// 运行间隔由60秒缩减到30秒
 			context().scheduleLocal(TriggerAgent.class, 150, 30);
 			/* 行政区域每周更新一次 */
@@ -111,6 +116,7 @@ public class ThisApplication {
 
 	public static void destroy() {
 		try {
+			FORKJOINPOOL.shutdown();
 			CacheManager.shutdown();
 		} catch (Exception e) {
 			e.printStackTrace();

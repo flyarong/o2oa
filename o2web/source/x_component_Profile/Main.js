@@ -53,7 +53,8 @@ MWF.xApplication.Profile.Main = new Class({
                     this.personData.mail = "";
                 }
 
-                this.content.loadHtml(this.path+this.options.style+"/"+((this.inBrowser||layout.viewMode=="Default")? "viewBrowser": "view")+".html",
+                var url =  this.path+this.options.style+"/"+( (!this.inBrowser && layout.viewMode==="Layout") ? "view": "viewBrowser")+".html";
+                this.content.loadHtml( url,
                     {"bind": {"data": this.personData, "lp": this.lp}, "module": this},
                     function(){
                         this.loadContent()
@@ -99,6 +100,8 @@ MWF.xApplication.Profile.Main = new Class({
                     if( i > 0 )node.hide();
                 }
                 if( node.getStyle("display") === "none" ){
+                    page.tabNode.hide();
+                }else if( layout.desktop.session.user.name.toLowerCase() === "xadmin" && ["password","empower"].contains( node.get("data-o2-type") ) ){
                     page.tabNode.hide();
                 }else if( !firstPage ){
                     firstPage = page;
@@ -157,7 +160,9 @@ MWF.xApplication.Profile.Main = new Class({
             var firstPage;
             pageConfigNodes.each(function(node){
                 var page = this.tab.addTab(node, node.get("title"));
-                if( node.getStyle("display") === "none" ){
+                if( node.getStyle("display") === "none" ) {
+                    page.tabNode.hide();
+                }else if( layout.desktop.session.user.name.toLowerCase() === "xadmin" && ["password","empower"].contains( node.get("data-o2-type") ) ){
                     page.tabNode.hide();
                 }else if( !firstPage ){
                     firstPage = page;
@@ -213,9 +218,9 @@ MWF.xApplication.Profile.Main = new Class({
 
         }.bind(this));
     },
-    openFaceSet: function(){
-        layout.openApplication(null, "FaceSet");
-    },
+    // openFaceSet: function(){
+    //     layout.openApplication(null, "FaceSet");
+    // },
     loadInforConfigActions: function(){
         this.contentImgNode = this.content.getElement(".o2_profile_inforIconContentImg");
         this.content.getElement(".o2_profile_inforIconChange").addClass("mainColor_color mainColor_border").addEvent("click", function(){
@@ -245,9 +250,10 @@ MWF.xApplication.Profile.Main = new Class({
 
         this.languageSelectNode = this.tab.pages[0].contentNode.getElement("select");
         this.languageSelectNode.empty();
-        if (!this.personData.language) this.personData.language = "zh-cn";
-        Object.keys(this.lp.lps).each(function(key){
-            var option = new Element("option", {"value": key, "text": this.lp.lps[key]}).inject(this.languageSelectNode);
+        if (!this.personData.language) this.personData.language = "zh-CN";
+        var lps = layout.config.supportedLanguages;
+        Object.keys(lps).each(function(key){
+            var option = new Element("option", {"value": key, "text": lps[key]}).inject(this.languageSelectNode);
             if (this.personData.language === key) option.set("selected", true);
         }.bind(this));
 
@@ -321,7 +327,7 @@ MWF.xApplication.Profile.Main = new Class({
     },
 
     loadIdeaConfigActions: function( i ){
-        if( typeOf(i) !== "number" ) i = (this.inBrowser||layout.viewMode=="Default")? 1 : 2;
+        if( typeOf(i) !== "number" ) i = (!this.inBrowser && layout.viewMode==="Layout") ? 2 : 1;
         this.ideasArea = this.tab.pages[i].contentNode.setStyle("min-height","500px").getElement("textarea").addEvent("focus",function(){
             this.addClass("mainColor_border mainColor_color");
         }).addEvent("blur",function(){
@@ -372,7 +378,7 @@ MWF.xApplication.Profile.Main = new Class({
         }.bind(this))
     },
     loadEmPowerConfigAction: function(){
-        var i = (this.inBrowser||layout.viewMode=="Default")? 2 : 3;
+        var i = (!this.inBrowser && layout.viewMode==="Layout")? 3 : 2;
 
         this.tab.pages[i].contentNode.setStyle("overflow","auto");
         var tabEmpowerNodes = this.tab.pages[i].contentNode.getElements("div.o2_profile_emPower_tab");
@@ -425,7 +431,7 @@ MWF.xApplication.Profile.Main = new Class({
             var popForm = new MWF.xApplication.Profile.emPowerPopupForm(null, {}, {
                 "style": "empower",
                 "width": "550",
-                "height": layout.desktop.session.user.identityList.length>1?"490":"440",
+                "height": layout.desktop.session.user.identityList.length>1?"530":"480",
                 "hasTop": true,
                 "hasIcon": false,
                 "hasTopIcon" : false,
@@ -732,7 +738,7 @@ MWF.xApplication.Profile.Main = new Class({
                             var editPopForm = new MWF.xApplication.Profile.emPowerPopupForm(null, _data, {
                                 "style": "empower",
                                 "width": "550",
-                                "height": layout.desktop.session.user.identityList.length>1?"490":"440",
+                                "height": layout.desktop.session.user.identityList.length>1?"530":"480",
                                 "hasTop": true,
                                 "hasIcon": false,
                                 "hasTopIcon" : false,
@@ -789,7 +795,7 @@ MWF.xApplication.Profile.Main = new Class({
                     var popForm = new MWF.xApplication.Profile.emPowerPopupForm(null, {}, {
                         "style": "empower",
                         "width": "550",
-                        "height": layout.desktop.session.user.identityList.length>1?"490":"440",
+                        "height": layout.desktop.session.user.identityList.length>1?"530":"480",
                         "hasTop": true,
                         "hasIcon": false,
                         "hasTopIcon" : false,
@@ -835,7 +841,7 @@ MWF.xApplication.Profile.Main = new Class({
 
     loadPasswordConfigActions: function(){
 
-        var i = (this.inBrowser||layout.viewMode=="Default")? 3 : 4;
+        var i = (!this.inBrowser && layout.viewMode==="Layout" )? 4 : 3;
 
         var passwordRemindNode =  this.tab.pages[i].contentNode.getElement(".o2_profile_passwordRemindNode");
         var paswordRule = layout.config.passwordRegexHint || this.lp.paswordRule;
@@ -865,7 +871,7 @@ MWF.xApplication.Profile.Main = new Class({
         }.bind(this)).addClass("mainColor_bg");
     },
     loadSSOConfigAction: function(){
-        var i = (this.inBrowser||layout.viewMode=="Default")? 4 : 5;
+        var i = (!this.inBrowser && layout.viewMode==="Layout") ? 5 : 4;
         this.ssoConfigAreaNode = this.tab.pages[i].contentNode.setStyle("min-height","300px").getElement(".o2_profile_ssoConfigArea");
         MWF.Actions.get("x_organization_assemble_authentication").listOauthServer(function(json){
             json.data.each(function(d){
@@ -1186,7 +1192,7 @@ MWF.xApplication.Profile.Main = new Class({
     },
     checkPassowrdStrength: function(pwd){
 
-        var i = (this.inBrowser||layout.viewMode=="Default")? 3 : 4;
+        var i = (!this.inBrowser && layout.viewMode==="Layout")? 4 : 3;
         var passwordStrengthNode = this.tab.pages[i].contentNode.getElement(".o2_profile_passwordStrengthArea");
         var passwordRemindNode =  this.tab.pages[i].contentNode.getElement(".o2_profile_passwordRemindNode");
 
@@ -1260,7 +1266,7 @@ MWF.xApplication.Profile.emPowerPopupForm = new Class({
     options: {
         "style": "empower",
         "width": "550",
-        "height": "440",
+        "height": "480",
         "hasTop": true,
         "hasIcon": false,
         "hasTopIcon" : false,
@@ -1327,7 +1333,7 @@ MWF.xApplication.Profile.emPowerPopupForm = new Class({
                 isEdited: this.isEdited || this.isNew,
                 style : "profile",
                 itemTemplate: {
-                    fromPerson: { text: this.lp.fromPerson,type: "select", isEdited : (identityTextList.length>1),
+                    fromPerson: { text: this.lp.fromIdentity,type: "select", isEdited : (identityTextList.length>1),
                         selectText: identityTextList,
                         selectValue: identityList,
                         defaultValue: this.data.fromIdentity||identityList[0],
@@ -1346,11 +1352,17 @@ MWF.xApplication.Profile.emPowerPopupForm = new Class({
                             "margin": "0 0 10px 0"
                         }
                     },
-                    toPerson: { text: this.lp.toPerson,type: "org", isEdited : this.isEdited || this.isNew, orgType: ["identity"], count : 1, orgWidgetOptions : {
+                    toPerson: { text: this.lp.toIdentity,type: "org", isEdited : this.isEdited || this.isNew, orgType: ["identity"], count : 1, orgWidgetOptions : {
                             "onLoadedInfor": function(item){
                                 // this.loadAcceptAndReject( item );
                             }.bind(this)
                         },defaultValue:this.data.toPerson},
+                    keepTask: {
+                        type: "checkbox",
+                        selectText: [this.lp.keepTask],
+                        selectValue: ["true"],
+                        defaultValue: this.data.keepEnable ? "true" : "false"
+                    },
                     startDateInput: {
                         text: this.lp.startTime,
                         tType: "date",
@@ -1456,18 +1468,31 @@ MWF.xApplication.Profile.emPowerPopupForm = new Class({
     },
 
     _ok: function (data, callback) {
+        debugger;
+        data.fromIdentity = data.fromPerson;
+        data.toIdentity = data.toPerson;
+        var p1 = o2.Actions.load("x_organization_assemble_express").PersonAction.listWithIdentityObject({ identityList: [data.fromIdentity]});
+        var p2 = o2.Actions.load("x_organization_assemble_express").PersonAction.listWithIdentityObject({ identityList: [data.toIdentity]});
+        Promise.all([p1, p2]).then(function (arr) {
+            if(arr[0].data && arr[0].data.length)data.fromPerson = arr[0].data[0].distinguishedName;
+            if(arr[1].data && arr[1].data.length)data.toPerson = arr[1].data[0].distinguishedName;
+            this.__ok( data, callback );
+        }.bind(this))
+    },
+    __ok: function (data, callback) {
         //data 是表单的数据， callback 是正确的回调
         //data.
 
         var submitData = [];
         //数据处理
         var sdata = {};
-        sdata.fromIdentity = data.fromPerson;
-        sdata.fromPerson = data.fromPerson.split("@")[0];
-        sdata.toIdentity = data.toPerson;
-        sdata.toPerson = data.toPerson.split("@")[0];
+        sdata.fromIdentity = data.fromIdentity;
+        sdata.fromPerson = data.fromPerson;
+        sdata.toIdentity = data.toIdentity;
+        sdata.toPerson = data.toPerson;
         sdata.startTime = data.startDateInput+" "+data.startTimeInput+":00";
         sdata.completedTime = data.endDateInput+" "+data.endTimeInput+":00";
+        sdata.keepEnable = false; //data.keepTask === "true";
 
         if( Date.parse(sdata.completedTime) - Date.parse(sdata.startTime) < 0 ){
             this.app.notice(this.lp.startTimeEarlyCompleteTime,"error");
@@ -1615,6 +1640,9 @@ MWF.xApplication.Profile.emPowerPopupForm = new Class({
             "<tr style='display:"+(this.data.type=="process"?"":"none")+"'><td styles='formTableTitleRight' lable='process'>"+this.lp.process+"</td>" +
             "    <td styles='formTableValue1' item='process' colspan='2'></td>" +
             "</tr>" +
+            // "<tr><td styles='formTableTitleRight' width='100'></td>" +
+            // "    <td styles='formTableValue' item='keepTask' colspan='2'></td>" +
+            // "</tr>" +
             "</table>";
     }
 });

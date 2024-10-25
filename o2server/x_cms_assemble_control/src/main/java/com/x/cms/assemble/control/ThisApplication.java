@@ -1,24 +1,14 @@
 package com.x.cms.assemble.control;
 
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ForkJoinPool;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.x.base.core.project.ApplicationForkJoinWorkerThreadFactory;
 import com.x.base.core.project.Context;
 import com.x.base.core.project.cache.CacheManager;
 import com.x.base.core.project.message.MessageConnector;
-import com.x.cms.assemble.control.queue.DataImportStatus;
-import com.x.cms.assemble.control.queue.ProjectionExecuteQueue;
-import com.x.cms.assemble.control.queue.QueueBatchOperation;
-import com.x.cms.assemble.control.queue.QueueDocumentDelete;
-import com.x.cms.assemble.control.queue.QueueDocumentUpdate;
-import com.x.cms.assemble.control.queue.QueueDocumentViewCountUpdate;
-import com.x.cms.assemble.control.queue.QueueSendDocumentNotify;
+import com.x.cms.assemble.control.queue.*;
 import com.x.cms.assemble.control.timertask.PublishWaitDocumentTask;
 import com.x.cms.assemble.control.timertask.Timertask_BatchOperationTask;
 import com.x.cms.assemble.control.timertask.Timertask_InitOperationRunning;
@@ -31,18 +21,11 @@ public class ThisApplication {
 		// nothing
 	}
 
-	private static ExecutorService threadPool;
+	private static final ForkJoinPool FORKJOINPOOL = new ForkJoinPool(Runtime.getRuntime().availableProcessors(),
+			new ApplicationForkJoinWorkerThreadFactory(ThisApplication.class.getPackage()), null, false);
 
-	public static ExecutorService threadPool() {
-		return threadPool;
-	}
-
-	private static void initThreadPool() {
-		int maximumPoolSize = Runtime.getRuntime().availableProcessors() + 1;
-		ThreadFactory threadFactory = new ThreadFactoryBuilder()
-				.setNameFormat(ThisApplication.class.getPackageName() + "-threadpool-%d").build();
-		threadPool = new ThreadPoolExecutor(0, maximumPoolSize, 120, TimeUnit.SECONDS, new ArrayBlockingQueue<>(1000),
-				threadFactory);
+	public static ForkJoinPool forkJoinPool() {
+		return FORKJOINPOOL;
 	}
 
 	protected static Context context;
@@ -62,6 +45,9 @@ public class ThisApplication {
 	// 执行文档的数据映射
 	public static final ProjectionExecuteQueue projectionExecuteQueue = new ProjectionExecuteQueue();
 
+	public static final FormVersionQueue formVersionQueue = new FormVersionQueue();
+	public static final ScriptVersionQueue scriptVersionQueue = new ScriptVersionQueue();
+
 	private static final ConcurrentHashMap<String, DataImportStatus> importStatus = new ConcurrentHashMap<>();
 
 	public static Context context() {
@@ -71,13 +57,14 @@ public class ThisApplication {
 	public static void init() throws Exception {
 		CacheManager.init(context.clazz().getSimpleName());
 		MessageConnector.start(context());
-		initThreadPool();
 		context().startQueue(queueBatchOperation);
 		context().startQueue(queueDocumentDelete);
 		context().startQueue(queueDocumentUpdate);
 		context().startQueue(queueDocumentViewCountUpdate);
 		context().startQueue(queueSendDocumentNotify);
 		context().startQueue(projectionExecuteQueue);
+		context().startQueue(formVersionQueue);
+		context().startQueue(scriptVersionQueue);
 		// 每天凌晨2点执行一次
 		context.schedule(Timertask_LogRecordCheckTask.class, "0 0 2 * * ?");
 
@@ -96,6 +83,7 @@ public class ThisApplication {
 
 	public static void destroy() {
 		try {
+			FORKJOINPOOL.shutdown();
 			CacheManager.shutdown();
 		} catch (Exception e) {
 			e.printStackTrace();

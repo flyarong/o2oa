@@ -21,13 +21,16 @@ export default content({
             placeholder: "",
             types: ["identity", "unit"], // 选择器类型
             count: 0 , // 0是多选 其它是固定数据选择
+            selectedResult: [] //
         };
     },
     afterRender() {
         if (this.bind.value.length > 0) {
           let newShowValue = [];
+          let selectedResult = [];
           for (let index = 0; index < this.bind.value.length; index++) {
             const element = this.bind.value[index];
+            selectedResult.push(element);
             const a = element.split("@");
             if (a && a.length > 0 ) {
               newShowValue.push(a[0]);
@@ -36,6 +39,7 @@ export default content({
             }
           }
           this.bind.showValue = newShowValue.join(", ");
+          this.bind.selectedResult = selectedResult;
         }
     },
     leaveIcon() {
@@ -51,7 +55,8 @@ export default content({
             "count": this.bind.count,
             "title": this.bind.selectorTitle,
             "units": this.bind.units,
-            "values": this.bind.value,
+            "firstLevelSelectable": true,
+            "values": this.bind.selectedResult,
             "resultType": "person",
             "onComplete": function(items) {
               this.changeValue(items);
@@ -74,6 +79,7 @@ export default content({
     changeValue(items) {
        let newValue = [];
        let newShowValue = [];
+       let selectedResult = [];
        if (items) {
         if (this.bind.count > 0 && items.length > this.bind.count) {
           const message = lpFormat(lp, "components.selectOrgPersonOverCount", {count: this.bind.count});
@@ -83,6 +89,7 @@ export default content({
         items.forEach(element => {
           if (element.data && element.data.distinguishedName) {
             newValue.push(element.data.distinguishedName);
+            selectedResult.push(element.data);
             const a = element.data.distinguishedName.split("@");
             if (a && a.length > 0 ) {
               newShowValue.push(a[0]);
@@ -91,6 +98,7 @@ export default content({
             }
           }
         });
+        this.bind.selectedResult = selectedResult;
         this.bind.value = newValue;
         this.bind.showValue = newShowValue.join(", ");
         // 反写到oo-model

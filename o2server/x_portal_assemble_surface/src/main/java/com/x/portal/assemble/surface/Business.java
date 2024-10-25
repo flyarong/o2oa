@@ -1,8 +1,19 @@
 package com.x.portal.assemble.surface;
 
 import com.x.base.core.container.EntityManagerContainer;
+import com.x.base.core.project.gson.XGsonBuilder;
+import com.x.base.core.project.http.EffectivePerson;
+import com.x.base.core.project.script.AbstractResources;
+import com.x.base.core.project.scripting.GraalvmScriptingFactory;
+import com.x.base.core.project.webservices.WebservicesClient;
 import com.x.organization.core.express.Organization;
-import com.x.portal.assemble.surface.factory.*;
+import com.x.portal.assemble.surface.factory.ApplicationDictFactory;
+import com.x.portal.assemble.surface.factory.ApplicationDictItemFactory;
+import com.x.portal.assemble.surface.factory.FileFactory;
+import com.x.portal.assemble.surface.factory.PageFactory;
+import com.x.portal.assemble.surface.factory.PortalFactory;
+import com.x.portal.assemble.surface.factory.ScriptFactory;
+import com.x.portal.assemble.surface.factory.WidgetFactory;
 import com.x.portal.assemble.surface.factory.cms.CmsFactory;
 import com.x.portal.assemble.surface.factory.process.ProcessFactory;
 import com.x.portal.assemble.surface.factory.service.CenterServiceFactory;
@@ -116,6 +127,32 @@ public class Business {
 			this.centerService = new CenterServiceFactory(this);
 		}
 		return centerService;
+	}
+
+	public GraalvmScriptingFactory.Bindings binding(EffectivePerson effectivePerson) throws Exception {
+		Resources resources = new Resources();
+		resources.setContext(ThisApplication.context());
+		resources.setOrganization(new Organization(ThisApplication.context()));
+		resources.setWebservicesClient(new WebservicesClient());
+		resources.setApplications(ThisApplication.context().applications());
+		GraalvmScriptingFactory.Bindings bindings = new GraalvmScriptingFactory.Bindings();
+		bindings.putMember(GraalvmScriptingFactory.BINDING_NAME_SERVICE_RESOURCES, resources);
+		bindings.putMember(GraalvmScriptingFactory.BINDING_NAME_SERVICE_EFFECTIVEPERSON,
+				XGsonBuilder.toJson(effectivePerson));
+		return bindings;
+	}
+
+	public static class Resources extends AbstractResources {
+		private Organization organization;
+
+		public Organization getOrganization() {
+			return organization;
+		}
+
+		public void setOrganization(Organization organization) {
+			this.organization = organization;
+		}
+
 	}
 
 }

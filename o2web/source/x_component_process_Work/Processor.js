@@ -15,6 +15,7 @@ MWF.xApplication.process.Work.Processor = new Class({
         "tabletWidth": 0,
         "tabletHeight": 0,
         "orgHeight": 276,
+        "inFlow": false,
         "maxOrgCountPerline": 2,
         "isManagerProcess": false, //是否为管理员提交
         "useDefaultOpinion": true
@@ -132,20 +133,24 @@ MWF.xApplication.process.Work.Processor = new Class({
                         "styles": this.css.routeContainer
                     }).inject(this.routeOpinionTile, "before");
 
-                    this.routeLeftWarper = new Element("div", {
-                        "styles":
-                            this.getMaxOrgLength() > 1 ? this.css.routeLeftWarper : this.css.routeLeftWarper_single
-                    }).inject(this.routeContainer);
+                    this.routeLeftWarper = new Element("div").inject(this.routeContainer);
+                    if( this.getMaxOrgLength() > 1 ){
+                        this.routeLeftWarper.setStyles( this.options.inFlow ? this.css.routeLeftWarper_flow : this.css.routeLeftWarper );
+                    }else{
+                        this.routeLeftWarper.setStyles( this.css.routeLeftWarper_single );
+                    }
                     this.routeGroupTitle = new Element("div", {
                         "styles": this.css.routeSelectorTile,
                         "text": MWF.xApplication.process.Work.LP.selectRouteGroup
                     }).inject(this.routeLeftWarper);
                     this.routeGroupArea = new Element("div", {"styles": this.css.routeSelectorArea_hasGroup}).inject(this.routeLeftWarper);
 
-                    this.routeRightWarper = new Element("div", {
-                        "styles":
-                            this.getMaxOrgLength() > 1 ? this.css.routeRightWarper : this.css.routeRightWarper_single
-                    }).inject(this.routeContainer);
+                    this.routeRightWarper = new Element("div").inject(this.routeContainer);
+                    if( this.getMaxOrgLength() > 1 ){
+                        this.routeLeftWarper.setStyles( this.options.inFlow ? this.css.routeRightWarper_flow : this.css.routeRightWarper );
+                    }else{
+                        this.routeLeftWarper.setStyles( this.css.routeRightWarper_single );
+                    }
                     this.routeSelectorTile = new Element("div", {
                         "styles": this.css.routeSelectorTile,
                         "text": MWF.xApplication.process.Work.LP.selectRoute
@@ -230,6 +235,7 @@ MWF.xApplication.process.Work.Processor = new Class({
         return obj;
     },
     setRouteGroupList: function () {
+        debugger;
         var _self = this;
         //var keys = Object.keys( this.routeGroupObject );
         //var length = keys.length;
@@ -254,7 +260,8 @@ MWF.xApplication.process.Work.Processor = new Class({
             list.push(this.splitByStartNumber(k).name)
         }.bind(this));
 
-        var flag = false;
+        var flag = true;
+        var matchRoutes = [];
         list.each(function (routeGroupName) {
             var routeList = this.routeGroupObject[routeGroupName];
             var routeGroupNode = new Element("div", {
@@ -279,8 +286,12 @@ MWF.xApplication.process.Work.Processor = new Class({
             if (keys.length === 1) {
                 this.selectRouteGroup(routeGroupNode);
                 flag = false;
-            } else {
-                flag = true;
+            }else if( matchRoutes.length === 0 && this.options.defaultRoute ){
+                matchRoutes = routeList.filter(function(r){ return r.id === this.options.defaultRoute || r.name === this.options.defaultRoute; }.bind(this));
+                if( matchRoutes.length ){
+                    this.selectRouteGroup(routeGroupNode);
+                }
+                flag = false;
             }
         }.bind(this))
         if (flag) {
@@ -493,10 +504,11 @@ MWF.xApplication.process.Work.Processor = new Class({
                 //this.selectedRoute.getLast().setStyles(this.css.routeTextNode);
 
                 if( this.options.useDefaultOpinion ){
-                    if( this.inputTextarea.get("value") === this.getDefaultOpinion( this.selectedRoute ) ||
+                    if( this.inputTextarea.get("value") === ( this.lastDefaultOpinion || "" ) ||
                         this.inputTextarea.get("value") === (MWF.xApplication.process.Work.LP.inputText || "")
                     ){
-                        this.inputTextarea.set("value", this.getDefaultOpinion(node) || (MWF.xApplication.process.Work.LP.inputText || "") );
+                        this.lastDefaultOpinion = this.getDefaultOpinion(node) || "";
+                        this.inputTextarea.set("value", this.lastDefaultOpinion || (MWF.xApplication.process.Work.LP.inputText || "") );
                     }
                 }
 
@@ -511,6 +523,7 @@ MWF.xApplication.process.Work.Processor = new Class({
             } else { //取消选中当前路由
                 if( this.options.useDefaultOpinion ) {
                     if (this.inputTextarea.get("value") === this.getDefaultOpinion(this.selectedRoute)) {
+                        this.lastDefaultOpinion = "";
                         this.inputTextarea.set("value", MWF.xApplication.process.Work.LP.inputText || "");
                     }
                 }
@@ -524,9 +537,11 @@ MWF.xApplication.process.Work.Processor = new Class({
             }
         } else {
             if( this.options.useDefaultOpinion ) {
-                if (this.inputTextarea.get("value") === (MWF.xApplication.process.Work.LP.inputText || "")) {
-                    var defaultOpinion1 = this.getDefaultOpinion(node);
-                    if (defaultOpinion1) this.inputTextarea.set("value", defaultOpinion1);
+                if ( (this.inputTextarea.get("value") === (MWF.xApplication.process.Work.LP.inputText || "")) ||
+                    (this.inputTextarea.get("value") === this.lastDefaultOpinion )
+                ) {
+                    this.lastDefaultOpinion = this.getDefaultOpinion(node) || "";
+                    if (this.lastDefaultOpinion) this.inputTextarea.set("value", this.lastDefaultOpinion);
                 }
             }
 
@@ -922,46 +937,6 @@ MWF.xApplication.process.Work.Processor = new Class({
             }
         }
 
-        if (routeData.validationScriptText) {
-            var validation = this.form.Macro.exec(routeData.validationScriptText, this);
-            if (!validation || validation.toString() !== "true") {
-                if (typeOf(validation) === "string") {
-                    new mBox.Notice({
-                        type: "error",
-                        position: {"x": "center", "y": "top"},
-                        move: false,
-                        target: this.node,
-                        delayClose: 6000,
-                        content: validation
-                    });
-                    return false;
-                } else {
-                    //"路由校验失败"
-                    new mBox.Notice({
-                        type: "error",
-                        position: {"x": "center", "y": "top"},
-                        move: false,
-                        target: this.node,
-                        delayClose: 6000,
-                        content: MWF.xApplication.process.Work.LP.routeValidFailure
-                    });
-                    return false;
-                }
-            }
-        }
-
-        //var array = [routeName, opinion, medias];
-        //this.node.mask({
-        //    "inject": {"where": "bottom", "target": this.node},
-        //    "destroyOnHide": true,
-        //    "style": {
-        //        "background-color": "#999",
-        //        "opacity": 0.3,
-        //        "z-index":600
-        //    }
-        //});
-        //this.fireEvent("submit", array );
-
         var appendTaskOrgItem;
         if (routeData.type === "appendTask" && routeData.appendTaskIdentityType === "select") {
             if (!this.orgItems || this.orgItems.length === 0) {
@@ -1059,14 +1034,6 @@ MWF.xApplication.process.Work.Processor = new Class({
 
         if (!this.selectedRoute) {
             this.routeSelectorArea.setStyle("background-color", "#ffe9e9");
-            //new mBox.Notice({
-            //    type: "error",
-            //    position: {"x": "center", "y": "top"},
-            //    move: false,
-            //    target: this.routeSelectorArea,
-            //    delayClose: 6000,
-            //    content: MWF.xApplication.process.Work.LP.mustSelectRoute
-            //});
             MWF.xDesktop.notice(
                 "error",
                 {"x": "center", "y": "top"},
@@ -1090,14 +1057,6 @@ MWF.xApplication.process.Work.Processor = new Class({
         if (!opinion && medias.length === 0) {
             if (routeData.opinionRequired == true) {
                 this.inputTextarea.setStyle("background-color", "#ffe9e9");
-                //new mBox.Notice({
-                //    type: "error",
-                //    position: {"x": "center", "y": "top"},
-                //    move: false,
-                //    target: this.inputTextarea,
-                //    delayClose: 6000,
-                //    content: MWF.xApplication.process.Work.LP.opinionRequired
-                //});
                 MWF.xDesktop.notice(
                     "error",
                     {"x": "center", "y": "top"},
@@ -1113,14 +1072,6 @@ MWF.xApplication.process.Work.Processor = new Class({
         var appendTaskOrgItem = "";
         if (routeData.type === "appendTask" && routeData.appendTaskIdentityType === "select") {
             if (!this.orgItems || this.orgItems.length === 0) {
-                //new mBox.Notice({
-                //    type: "error",
-                //    position: {"x": "center", "y": "top"},
-                //    move: false,
-                //    target: this.orgsArea,
-                //    delayClose: 6000,
-                //    content: MWF.xApplication.process.Work.LP.noAppendTaskIdentityConfig //"没有配置转交人，请联系管理员"
-                //});
                 MWF.xDesktop.notice(
                     "error",
                     {"x": "center", "y": "center"},
@@ -1135,20 +1086,11 @@ MWF.xApplication.process.Work.Processor = new Class({
             }
         }
 
-
         this.saveOrgsWithCheckEmpower(function () {
             var appandTaskIdentityList;
             if (appendTaskOrgItem) {
                 appandTaskIdentityList = appendTaskOrgItem.getData();
                 if (!appandTaskIdentityList || appandTaskIdentityList.length === 0) {
-                    //new mBox.Notice({
-                    //    type: "error",
-                    //    position: {"x": "center", "y": "top"},
-                    //    move: false,
-                    //    target: this.orgsArea,
-                    //    delayClose: 6000,
-                    //    content:  MWF.xApplication.process.Work.LP.selectAppendTaskIdentityNotice //"请选择转交人"
-                    //});
                     MWF.xDesktop.notice(
                         "error",
                         {"x": "center", "y": "center"},
@@ -1279,6 +1221,11 @@ MWF.xApplication.process.Work.Processor = new Class({
 
 
     destroy: function () {
+        if (this.orgItems && this.orgItems.length){
+            this.orgItems.each(function (org) {
+                if(org.clearTooltip)org.clearTooltip();
+            })
+        }
         if (this.node) this.node.empty();
         delete this.task;
         delete this.node;
@@ -1294,6 +1241,19 @@ MWF.xApplication.process.Work.Processor = new Class({
     },
     getRouteDataList: function () {
         if(this.routeDataList)return this.routeDataList;
+
+        if (this.task.routeNameDisable){
+            this.routeDataList = [{
+                "id": o2.uuid(),
+                "asyncSupported": false,
+                "soleDirect": false,
+                "name": "继续流转",
+                "alias": "",
+                "selectConfigList": []
+            }];
+            return this.routeDataList;
+        }
+
         if( this.form && this.form.businessData && this.form.businessData.routeList ){
             this.form.businessData.routeList.sort( function(a, b){
                 var aIdx = parseInt(a.orderNumber || "9999999");
@@ -1645,8 +1605,6 @@ MWF.xApplication.process.Work.Processor = new Class({
             });
         }
 
-        debugger;
-
         var orgItems_old = this.orgItemsObject[route] || [];
         var orgItemMap_old = this.orgItemsMap[route] || {};
 
@@ -1743,7 +1701,6 @@ MWF.xApplication.process.Work.Processor = new Class({
 
     },
     showOrgsByRoute: function (route) {
-        //debugger;
         this.loadOrgs(route);
     },
     clearAllOrgs: function () {
@@ -1866,11 +1823,19 @@ MWF.xApplication.process.Work.Processor = new Class({
         }
         debugger;
         if (this.getMaxOrgLength() > 1) {
-            this.node.setStyles(this.css.node_wide);
-            this.inputOpinionNode.setStyles(this.css.inputOpinionNode_wide);
-            this.inputTextarea.setStyles(this.css.inputTextarea_wide);
-            this.inputTextareaStyle = this.css.inputTextarea_wide;
-            this.selectIdeaNode.setStyles(this.css.selectIdeaNode_wide);
+            if( this.options.inFlow ){
+                this.node.setStyles(this.css.node_wide_flow);
+                this.inputOpinionNode.setStyles(this.css.inputOpinionNode_wide_flow);
+                this.inputTextarea.setStyles(this.css.inputTextarea_wide_flow);
+                this.inputTextareaStyle = this.css.inputTextarea_wide_flow;
+                this.selectIdeaNode.setStyles(this.css.selectIdeaNode_wide_flow);
+            }else{
+                this.node.setStyles(this.css.node_wide);
+                this.inputOpinionNode.setStyles(this.css.inputOpinionNode_wide);
+                this.inputTextarea.setStyles(this.css.inputTextarea_wide);
+                this.inputTextareaStyle = this.css.inputTextarea_wide;
+                this.selectIdeaNode.setStyles(this.css.selectIdeaNode_wide);
+            }
 
         } else {
             this.node.setStyles(this.css.node);
@@ -1928,7 +1893,6 @@ MWF.xApplication.process.Work.Processor = new Class({
         return flag;
     },
     saveOrgsWithCheckEmpower: function (callback) {
-        debugger;
         var currentRoute = this.selectedRoute ? this.selectedRoute.retrieve("route") : "";
 
         var visableOrg = this.getVisableOrgData( currentRoute || this.selectedRouteId || "" );
@@ -2147,6 +2111,11 @@ if (MWF.xApplication.process.Xform && MWF.xApplication.process.Xform.Form) {
                 }
             }
         },
+        clearTooltip: function(){
+            if( this.selector && this.selector.selector && this.selector.selector.clearTooltip ){
+                this.selector.selector.clearTooltip();
+            }
+        },
         _getOrgOptions: function () {
             this.selectTypeList = typeOf(this.json.selectType) == "array" ? this.json.selectType : [this.json.selectType];
             if (this.selectTypeList.contains("identity")) {
@@ -2155,9 +2124,9 @@ if (MWF.xApplication.process.Xform && MWF.xApplication.process.Xform.Form) {
             if (this.selectTypeList.contains("unit")) {
                 this.unitOptions = new MWF.xApplication.process.Work.Processor.UnitOptions(this.form, this.json);
             }
-            //if( this.selectTypeList.contains( "group" ) ){
-            //    this.groupOptions = new MWF.APPOrg.GroupOptions( this.form, this.json );
-            //}
+            if( this.selectTypeList.contains( "group" ) ){
+               this.groupOptions = new MWF.xApplication.process.Work.Processor.GroupOptions( this.form, this.json );
+            }
         },
         getOptions: function () {
             var _self = this;
@@ -2212,12 +2181,16 @@ if (MWF.xApplication.process.Xform && MWF.xApplication.process.Xform.Form) {
                 unitOpt.exclude = exclude;
             }
 
-            //var groupOpt;
-            //if( this.groupOptions ){
-            //    groupOpt = this.groupOptions.getOptions();
-            //    groupOpt.values = (this.json.isInput) ? [] : values;
-            //    groupOpt.exclude = exclude;
-            //}
+            var groupOpt;
+            if( this.groupOptions ){
+               groupOpt = this.groupOptions.getOptions();
+                if (this.ignoreOldData) {
+                    groupOpt.values = this._computeValue() || [];
+                } else {
+                    groupOpt.values = this.getValue() || [];
+                }
+               groupOpt.exclude = exclude;
+            }
 
             var defaultOpt;
             if (layout.mobile) {
@@ -2281,7 +2254,7 @@ if (MWF.xApplication.process.Xform && MWF.xApplication.process.Xform.Form) {
             };
 
             if (this.selectTypeList.length === 1) {
-                return Object.merge(
+                var opts = Object.merge(
                     defaultOpt,
                     {
                         "type": this.selectTypeList[0],
@@ -2296,8 +2269,9 @@ if (MWF.xApplication.process.Xform && MWF.xApplication.process.Xform.Form) {
                         //"onClose": this.selectOnClose.bind(this)
                     },
                     layout.mobile ? mobileEvents : {},
-                    identityOpt || unitOpt
+                    identityOpt || unitOpt || groupOpt
                 )
+                return this.filterOptionValues( opts, this.selectTypeList[0] );
             } else if (this.selectTypeList.length > 1) {
                 var options = {
                     "type": "",
@@ -2326,9 +2300,40 @@ if (MWF.xApplication.process.Xform && MWF.xApplication.process.Xform.Form) {
                         unitOpt
                     );
                 }
-                //if( groupOpt )options.groupOptions = groupOpt;
+                if (groupOpt) {
+                    options.groupOptions = Object.merge(
+                        defaultOpt,
+                        layout.mobile ? mobileEvents : {},
+                        groupOpt
+                    );
+                }
                 return options;
             }
+        },
+        filterOptionValues: function( options, type ){
+            var suffix;
+            switch (type) {
+                case "identity": suffix = "I"; break;
+                case "unit": suffix = "U"; break;
+                case "group": suffix = "G"; break;
+            }
+            options.values = (options.values || []).filter(function (v) {
+                if( typeOf(v) === "string" ){
+                    if( v.contains("@") ){
+                        return v.split("@").getLast().toUpperCase() === suffix;
+                    }else{
+                        return true;
+                    }
+                }else if( typeOf(v) === "object" ){
+                    if( v.distinguishedName ){
+                        return v.distinguishedName.split("@").getLast().toUpperCase() === suffix;
+                    }else{
+                        return false;
+                    }
+                }
+                return false;
+            }.bind(this));
+            return options;
         },
         selectOnComplete: function (items) { //移动端才执行
             var array = [];
@@ -2544,6 +2549,11 @@ if (MWF.xApplication.process.Xform && MWF.xApplication.process.Xform.Form) {
                     if (v) values.push(v)
                 });
             }
+            // if (this.json.groupValue) {
+            //     this.json.groupValue.each(function (v) {
+            //         if (v) values.push(v)
+            //     });
+            // }
             if (this.json.dutyValue) {
                 var dutys = JSON.decode(this.json.dutyValue);
                 var par;
@@ -2605,7 +2615,7 @@ if (MWF.xApplication.process.Xform && MWF.xApplication.process.Xform.Form) {
                     if (vtype === "string") {
                         this.getOrgAction()[this.getValueMethod(v)](function (json) {
                             data = MWF.org.parseOrgData(json.data, true, simple);
-                        }.bind(this), error, v, false);
+                        }.bind(this), null, v, false);
                     }
                     if (vtype === "object") {
                         data = MWF.org.parseOrgData(v, true, simple);
@@ -2618,7 +2628,7 @@ if (MWF.xApplication.process.Xform && MWF.xApplication.process.Xform.Form) {
                 var vData;
                 this.getOrgAction()[this.getValueMethod(value)](function (json) {
                     vData = MWF.org.parseOrgData(json.data, true, simple);
-                }.bind(this), error, value, false);
+                }.bind(this), null, value, false);
                 if (vData) values.push(vData);
             }
             if (type === "object") {
@@ -3122,5 +3132,9 @@ if (MWF.xApplication.process.Xform && MWF.xApplication.process.Xform.Form) {
 
     MWF.xApplication.process.Work.Processor.IdentityOptions = new Class({
         Extends: MWF.APPOrg.IdentityOptions
+    });
+
+    MWF.xApplication.process.Work.Processor.GroupOptions = new Class({
+        Extends: MWF.APPOrg.GroupOptions
     });
 }

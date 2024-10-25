@@ -16,7 +16,6 @@ import com.x.base.core.project.http.EffectivePerson;
 import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
 import com.x.processplatform.assemble.surface.Business;
-import com.x.processplatform.core.entity.element.Application;
 import com.x.processplatform.core.entity.element.Process;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -62,7 +61,7 @@ class ActionCreateForce extends BaseCreateAction {
 		if (BooleanUtils.isFalse(wi.getLatest()) || (StringUtils.isEmpty(lastestWorkId))) {
 			updateWork(identity, workId, wi.getTitle(), wi.getParentWork());
 			// 驱动工作,使用非队列方式
-			this.processingWork(workId);
+			this.processingCreateWork(workId);
 		} else {
 			// 如果是草稿,准备后面的直接打开
 			workId = lastestWorkId;

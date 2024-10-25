@@ -25,15 +25,17 @@ MWF.xDesktop.Actions.RestActions = new Class({
 
         //this.address = "http://xa02.zoneland.net:8080/"+this.serviceName;
         var addressObj = layout.serviceAddressList[this.serviceName];
+        var defaultPort = layout.config.app_protocol==='https' ? "443" : "80";
         if (addressObj){
             //var mapping = layout.getAppUrlMapping(layout.config.app_protocol+"//"+addressObj.host+(addressObj.port==80 ? "" : ":"+addressObj.port)+addressObj.context);
-            this.address = layout.config.app_protocol+"//"+(addressObj.host || window.location.hostname)+((!addressObj.port || addressObj.port==80) ? "" : ":"+addressObj.port)+addressObj.context;
+            var appPort = addressObj.port || window.location.port;
+            this.address = layout.config.app_protocol+"//"+(addressObj.host || window.location.hostname)+((!appPort || appPort.toString()===defaultPort) ? "" : ":"+appPort)+addressObj.context;
         }else{
             var host = layout.desktop.centerServer.host || window.location.hostname;
-            var port = layout.desktop.centerServer.port;
+            var port = layout.desktop.centerServer.port || window.location.port;
 
             //var mapping = layout.getCenterUrlMapping(layout.config.app_protocol+"//"+host+(port=="80" ? "" : ":"+port)+"/x_program_center");
-            this.address = layout.config.app_protocol+"//"+host+((!port || port=="80") ? "" : ":"+port)+"/"+this.serviceName;
+            this.address = layout.config.app_protocol+"//"+host+((!port || port.toString()===defaultPort) ? "" : ":"+port)+"/"+this.serviceName;
         }
 
         //this.address = "http://hbxa01.bf.ctc.com/"+this.serviceName;
@@ -495,7 +497,7 @@ MWF.xDesktop.Actions.RestActions = new Class({
             var msg = {
                 "subject": MWF.LP.desktop.action.uploadTitle,
                 //"content": MWF.LP.desktop.action.uploadTitle+" : "+file.name+"<br/>"+contentHTML
-                "content": ( file.name ? (file.name+"<br/>") : "" )+contentHTML
+                "content": ( file.name ? (o2.txt(file.name)+"<br/>") : "" )+contentHTML
             };
 
             var messageItem = layout.desktop.message.addMessage(msg);
@@ -504,7 +506,7 @@ MWF.xDesktop.Actions.RestActions = new Class({
             messageItem.close = function(callback, e){
                 if (this.status=="progress"){
                     var flag = false;
-                    var name = (file.name||"");
+                    var name = o2.txt(file.name||"");
                     name = name.length > 50 ? name.substr(0, 50)+"..." : name;
                     var text = MWF.LP.desktop.action.cancelUpload.replace(/{name}/g, (name));
                     MWF.xDesktop.confirm("wram", e, MWF.LP.desktop.action.cancelUploadTitle, text, "400", "180", function(){
@@ -619,7 +621,7 @@ MWF.xDesktop.Actions.RestActions.Callback = new Class({
                 //    return responseJSON;
                 //     break;
                 case "warn":
-                    MWF.xDesktop.notice("info", {x: "right", y:"top"}, responseJSON.errorMessage.join("\n"));
+                    //MWF.xDesktop.notice("info", {x: "right", y:"top"}, responseJSON.errorMessage.join("\n"));
                     if (this.appendSuccess) this.appendSuccess(responseJSON);
                     if (this.success) return this.success(responseJSON);
                     return responseJSON;

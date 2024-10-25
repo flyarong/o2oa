@@ -32,6 +32,7 @@ public class ActionImageDownloadWidthHeight extends BaseAction {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(ActionImageDownloadWidthHeight.class);
 
+	private static String[] imageExtentionArray = new String[] { "jpg", "png", "bmp", "jpeg" };
 	ActionResult<Wo> execute(EffectivePerson effectivePerson, String id, Integer width, Integer height)
 			throws Exception {
 
@@ -46,7 +47,7 @@ public class ActionImageDownloadWidthHeight extends BaseAction {
 			if (null == file) {
 				throw new ExceptionFileNotExist(id);
 			}
-			if (!ArrayUtils.contains(IMAGE_EXTENSIONS, file.getExtension())) {
+			if (!ArrayUtils.contains(imageExtentionArray, file.getExtension().toLowerCase())) {
 				throw new IllegalStateException("file is not image file.");
 			}
 			if (width < 0 || width > 5000) {
@@ -72,7 +73,8 @@ public class ActionImageDownloadWidthHeight extends BaseAction {
 				}
 				try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
 					file.readContent(mapping, os);
-					try (ByteArrayInputStream input = new ByteArrayInputStream(os.toByteArray())) {
+					try {
+						ByteArrayInputStream input = new ByteArrayInputStream(os.toByteArray());
 						BufferedImage src = ImageIO.read(input);
 						int scalrWidth = (width == 0) ? src.getWidth() : width;
 						int scalrHeight = (height == 0) ? src.getHeight() : height;
@@ -91,9 +93,19 @@ public class ActionImageDownloadWidthHeight extends BaseAction {
 							CacheManager.put(cacheCategory, cacheKey, wo);
 							result.setData(wo);
 						}
+					} catch (Exception ex) { // 图片转化异常的情况 直接返回整个文件
+						LOGGER.warn("图片转化异常", ex);
+						byte[] bs = os.toByteArray();
+						wo = new Wo(bs, this.contentType(false, file.getName()),
+								this.contentDisposition(false, file.getName()));
+						// 对10M以下的文件进行缓存
+						if (bs.length < (1024 * 1024 * 10)) {
+							CacheManager.put(cacheCategory, cacheKey, wo);
+						}
+						result.setData(wo);
 					}
 				} catch (Exception e) {
-					if (e.getMessage().indexOf("existed") > -1) {
+					if (e.getMessage() != null && e.getMessage().contains("existed")) {
 						LOGGER.warn("原始附件{}-{}不存在，删除记录！", file.getId(), file.getName());
 						emc.beginTransaction(IMMsgFile.class);
 						emc.delete(IMMsgFile.class, file.getId());

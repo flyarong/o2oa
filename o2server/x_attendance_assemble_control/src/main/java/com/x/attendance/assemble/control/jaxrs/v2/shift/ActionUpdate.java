@@ -12,6 +12,7 @@ import com.x.base.core.entity.JpaObject;
 import com.x.base.core.entity.annotation.CheckPersistType;
 import com.x.base.core.project.bean.WrapCopier;
 import com.x.base.core.project.bean.WrapCopierFactory;
+import com.x.base.core.project.cache.CacheManager;
 import com.x.base.core.project.exception.ExceptionAccessDenied;
 import com.x.base.core.project.http.ActionResult;
 import com.x.base.core.project.http.EffectivePerson;
@@ -56,11 +57,20 @@ public class ActionUpdate extends BaseAction {
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("班次post {}", wi.toString());
             }
+            long workTime = shiftWorkTime(properties);
+            if (workTime < 0) {
+                workTime = -workTime;
+            }
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("班次工作 "+workTime);
+            }
             // 修改
             AttendanceV2Shift shift = emc.find(wi.getId(), AttendanceV2Shift.class);
             emc.beginTransaction(AttendanceV2Shift.class);
             shift.setShiftName(wi.getShiftName());
             shift.setProperties(wi.getProperties());
+            shift.setWorkTime((int)workTime);
+            shift.setNeedLimitWorkTime(wi.getNeedLimitWorkTime());
             shift.setAbsenteeismLateMinutes(wi.getAbsenteeismLateMinutes());
             shift.setSeriousTardinessLateMinutes(wi.getSeriousTardinessLateMinutes());
             shift.setLateAndEarlyOffTime(wi.getLateAndEarlyOffTime());
@@ -69,6 +79,7 @@ public class ActionUpdate extends BaseAction {
             shift.setOperator(effectivePerson.getDistinguishedName());
             emc.check(shift, CheckPersistType.all);
             emc.commit();
+            CacheManager.notify(AttendanceV2Shift.class);// 清除缓存
             Wo wo = new Wo();
             wo.setId(shift.getId());
             result.setData(wo);

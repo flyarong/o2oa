@@ -26,8 +26,8 @@ public class Collect extends ConfigObject {
 	private static String Default_footer = "www.o2oa.net";
 	private static String Default_name = "www.o2oa.net";
 	private static String Default_appUrl = "https://app.o2oa.net/download/download.html";
-	private static String Default_server = "collect.o2oa.net";
-	private static String Default_appPackServerHost = "apppack.o2oa.net";
+	static String Default_server = "collect.o2oa.net";
+	static String Default_appPackServerHost = "apppack.o2oa.net";
 	private static Integer Default_port = 20080;
 	private static Integer Default_appPackServerPort = 30088;
 	public static String ADDRESS_COLLECT_LOGIN = "/o2_collect_assemble/jaxrs/authentication/captcha/key/o2/answer/o2";
@@ -39,7 +39,8 @@ public class Collect extends ConfigObject {
 	public static String ADDRESS_COLLECT_APPLICATION_DOWN = "/o2_collect_assemble/jaxrs/application2/download";
 	public static String COLLECT_TOKEN = "c-token";
 	public static String ADDRESS_APPPACK_AUTH = "/auth/collect";
-	public static String ADDRESS_APPPACK_SAVE = "/pack/info/save";
+	// public static String ADDRESS_APPPACK_SAVE = "/pack/info/save";
+	public static String ADDRESS_APPPACK_SAVE = "/pack/info/flutter/save";
 	public static String ADDRESS_APPPACK_INFO = "/pack/info/collect/%s";
 	public static String ADDRESS_APPPACK_INFO_RESTART = "/pack/info/restart/collect/%s";
 	public static String ADDRESS_APPPACK_DOWNLOAD_APK = "/pack/download/apk/%s";

@@ -16,11 +16,19 @@ MWF.xApplication.query.ViewDesigner.LP = {
     "saveViewNotice" : "请先保存视图！",
 
     "application" : "数据应用",
-    "newView" : "新视图",
+
     "newViewName" : "新视图名称",
     "copy" : "副本",
     "ok" : "确定",
     "cancel" : "取消",
+
+    "sorkKeyNote": "-排序-",
+    "createTime": "创建时间",
+    "updateTime": "更新时间",
+    "asc": "正序",
+    "desc": "倒序",
+    "searchPlacholder": "输入名称/别名/id搜索",
+    "searchAndSort": "排序和搜索",
 
     "action": {
         "move": "移动",
@@ -76,6 +84,9 @@ MWF.xApplication.query.ViewDesigner.LP = {
         "restoreDefaultTool" : "恢复删除的系统操作",
         "selectDefaultTool" : "选择系统操作"
     },
+    "actionBar": {
+        "exportExcel": "导出Excel"
+    },
     "mastInputPath": "请输入数据路径",
     "mastInputTitle": "请输入标题",
     "filter": {
@@ -97,7 +108,9 @@ MWF.xApplication.query.ViewDesigner.LP = {
         "columnValue" : "列值",
         "contain" : "包含",
         "from" : "从",
-        "in": "包含"
+        "in": "包含",
+        "script": "脚本",
+        "input":"输入"
     },
     "delete_filterItem_title": "删除过滤条件确认",
     "delete_filterItem": "您确定要删除当前过滤条件吗？",
@@ -320,7 +333,29 @@ MWF.xApplication.query.ViewDesigner.LP = {
         "selectOptionScriptNotice":"return [\"选项文本|选项值\"]",
         "selectOptionScript":"选项脚本",
         "defaultFilterCondition":"默认过滤条件",
-        "customFilterCondition":"自定义过滤数据"
+        "customFilterCondition":"自定义过滤数据",
+        "byScript": "根据脚本",
+        "language": "语言包",
+        "languageInfo": "返回包含语言信息的JSON对象；o2.language获取当前语言信息",
+        "forceClearCustomViewStyle": "切换时清除自定义样式",
+
+        "export": "导出",
+        "exportNotice": "一次性最多导出2000条",
+        "exportWidth": "宽度",
+        "exportEnable": "允许导出",
+        "isTime": "时间类型",
+        "isNumber": "数字类型",
+        "viewEnable": "启用视图",
+
+        "total": "合计",
+        "notNeeded": "不需要",
+        "totalValue": "数值",
+        "totalCount": "数量",
+
+        "headText": "表头文本",
+        "headStyle": "表头样式",
+        "columnTitleStyle": "列标题样式",
+        "columnContentStyle": "列内容样式"
     },
     "viewStyle":{
         "default": "默认样式",
@@ -329,6 +364,16 @@ MWF.xApplication.query.ViewDesigner.LP = {
         "official":"公文样式",
         "deepBlue":"集团样式",
         "blueFlat":"蓝白扁平",
-        "greenFlat": "绿色扁平"
+        "greenFlat": "绿色扁平",
+        "lightBlue": "淡蓝样式"
+    },
+    "formToolbar":{
+        "save": "保存",
+        "saveAs": "另存为",
+        "autoSave": "自动保存",
+        "preview": "预览",
+        "help": "帮助",
+        "add": "新建",
+        "gotoApp": "打开所在应用"
     }
 };

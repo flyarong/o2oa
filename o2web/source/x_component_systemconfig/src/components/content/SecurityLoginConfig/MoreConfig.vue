@@ -47,6 +47,15 @@
         @changeConfig="(value)=>{tokenExpiredMinutes = value.toInt(); saveConfig('person', 'tokenExpiredMinutes', value.toInt())}"></BaseItem>
 
     <BaseItem
+        :title="lp._loginConfig.appTokenExpired"
+        :info="lp._loginConfig.appTokenExpiredInfo"
+        :config="appTokenExpiredMinutes"
+        :allowEditor="true"
+        min="1"
+        type="number"
+        @changeConfig="(value)=>{appTokenExpiredMinutes = value.toInt(); saveConfig('person', 'appTokenExpiredMinutes', value.toInt())}"></BaseItem>
+
+    <BaseItem
         :title="lp._loginConfig.tokenName"
         :info="lp._loginConfig.tokenNameInfo"
         :config="tokenName"
@@ -64,6 +73,26 @@
       </el-switch>
     </div>
 
+    <div class="item_title">{{lp._loginConfig.tokenCookieHttpOnly}}</div>
+    <div class="item_info">{{lp._loginConfig.tokenCookieHttpOnlyInfo}}</div>
+    <div class="item_info">
+      <el-switch
+              @change="saveConfig('person', 'tokenCookieHttpOnly', tokenCookieHttpOnly)"
+              v-model="tokenCookieHttpOnly"
+              :active-text="lp.operation.enable" :inactive-text="lp.operation.disable">
+      </el-switch>
+    </div>
+
+    <div class="item_title">{{lp._loginConfig.tokenCookieSecure}}</div>
+    <div class="item_info">{{lp._loginConfig.tokenCookieSecureInfo}}</div>
+    <div class="item_info">
+      <el-switch
+              @change="saveConfig('person', 'tokenCookieSecure', tokenCookieSecure)"
+              v-model="tokenCookieSecure"
+              :active-text="lp.operation.enable" :inactive-text="lp.operation.disable">
+      </el-switch>
+    </div>
+
   </div>
 </template>
 
@@ -76,19 +105,28 @@ import {getConfigData, getConfig, saveConfig} from '@/util/acrions';
 const failureCount = ref(5);
 const failureInterval = ref(15);
 const tokenExpiredMinutes = ref(4320);
+const appTokenExpiredMinutes = ref(4320);
 const tokenName = ref('x-token');
 const enableSafeLogout = ref(false);
 const superPermission = ref(true);
+const tokenCookieHttpOnly = ref(false);
+const tokenCookieSecure = ref(false);
 
 const load = async () => {
   const data = await getConfigData('person');
   if (data.failureCount) failureCount.value = data.failureCount;
   if (data.failureInterval) failureInterval.value = data.failureInterval;
   if (data.tokenExpiredMinutes) tokenExpiredMinutes.value = data.tokenExpiredMinutes;
+  if (data.appTokenExpiredMinutes) {
+    appTokenExpiredMinutes.value = data.appTokenExpiredMinutes;
+  }else if(data.tokenExpiredMinutes){
+    appTokenExpiredMinutes.value = data.tokenExpiredMinutes;
+  }
   if (data.tokenName) tokenName.value = data.tokenName;
   enableSafeLogout.value = !!data.enableSafeLogout;
   superPermission.value = data.superPermission!==false;
-
+  tokenCookieHttpOnly.value = data.tokenCookieHttpOnly===true;
+  tokenCookieSecure.value = data.tokenCookieSecure===true;
 }
 
 load();

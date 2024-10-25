@@ -135,6 +135,11 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 			 * @see {@link https://www.yuque.com/o2oa/ixsnyt/hm5uft#i0zTS|组件事件说明}
 			 */
 			/**
+			 * 导出前触发。
+			 * @event MWF.xApplication.process.Xform.DatatablePC#beforeExport
+			 * @see {@link https://www.yuque.com/o2oa/ixsnyt/hm5uft#i0zTS|组件事件说明}
+			 */
+			/**
 			 * 导出excel的时候触发，this.event指向导出的数据，您可以通过修改this.event来修改数据。
 			 * @event MWF.xApplication.process.Xform.DatatablePC#export
 			 * @see {@link https://www.yuque.com/o2oa/ixsnyt/hm5uft#i0zTS|组件事件说明}
@@ -175,6 +180,11 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 			 * }
 			 */
 			/**
+			 * 导入前触发。
+			 * @event MWF.xApplication.process.Xform.DatatablePC#beforeImport
+			 * @see {@link https://www.yuque.com/o2oa/ixsnyt/hm5uft#i0zTS|组件事件说明}
+			 */
+			/**
 			 * 在导入excel，数据校验成功将要设置回数据表格的时候触发，this.event指向整理过的导入数据，格式见{@link DatatableData}。
 			 * @event MWF.xApplication.process.Xform.DatatablePC#import
 			 * @see {@link https://www.yuque.com/o2oa/ixsnyt/hm5uft#i0zTS|组件事件说明}
@@ -185,7 +195,8 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 			 * @see {@link https://www.yuque.com/o2oa/ixsnyt/hm5uft#i0zTS|组件事件说明}
 			 */
 			"moduleEvents": ["queryLoad","postLoad","load", "afterLoad",
-				"beforeLoadLine", "afterLoadLine", "change", "addLine", "deleteLine", "afterDeleteLine", "editLine", "completeLineEdit", "cancelLineEdit", "export", "import", "validImport", "afterImport"]
+				"beforeLoadLine", "afterLoadLine", "change", "addLine", "deleteLine", "afterDeleteLine", "editLine",
+				"completeLineEdit", "cancelLineEdit", "beforeExport", "export", "beforeImport", "import", "validImport", "afterImport"]
 		},
 
 		initialize: function(node, json, form, options){
@@ -257,12 +268,12 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 			this.sectionBy = this._getSectionBy();
 			this.isShowAllSection = this.isAllSectionShow();
 
-			this.editModules = [];
+			// this.editModules = [];
 
-			if( !layout.mobile ){
-				this.node.setStyle("overflow-x", "auto");
-				this.node.setStyle("overflow-y", "hidden");
-			}
+			// if( !layout.mobile ){
+			// 	this.node.setStyle("overflow-x", "auto");
+			// 	this.node.setStyle("overflow-y", "hidden");
+			// }
 			this.table = this.node.getElement("table");
 			this.tBody = this.table.getElement("tbody");
 
@@ -292,7 +303,7 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 			// this.hiddenColIndexList = [];
 
 			if( this.isShowAllSection ){
-				this.data = this.getAllSectionData()
+				this.data = this._getAllSectionData()
 			}else if( this.isMergeRead ){
 				this.data = this.getSectionMergeReadData()
 			}else{
@@ -315,11 +326,10 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 		 *  this.form.get("fieldId").reload(); //重新加载
 		 */
 		reload: function(){
-			debugger;
 			this.reloading = true;
 			this._removeEl();
 
-			this.editModules = [];
+			// this.editModules = [];
 
 			//是否有总计列
 			this.totalFlag = false;
@@ -360,16 +370,22 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 				node = this.titleTr.getElement("th.mwf_moveaction");
 				if( node )node.destroy();
 			}
-
 			if( this.templateTr ){
 				node = this.templateTr.getElement("td.mwf_editaction");
 				if( node )node.destroy();
 				node = this.templateTr.getElement("td.mwf_moveaction");
 				if( node )node.destroy();
 			}
-
 			if( this.totalTr ){
 				this.totalTr.destroy();
+				this.totalTr = null;
+			}
+			if( this.exportActionNode ){
+				this.exportActionNode.destroy();
+				this.totalTr = null;
+			}
+			if( this.importActionNode ){
+				this.importActionNode.destroy();
 				this.totalTr = null;
 			}
 		},
@@ -572,10 +588,13 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 				}
 			}.bind(this));
 		},
+		_getTotalTr: function(){
+			return this.totalTr;
+		},
 		_loadTotal: function(){
 			var totalData = {};
 			if (!this.totalFlag)return totalData;
-			if (!this.totalTr)this._loadTotalTr();
+			if (!this._getTotalTr())this._loadTotalTr();
 			var data;
 			if( this.isShowAllSection ){
 				data = { data : [] };
@@ -593,48 +612,94 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 				var json = column.moduleJson;
 				if(!json)return;
 
-				var pointLength = 0; //小数点后的最大数位
-				var tmpV;
-				if (column.type === "count"){
-					tmpV = data.data.length;
-				}else if(column.type === "number"){
-					tmpV = new Decimal(0);
-					for (var i=0; i<data.data.length; i++){
-						var d = data.data[i];
-						if(d[json.id]){
-							tmpV = tmpV.plus(d[json.id].toFloat() || 0);
-							var v = d[json.id].toString();
-							if( v.indexOf(".") > -1 ){
-								pointLength = Math.max(pointLength, v.split(".")[1].length);
-							}
-						}
-					}
-				}
-
-				if( isNaN( tmpV ) ){
-					totalData[json.id] = "";
-					column.td.set("text", "" );
-				}else{
-					if( pointLength > 0 && tmpV.toString() !== "0" ){
-						var s = tmpV.toString();
-						if( s.indexOf(".") > -1 ){
-							var length = s.split(".")[1].length;
-							if( length < pointLength ){
-								totalData[json.id] = s + "0".repeat(pointLength-length);
-							}else{
-								totalData[json.id] = s;
-							}
-						}else{
-							totalData[json.id] = s +"."+ "0".repeat(pointLength)
-						}
-					}else{
-						totalData[json.id] = tmpV.toString();
-					}
-					column.td.set("text", totalData[json.id] );
-				}
+				var total = this._loadColumnTotal( column, data );
+				if( typeOf(total) !== "null" )totalData[json.id] = total;
 			}.bind(this));
 			data.total = totalData;
 			return totalData;
+		},
+		_loadColumnTotal: function(column, data){
+			var json = column.moduleJson;
+			if(!json)return;
+
+			var pointLength = 0; //小数点后的最大数位
+			var tmpV;
+			if (column.type === "count"){
+				tmpV = data.data.length;
+			}else if(column.type === "number"){
+				tmpV = new Decimal(0);
+				for (var i=0; i<data.data.length; i++){
+					var d = data.data[i];
+					if(d[json.id]){
+						var v = this.formatDecimals( json, d[json.id].toFloat() );
+						tmpV = tmpV.plus(v ? v.toFloat() : 0);
+						if( v.indexOf(".") > -1 ){
+							pointLength = Math.max(pointLength, v.split(".")[1].length);
+						}
+					}
+				}
+			}
+
+			if( isNaN( tmpV ) ) {
+				column.td.set("text", "");
+				return;
+			}
+
+			var s = tmpV.toString(), total;
+			if( json.decimals && (json.decimals!=="*")){
+				total = this.formatDecimals( json, s.toFloat());
+			}else if( pointLength <= 0 || s === "0" ){
+				total = s;
+			}else if( s.indexOf(".") > -1 ){
+				var length = s.split(".")[1].length;
+				total = length < pointLength ? (s + "0".repeat(pointLength-length)) : s
+			}else{
+				total = s +"."+ "0".repeat(pointLength);
+			}
+
+			column.td.set("text", this.formatSeparate( json, total ) );
+			if( json.currencySymbol ){
+				new Element("span", {"text": json.currencySymbol, "style":"padding-right:5px"}).inject( column.td, "top" );
+			}
+			return total;
+		},
+		formatDecimals: function( json, v ){
+			var str;
+			if (json.decimals && (json.decimals!=="*")) { //小数点数位
+
+				var decimals = json.decimals.toInt();
+
+				var p = Math.pow(10, decimals);
+				var f_x = Math.round(v * p) / p;
+				str = f_x.toString();
+
+				if (decimals > 0) {
+					var pos_decimal = str.indexOf('.');
+					if (pos_decimal < 0) {
+						pos_decimal = str.length;
+						str += '.';
+					}
+					var decimalStr = (str).substr(pos_decimal + 1, (str).length);
+					while (decimalStr.length < decimals) {
+						str += '0';
+						decimalStr += 0;
+					}
+				}
+			}
+			return str || v.toString();
+		},
+		formatSeparate: function(json, str){
+			if( typeOf( str ) === "number" )str = str.toString();
+			if( json.digitsToSeparate && parseInt(json.digitsToSeparate) > 1 ){
+				var digits = parseInt(json.digitsToSeparate);
+				var reg = new RegExp( "(\\d{"+digits+"}\\B)" ,"g");
+				var arr = str.split(".");
+				var i = arr[0].split("").reverse().join("")
+					.replace(reg, "$1,")
+					.split("").reverse().join("");
+				str = arr.length > 1 ? ( i + "." + arr[1] ) : i ;
+			}
+			return str;
 		},
 		isTotalNumberModule: function( id ){
 			return this.totalNumberModuleIds.contains(id)
@@ -661,7 +726,37 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 			}
 			return false;
 		},
+		/**
+		 * @summary 当数据表格设置为区段合并展现、区段合并编辑时，可以使用本方法获取所有区段数据。
+		 * @return {Object} 对象.
+		 * @example
+		 * var data = this.form.get("fieldId").getAllSectionData();
+		 * //data格式如下：
+		 * {
+		 *  	"3455b82a-399c-4ee4-b9b9-e70ae40fbaf1": { //区段1的key和data
+		 *			"data": [
+		 *				{
+		 *					"good": "yf",
+		 *					"number_2": 11,
+		 *					"prize": 1
+		 *				}
+		 *			]
+		 *		},
+		 *  	"83de86fc-60bc-4b4c-955c-1085915865a4": { //区段2的key和data
+		 *  		"data": [
+		 *  			{
+		 *  				"good": "yf",
+		 *  				"number_2": 11,
+		 *  				"prize": 10
+		 *  			}
+		 *  		]
+		 *  	}
+		 *  }
+		 */
 		getAllSectionData: function(){
+			return this.getBusinessDataById();
+		},
+		_getAllSectionData: function(){
 			var bData = this.getBusinessDataById();
 			var flag = false;
 			if( !bData ){
@@ -865,7 +960,7 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 		_loadSectionLineList_EditSection: function(callback, operation){
 			var map = this.unchangedSectionLineMap || {};
 			// Object.each(map, function (sline, idx) {
-            //     sline.resetIndex( idx.toInt(), (idx.toInt()+1).toString() );
+            //     sline.setIndex( idx.toInt(), (idx.toInt()+1).toString() );
             // });
 			this.dataWithSectionBy.each(function(data, idx){
 				var isEdited = false;
@@ -876,7 +971,7 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 				var sectionLine, beforeNode = idx > 0 ? this.sectionlineList[idx-1].getLastTr() : this.templateNode;
 				if( map[data.sectionKey] ) {
 					sectionLine =  map[data.sectionKey];
-					sectionLine.resetIndex( beforeNode, data, idx, isEdited, isNew, operation );
+					sectionLine.setIndex( beforeNode, data, idx, isEdited, isNew, operation );
 				}else{
 					var node = this._createLineNode( beforeNode );
 					sectionLine = this._loadSectionLine_EditSection(node, data, idx, isEdited, isNew);
@@ -916,7 +1011,7 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 				var beforeNode = idx > 0 ? this.sectionlineList[idx-1].getLastTr() : this.templateNode;
 				if( map[data.sectionKey] ) {
 					sectionLine =  map[data.sectionKey];
-					sectionLine.resetIndex( beforeNode, data, idx, isEdited, isNew, operation );
+					sectionLine.setIndex( beforeNode, data, idx, isEdited, isNew, operation );
 				}else {
 					var node = this._createLineNode( beforeNode );
 					sectionLine = this._loadSectionLine(node, data, idx, isEdited, isNew);
@@ -945,7 +1040,7 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 		_loadLineList: function(callback, operation){
 			var map = this.unchangedLineMap || {};
             Object.each(map, function (line, idx) {
-                line.resetIndex( idx.toInt() );
+                line.setIndex( idx.toInt() );
             });
             this.data.data.each(function(data, idx){
                 if( !data )return;
@@ -1209,9 +1304,10 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 
 			_self.fireEvent("change", [{"lines":lines, "type":"deletelines"}]);
 
-			if(saveFlag)this.form.saveFormData();
+			if(saveFlag)this.saveFormData();
 		},
 		_deleteLine: function(ev, line){
+			if( !this._completeLineEdit(ev, true) )return;
 			if( this.isMin() ){
 				var text = MWF.xApplication.process.Xform.LP.minItemCountNotice.replace("{n}", this.json.minCount );
 				this.form.notice(text,"info");
@@ -1252,7 +1348,7 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 
 			this.fireEvent("change", [{"lines":[line], "type":"deleteline"}]);
 
-			if(saveFlag)this.form.saveFormData();
+			if(saveFlag)this.saveFormData();
 		},
 		_cancelLineEdit: function(){
 			var line = this.currentEditedLine;
@@ -1270,7 +1366,7 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 				this._loadTotal();
 				if( line.sectionLine )line.sectionLine._loadTotal();
 				if(line.attachmentChangeFlag){
-					this.form.saveFormData();
+					this.saveFormData();
 					line.attachmentChangeFlag = false;
 				}
 				this.currentEditedLine = null;
@@ -1299,7 +1395,7 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 			this._loadTotal();
 			if( line.sectionLine )line.sectionLine._loadTotal();
 			if(line.attachmentChangeFlag && !ignoerSave){
-				this.form.saveFormData();
+				this.saveFormData();
 				line.attachmentChangeFlag = false;
 			}
 			this.currentEditedLine = null;
@@ -1364,16 +1460,16 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 			this.currentEditedLine = line;
 		},
 
-		editValidation: function(){
-			var flag = true;
-			this.editModules.each(function(field, key){
-				if (field.json.type!=="sequence" && field.validationMode ){
-					field.validationMode();
-					if (!field.validation()) flag = false;
-				}
-			}.bind(this));
-			return flag;
-		},
+		// editValidation: function(){
+		// 	var flag = true;
+		// 	this.editModules.each(function(field, key){
+		// 		if (field.json.type!=="sequence" && field.validationMode ){
+		// 			field.validationMode();
+		// 			if (!field.validation()) flag = false;
+		// 		}
+		// 	}.bind(this));
+		// 	return flag;
+		// },
 
 
 		_afterLoaded: function(){
@@ -1391,10 +1487,10 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 		/**当参数为Promise的时候，请查看文档: {@link  https://www.yuque.com/o2oa/ixsnyt/ws07m0|使用Promise处理表单异步}<br/>
 		 * 当表单上没有对应组件的时候，可以使用this.data[fieldId] = data赋值。
 		 * @summary 为数据表格赋值，如果需要设置所有区段数据请使用setAllSectionData方法。
-		 * @param data{DatatableData|Promise|Array} 必选，数组或Promise.
+		 * @param data{DatatableData|Promise} 必选，数组或Promise.
 		 * @param fireChange{boolean} 可选，是否触发change事件，默认false.
 		 * @example
-		 *  this.form.get("fieldId").setData([]); //赋空值
+		 *  this.form.get("fieldId").setData({data:[]}); //赋空值
 		 * @example
 		 *  //如果无法确定表单上是否有组件，需要判断
 		 *  if( this.form.get('fieldId') ){ //判断表单是否有无对应组件
@@ -1467,14 +1563,13 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
                 this.clearSubModules();
             }
 
-            if (fireChange && JSON.stringify(old) !== JSON.stringify(data)) this.fireEvent("change");
-
             this.lineList = [];
             this.sectionlineList = [];
 
 			if( this.currentEditedLine )this.currentEditedLine = null;
 
             this._loadDatatable( function () {
+				if (fireChange && JSON.stringify(old) !== JSON.stringify(data)) this.fireEvent("change");
 				this.unchangedLineMap = null;
 			}.bind(this), operation);
         },
@@ -1484,6 +1579,12 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 				d[ this.sectionBy ] = data || { data: [] };
 				this.setAllSectionData( d, fireChange , operation);
 			}
+		},
+		deleteAttachment: function( attId ){
+			this.form.workAction.deleteAttachment(attId, this.form.businessData.work.id);
+		},
+		saveFormData: function(){
+			this.form.saveFormData();
 		},
 		/**
 		 * @summary 当数据表格设置为区段合并展现、区段合并编辑时，可以使用本方法设置所有区段数据。
@@ -1526,14 +1627,12 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 			// if( data && data.data )delete data.data;
 			// if( data && data.total )delete data.total;
 
-			debugger;
-
 			this._setUnchangedSectionLineMap(data);
 
 			this.setBusinessDataById(data);
 
 			if( operation ){
-				this.data = this.isShowAllSection ? this.getAllSectionData() : data;
+				this.data = this.isShowAllSection ? this._getAllSectionData() : data;
 			}else{
 				this.checkMerge(data);
 			}
@@ -1574,7 +1673,7 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 			this.isShowAllSection = this.isAllSectionShow();
 
 			if( this.isShowAllSection ){
-				this.data = this.getAllSectionData();
+				this.data = this._getAllSectionData();
 			}else if( this.isMergeRead ) {
 				this.data = this.getSectionMergeReadData();
 			}else if( isMergeEidt ){
@@ -1645,6 +1744,17 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 				}
             }
         },
+		resetId: function(){
+			if( this.sectionlineList && this.sectionlineList.length ){
+				this.sectionlineList.each(function (sline, i) {
+					sline.resetId();
+				}.bind(this));
+			}else{
+				for (var i=0; i<this.lineList.length; i++){
+					this.lineList[i].resetId();
+				}
+			}
+		},
 		/**
 		 * @summary 判断数据表格是否为空.
 		 * @example
@@ -2008,11 +2118,11 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 			return true;
 		},
 		validation: function(routeName, opinion){
-			if (this.isEdit){
-				if (!this.editValidation()){
-					return false;
-				}
-			}
+			// if (this.isEdit){
+			// 	if (!this.editValidation()){
+			// 		return false;
+			// 	}
+			// }
 			if (!this.validationConfig(routeName, opinion))  return false;
 
 			if( !this.validationCurrentEditedLine() )return false;
@@ -2043,7 +2153,7 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 			if( !this.exportenable && !this.importenable )return;
 
 			var position = ["leftTop","centerTop","rightTop"].contains( this.json.impexpPosition || "" ) ? "top" : "bottom";
-			var container = new Element("div").inject(this.node, position);
+			var container = new Element("div", {style: "overflow:hidden;"}).inject(this.node, position);
 
 			this.importExportAreaNode = new Element("div").inject( container );
 			if( ["leftTop","leftBottom"].contains( this.json.impexpPosition || "" ) ){
@@ -2083,6 +2193,7 @@ MWF.xApplication.process.Xform.DatatablePC = new Class(
 				this.importActionNode.setStyles(styles);
 
 				this.importActionNode.addEvent("click", function () {
+					debugger;
 					this.importFromExcel();
 				}.bind(this))
 			}
@@ -2230,7 +2341,12 @@ MWF.xApplication.process.Xform.DatatablePC.SectionLine =  new Class({
 			this._loadTotal();
 		}
 	},
-	resetIndex: function( preNode, data, index, isEdited, isNew, operation ){
+	resetId: function(){
+		this.lineList.each(function (line) {
+			line.resetId();
+		}.bind(this))
+	},
+	setIndex: function( preNode, data, index, isEdited, isNew, operation ){
 		if( this.isUnchangedAll && index === this.options.index )return;
 
 		this.data = data;
@@ -2243,7 +2359,7 @@ MWF.xApplication.process.Xform.DatatablePC.SectionLine =  new Class({
 		this.lineList = [];
 		var map = this.unchangedLineMap || {};
 		Object.each(map, function (line, idx) {
-            line.resetIndex( this.datatable.lineList.length + idx.toInt(), idx.toInt() );
+            line.setIndex( this.datatable.lineList.length + idx.toInt(), idx.toInt() );
         }.bind(this));
 		if( this.data.data &&  this.data.data.data ){
 			this.data.data.data.each(function (d, idx) {
@@ -2371,7 +2487,7 @@ MWF.xApplication.process.Xform.DatatablePC.SectionLine =  new Class({
 		if( this.isUnchangedAll ){
 			for( var i=0; i<data.data.length; i++ ){
 				var line = map[i.toString()];
-				if( !line || line.options.index !== i ){
+				if( !line || line.options.indexInSectionLine !== i ){
 					this.isUnchangedAll = false;
 					break;
 				}
@@ -2467,10 +2583,13 @@ MWF.xApplication.process.Xform.DatatablePC.SectionLine =  new Class({
 			}
 		}.bind(this));
 	},
+	_getTotalTr: function(){
+		return this.totalTr;
+	},
 	_loadTotal: function(){
 		var totalData = {};
 		if( !this.datatable.totalFlag )return totalData;
-		if (!this.totalTr)this._loadTotalTr();
+		if (!this._getTotalTr())this._loadTotalTr();
 		var data;
 		if( this.datatable.isShowAllSection ){
 			Object.each( this.datatable.getBusinessDataById(), function (d, k) {
@@ -2483,45 +2602,8 @@ MWF.xApplication.process.Xform.DatatablePC.SectionLine =  new Class({
 			var json = column.moduleJson;
 			if(!json)return;
 
-			var pointLength = 0; //小数点后的最大数位
-			var tmpV;
-			if (column.type === "count"){
-				tmpV = data.data.length;
-			}else if(column.type === "number"){
-				tmpV = new Decimal(0);
-				for (var i=0; i<data.data.length; i++){
-					var d = data.data[i];
-					if(d[json.id]){
-						tmpV = tmpV.plus(d[json.id].toFloat() || 0);
-						var v = d[json.id].toString();
-						if( v.indexOf(".") > -1 ){
-							pointLength = Math.max(pointLength, v.split(".")[1].length);
-						}
-					}
-				}
-			}
-
-			if( isNaN( tmpV ) ){
-				totalData[json.id] = "";
-				column.td.set("text", "" );
-			}else{
-				if( pointLength > 0 && tmpV.toString() !== "0" ){
-					var s = tmpV.toString();
-					if( s.indexOf(".") > -1 ){
-						var length = s.split(".")[1].length;
-						if( length < pointLength ){
-							totalData[json.id] = s + "0".repeat(pointLength-length);
-						}else{
-							totalData[json.id] = s;
-						}
-					}else{
-						totalData[json.id] = s +"."+ "0".repeat(pointLength)
-					}
-				}else{
-					totalData[json.id] = tmpV.toString();
-				}
-				column.td.set("text", totalData[json.id] );
-			}
+			var total = this.datatable._loadColumnTotal( column, data );
+            if( typeOf(total) !== "null" )totalData[json.id] = total;
 		}.bind(this));
 		data.total = totalData;
 		return totalData;
@@ -2598,12 +2680,27 @@ MWF.xApplication.process.Xform.DatatablePC.Line =  new Class({
 		// 	this.options.isNew = false;
 		// }
 	},
-	resetIndex: function(index, indexInSectionLine){
-        if( this.options.index === index )return;
-        this.options.index = index;
-        this.options.indexText = (index.toInt()+1).toString();
+	resetId: function(){
+		this.setIndex();
+	},
+	setIndex: function(index, indexInSectionLine){
+		var hasIndexArg = typeOf(index) !== "null";
+		var hasIndexInSectionLineArg = typeOf(indexInSectionLine) !== "null";
 
-        if( typeOf(indexInSectionLine) !== "null" ){
+		if( hasIndexArg && hasIndexInSectionLineArg){
+			if( this.options.index === index && this.options.indexInSectionLine === indexInSectionLine )return;
+		}else if( hasIndexArg && !hasIndexInSectionLineArg){
+			if( this.options.index === index )return;
+		}else if(!hasIndexArg && hasIndexInSectionLineArg){
+			if( this.options.indexInSectionLine === indexInSectionLine )return;
+		}
+
+		if( hasIndexArg ){
+			this.options.index = index;
+			this.options.indexText = (index.toInt()+1).toString();
+		}
+
+        if( hasIndexInSectionLineArg ){
 			this.options.indexInSectionLine = indexInSectionLine;
 			this.options.indexInSectionLineText = (indexInSectionLine.toInt()+1).toString();
 		}
@@ -2616,9 +2713,9 @@ MWF.xApplication.process.Xform.DatatablePC.Line =  new Class({
             if( this.datatable.isShowAllSection ){
                 id = this.datatable.json.id + ".." + sectionKey + "..data.." + this.options.indexInSectionLine + ".." + json.originialId;
             }else if( sectionKey ){
-                id = this.datatable.json.id + ".." + sectionKey + "..data.." + index + ".." + json.originialId;
+                id = this.datatable.json.id + ".." + sectionKey + "..data.." + this.options.index + ".." + json.originialId;
             }else{
-                id = this.datatable.json.id + "..data.." + index + ".." + json.originialId;
+                id = this.datatable.json.id + "..data.." + this.options.index + ".." + json.originialId;
             }
             json.id = id;
             switch (module.json.type) {
@@ -2650,8 +2747,10 @@ MWF.xApplication.process.Xform.DatatablePC.Line =  new Class({
                 this.form.forms[id] = module;
             }
 
-            this.loadSequence();
-            this.loadZebraStyle();
+            if( hasIndexArg || hasIndexInSectionLineArg ){
+				this.loadSequence();
+				this.loadZebraStyle();
+			}
         }.bind(this));
     },
 	loadModules: function(){
@@ -2740,7 +2839,7 @@ MWF.xApplication.process.Xform.DatatablePC.Line =  new Class({
 				if((json.type==="Attachment" || json.type==="AttachmentDg")){
 					module.addEvent("change", function(){
 						if( this.datatable.multiEditMode ){
-							_self.form.saveFormData();
+							_self.datatable.saveFormData();
 						}else{
 							_self.attachmentChangeFlag = true;
 						}
@@ -2759,7 +2858,7 @@ MWF.xApplication.process.Xform.DatatablePC.Line =  new Class({
 					// }else if(this.options.isEdited){
 					// 	this.data[templateJsonId] = module.getData();
 					// }
-					if(this.options.isEdited) {
+					if(this.options.isEdited ) {
 						if (json.type !== "Attachment" && json.type !== "AttachmentDg"){
 							if( module.json.compute === "save" && module.getInputData ){
 								this.data[templateJsonId] = module.getInputData();
@@ -2767,6 +2866,8 @@ MWF.xApplication.process.Xform.DatatablePC.Line =  new Class({
 								this.data[templateJsonId] = module.getData();
 							}
 						}
+					}else if(!hasData && module.getValue ){
+						this.data[templateJsonId] = module.getValue();
 					}
 					this.allField[id] = module;
 					this.allField_templateId[templateJsonId] = module;
@@ -2780,7 +2881,6 @@ MWF.xApplication.process.Xform.DatatablePC.Line =  new Class({
 					//该字段是合集数值字段
 					if(this.datatable.multiEditMode && this.isTotalNumberModule(templateJsonId)){
 						//module
-						debugger;
 						module.addEvent("change", function(){
 							this.datatable._loadTotal();
 							if( this.sectionLine )this.sectionLine._loadTotal();
@@ -2801,10 +2901,15 @@ MWF.xApplication.process.Xform.DatatablePC.Line =  new Class({
 		return this.options.index;
 	},
 	getModule: function(templateJsonId){
+		var _subform = this.datatable.json._subform;
+		if( _subform ){
+			var module = this.all_templateId[_subform+"_"+templateJsonId];
+			if( module )return module;
+		}
 		return this.all_templateId[templateJsonId];
 	},
 	get: function(templateJsonId){
-		return this.all_templateId[templateJsonId];
+		return this.getModule( templateJsonId );
 	},
 	getAttachmentSite: function(json, templateJsonId, sectionKey){
 		//确保site最长为64，否则后台会报错
@@ -2838,7 +2943,7 @@ MWF.xApplication.process.Xform.DatatablePC.Line =  new Class({
 				var array = module._getBusinessData();
 				(array || []).each(function(d){
 					saveFlag = true;
-					this.form.workAction.deleteAttachment(d.id, this.form.businessData.work.id);
+					this.datatable.deleteAttachment(d.id);
 
 					for( var i=0; i<this.form.businessData.attachmentList.length; i++ ){
 						var attData = this.form.businessData.attachmentList[i];
@@ -3249,7 +3354,7 @@ MWF.xApplication.process.Xform.DatatablePC.ImporterDatabale = new Class({
 	_loadUserInterface: function(){
 		// this.fireEvent("queryLoad");
 
-		this.editModules = [];
+		// this.editModules = [];
 
 		this.table = new Element("table").inject(this.node);
 		this.tBody = new Element("tbody").inject(this.table);
@@ -3472,7 +3577,7 @@ MWF.xApplication.process.Xform.DatatablePC.ImporterLine =  new Class({
 				this.all_templateId[templateJsonId] = module;
 
 				if (module.field) {
-					if(this.options.isEdited) {
+					if(this.options.isEdited ) {
 						if (json.type !== "Attachment" && json.type !== "AttachmentDg"){
 							if( module.json.compute === "save" && module.getInputData ){
 								this.data[templateJsonId] = module.getInputData();
@@ -3480,6 +3585,8 @@ MWF.xApplication.process.Xform.DatatablePC.ImporterLine =  new Class({
 								this.data[templateJsonId] = module.getData();
 							}
 						}
+					}else if(!hasData && module.getValue ){
+						this.data[templateJsonId] = module.getValue();
 					}
 					this.allField[id] = module;
 					this.allField_templateId[templateJsonId] = module;
@@ -3570,33 +3677,67 @@ MWF.xApplication.process.Xform.DatatablePC.Exporter = new Class({
 		this.columnJsonList = [];
 	},
 	exportToExcel : function () {
+		MWF.require("MWF.widget.Mask", null, false);
+		this.mask = new MWF.widget.Mask({ "style": "desktop", "zIndex": 50000 });
+		// 适配移动端
+		if (layout.mobile) {
+			this.mask.load();
+		} else {
+			this.mask.loadNode(this.form.app.content);
+		}
+
+		this.datatable.fireEvent("beforeExport");
+
 		this.getColumnList();
 
 		var resultArr = [];
 		var titleArr = this.getTitleArray();
 		resultArr.push( titleArr );
 
+		var lineList = [];
 
-		this.datatable.lineList.each(function (line, index) {
-			resultArr.push( this.getLineExportData(line, index) );
+		if( this.datatable.isShowAllSection ){
+			lineList = this.datatable.sectionLineEdited ? this.datatable.sectionLineEdited.lineList : this.datatable.lineList;
+		}else if( this.datatable.isMergeRead ) {
+			lineList = this.datatable.lineList;
+		}else{
+			lineList = this.datatable.lineList;
+		}
+
+		lineList.each(function (line, index) {
+			var lineData = this.getLineExportData(line, index);
+			var p = Promise.all(lineData).then(function (arr) {
+				return arr;
+			});
+			resultArr.push( p );
 		}.bind(this));
 
-		var colWidthArr = this.getColWidthArray();
-		var excelName = this.getExcelName();
+		Promise.all(resultArr).then(function ( rstArr ) {
+			var colWidthArr = this.getColWidthArray();
+			var excelName = this.getExcelName();
 
-		var arg = {
-			data : resultArr,
-			colWidthArray : colWidthArr,
-			title : excelName
-		};
-		this.datatable.fireEvent("export", [arg]);
+			var arg = {
+				data : rstArr,
+				colWidthArray : colWidthArr,
+				title : excelName
+			};
+			this.datatable.fireEvent("export", [arg]);
 
-		new MWF.xApplication.process.Xform.DatatablePC.ExcelUtils( this.datatable ).exportToExcel(
-			arg.data || resultArr,
-			arg.title || excelName,
-			arg.colWidthArray || colWidthArr,
-			this.getDateIndexArray()  //日期格式列下标
-		);
+			new MWF.xApplication.process.Xform.DatatablePC.ExcelUtils( this.datatable ).exportToExcel(
+				arg.data || rstArr,
+				arg.title || excelName,
+				arg.colWidthArray || colWidthArr,
+				this.getDateIndexArray(),  //日期格式列下标
+				null,
+				function () {
+					if (this.mask) {
+						this.mask.hide();
+						this.mask = null;
+					}
+				}.bind(this)
+			);
+		}.bind(this))
+
 	},
 	getColumnList: function(){
 		this.columnJsonList = [];
@@ -3626,8 +3767,6 @@ MWF.xApplication.process.Xform.DatatablePC.Exporter = new Class({
 	getLineExportData: function(line, index ){
 		var exportData = [];
 		this.columnJsonList.each(function (column) {
-
-			debugger;
 
 			var module;
 			if( column.mJson && column.available ){
@@ -3742,7 +3881,7 @@ MWF.xApplication.process.Xform.DatatablePC.Exporter = new Class({
 		if (thJson && ( thJson.isShow === false || thJson.isImpExp === false ))return false; //隐藏列，不允许导入导出
 		if (mJson && (mJson.type == "sequence" || mJson.cellType == "sequence") )return false; //序号列
 		if (mJson && ["Image","Button","ImageClipper","WritingBoard","Attachment","AttachmentDg","Label",
-			"Elbutton","Elbutton","Elcarousel","Eldropdown","Elicon","Eltree"].contains(mJson.type) )return false; //图片，附件,Label列不导入导出
+			"Elbutton","Elcarousel","Eldropdown","Elicon","Eltree"].contains(mJson.type) )return false; //图片，附件,Label列不导入导出
 		// if (type==="import" && module && ["Label"].contains(module.json.type))return false; //Label 不导入
 		return true;
 	},
@@ -3803,6 +3942,18 @@ MWF.xApplication.process.Xform.DatatablePC.Exporter = new Class({
 	},
 
 	exportWithImportDataToExcel : function ( importedData ) {
+		MWF.require("MWF.widget.Mask", null, false);
+		this.mask = new MWF.widget.Mask({ "style": "desktop", "zIndex": 50000 });
+		// 适配移动端
+		if (layout.mobile) {
+			this.mask.load();
+		} else {
+			this.mask.loadNode(this.form.app.content);
+		}
+
+
+		this.datatable.fireEvent("beforeExport");
+
 		this.getColumnList();
 
 		var resultArr = [];
@@ -3838,7 +3989,14 @@ MWF.xApplication.process.Xform.DatatablePC.Exporter = new Class({
 		    arg.data || resultArr,
 		    arg.title || excelName,
 		    arg.colWidthArray || colWidthArr,
-		    this.getDateIndexArray() //日期格式列下标
+		    this.getDateIndexArray(), //日期格式列下标
+			null,
+			function () {
+				if (this.mask) {
+					this.mask.hide();
+					this.mask = null;
+				}
+			}.bind(this)
 		 );
 	}
 });
@@ -3854,6 +4012,11 @@ MWF.xApplication.process.Xform.DatatablePC.Importer = new Class({
 		this.datatable = datatable;
 		this.form = this.datatable.form;
 
+		this.lp = MWF.xApplication.process.Xform.LP;
+		this.columnText =  this.lp.importValidationColumnText;
+		this.columnTextExcel = this.lp.importValidationColumnTextExcel;
+		this.excelUtil = new MWF.xApplication.process.Xform.DatatablePC.ExcelUtils( this.datatable );
+
 		this.columnJsonList = [];
 	},
 	isAvaliableColumn : function(thJson, mJson){
@@ -3865,36 +4028,51 @@ MWF.xApplication.process.Xform.DatatablePC.Importer = new Class({
 		return true;
 	},
 	importFromExcel : function () {
+		this.datatable.fireEvent("beforeImport");
+
 		this.getColumnList();
 		var dateColArray = this.getDateIndexArray(); //日期列
 		var orgTitleArray = this.getOrgTitleArray();
 
-		new MWF.xApplication.process.Xform.DatatablePC.ExcelUtils( this.datatable ).upload( dateColArray, function (data) {
-			debugger;
+		this.excelUtil.upload( dateColArray, function (data) {
+
+			MWF.require("MWF.widget.Mask", null, false);
+			this.mask = new MWF.widget.Mask({ "style": "desktop", "zIndex": 50000 });
+			// 适配移动端
+			if (layout.mobile) {
+				this.mask.load();
+			} else {
+				this.mask.loadNode(this.form.app.content);
+			}
+
+			this.importedData = data;
+			if( !this.checkCount() )return;
+
 			this.loadSimulateModule();
 			this.columnJsonList.each(function (c) {
 				c.module = this.importerLine.getModule(c.mJson.id)
 			}.bind(this));
 
-
-			if( !this.checkCount(data) )return;
-			var checkAndImport = function () {
-				if( !this.checkData( data ) ){
-					this.openErrorDlg( data );
-				}else{
-					this.importData( data )
-				}
-				this.destroySimulateModule();
-			}.bind(this);
-
 			if( orgTitleArray.length > 0 ){
-				this.listAllOrgData( orgTitleArray, data, function () {
-					checkAndImport();
+				this.listAllOrgData( orgTitleArray, function () {
+					this.checkAndImport();
 				}.bind(this));
 			}else{
-				checkAndImport();
+				this.checkAndImport();
 			}
 
+
+		}.bind(this));
+	},
+	checkAndImport: function () {
+		this.checkData( function (flag) {
+
+			if( !flag ){
+				this.openErrorDlg();
+			}else{
+				this.importData()
+			}
+			this.destroySimulateModule();
 
 		}.bind(this));
 	},
@@ -3907,20 +4085,6 @@ MWF.xApplication.process.Xform.DatatablePC.Importer = new Class({
 		this.importerDatatable.destroy();
 		this.importerDatatable = null;
 		this.form.disallowSaving = false;
-
-		// if( !this.importerLine ){
-		// 	this.form.disallowSaving = false;
-		// 	return;
-		// }
-		//
-		// this.importerLine.clearSubModules();
-		// this.importerLine = null;
-		//
-		// if(this.importerLineNode){
-		// 	this.importerLineNode.destroy();
-		// 	this.importerLineNode = null;
-		// }
-		// this.form.disallowSaving = false;
 	},
 	loadSimulateModule: function(){
 		this.form.disallowSaving = true;
@@ -3928,68 +4092,8 @@ MWF.xApplication.process.Xform.DatatablePC.Importer = new Class({
 		this.importerDatatable.load();
 
 		this.importerLine = this.importerDatatable.addLine({});
-
-		// this.importerLineNode = new Element("tr");
-		// this.importerLine = new MWF.xApplication.process.Xform.DatatablePC.ImporterLine(this.importerLineNode, this.datatable, {});
-		// this.importerLine.load();
 	},
-	// destroySimulateModule: function(){
-	// 	if( !this.simelateModuleMap )return;
-	// 	var keys = Object.keys(this.simelateModuleMap);
-	// 	keys.each(function (key, i) {
-	// 		var module = this.simelateModuleMap[key];
-	// 		if( module ){
-	// 			var id = module.json.id;
-	// 			if( this.form.businessData.data.hasOwnProperty(id) )delete this.form.businessData.data[id];
-	// 			delete this.simelateModuleMap[key];
-	// 		}
-	// 	}.bind(this))
-	// 	this.simelateModuleMap = null;
-	//
-	// 	if(this.simulateNode){
-	// 		this.simulateNode.destroy();
-	// 		this.simulateNode = null;
-	// 	}
-	// },
-	// loadSimulateModule: function(){
-	// 	if( this.simelateModuleMap ){
-	// 		this.destroySimulateModule();
-	// 	}
-	// 	//加载模拟字段
-	// 	this.simelateModuleMap = {};
-	// 	this.simulateNode = new Element("div").inject(this.datatable.node);
-	// 	this.simulateNode.hide();
-	// 	this.simulateNode.set("html", this.datatable.templateHtml);
-	// 	var moduleNodes = this.form._getModuleNodes(this.simulateNode);
-	// 	moduleNodes.each(function (node) {
-	// 		if (node.get("MWFtype") !== "form") {
-	// 			var _self = this;
-	//
-	// 			var tJson = this.form._getDomjson(node);
-	// 			if( tJson && this.isAvaliableColumn(null, tJson) ){
-	// 				var json = Object.clone(tJson);
-	//
-	// 				var templateJsonId = json.id;
-	//
-	// 				json.id = "dtSimulate_"+json.id;
-	// 				node.set("id", json.id);
-	//
-	// 				if (!MWF["APP" + json.type]) {
-	// 					MWF.xDesktop.requireApp("process.Xform", json.type, null, false);
-	// 				}
-	// 				var module = new MWF["APP" + json.type](node, json, this.form);
-	//
-	// 				this.simelateModuleMap[templateJsonId] = module;
-	//
-	// 				module.load();
-	//
-	// 			}
-	// 		}
-	// 	}.bind(this));
-	// },
 	getColumnList: function(){
-		// this.loadSimulateModule();
-
 		this.columnJsonList = [];
 
 		var ths = this.datatable.titleTr.getElements("th.mwf_origional");
@@ -4025,7 +4129,7 @@ MWF.xApplication.process.Xform.DatatablePC.Importer = new Class({
 		var dateIndexArr = []; //日期格式列下标
 		var idx=0;
 		this.columnJsonList.each(function(c){
-			if ( c.mJson && c.mJson.type === "Calendar") {
+			if ( c.mJson && c.mJson.type === "Calendar" && (c.mJson.format === "%Y-%m-%d" || c.mJson.format === "%Y-%m-%d %H:%M:%S")) {
 				dateIndexArr.push(idx);
 			}
 			idx++;
@@ -4041,10 +4145,9 @@ MWF.xApplication.process.Xform.DatatablePC.Importer = new Class({
 		}.bind(this));
 		return orgTitleArr;
 	},
-	parseImportedData: function(idata){
+	parseImportedData: function(){
 		var data = [];
-
-		idata.each( function( ilineData ){
+		this.importedData.each( function( ilineData ){
 			var lineData = {};
 
 			this.columnJsonList.each( function (obj, i) {
@@ -4079,49 +4182,6 @@ MWF.xApplication.process.Xform.DatatablePC.Importer = new Class({
 						default:
 							value = d; //换行符&#10;
 							break;
-						// case "Combox":
-						// case "Address":
-						// 	arr = this.stringToArray(d);
-						// 	value = arr.length === 0  ? arr[0] : arr;
-						// 	break;
-						// case "Checkbox":
-						// 	arr = this.stringToArray(d);
-						// 	var options = module.getOptionsObj();
-						// 	arr.each( function( a, i ){
-						// 		var idx = options.textList.indexOf( a );
-						// 		arr[ i ] = idx > -1 ? options.valueList[ idx ] : a;
-						// 	});
-						// 	value = arr.length === 1  ? arr[0] : arr;
-						// 	break;
-						// case "Radio":
-						// case "Select":
-						// 	value = d.replace(/&#10;/g,""); //换行符&#10;
-						// 	var options = module.getOptionsObj();
-						// 	var idx = options.textList.indexOf( value );
-						// 	value = idx > -1 ? options.valueList[ idx ] : value;
-						// 	break;
-						// case "Textarea":
-						// 	value = d.replace(/&#10;/g,"\n"); //换行符&#10;
-						// 	break;
-						// case "Calendar":
-						// 	value = d.replace(/&#10;/g,""); //换行符&#10;
-						// 	if( value && (new Date(value).isValid()) ){
-						// 		var format;
-						// 		if (!json.format){
-						// 			if (json.selectType==="datetime" || json.selectType==="time"){
-						// 				format = (json.selectType === "time") ? "%H:%M" : (Locale.get("Date").shortDate + " " + "%H:%M")
-						// 			}else{
-						// 				format = Locale.get("Date").shortDate;
-						// 			}
-						// 		}else{
-						// 			format = json.format;
-						// 		}
-						// 		value = Date.parse( value ).format( format );
-						// 	}
-						// 	break;
-						// default:
-						// 	value = d.replace(/&#10;/g,""); //换行符&#10;
-						// 	break;
 					}
 				}
 
@@ -4139,8 +4199,7 @@ MWF.xApplication.process.Xform.DatatablePC.Importer = new Class({
 			return !!s;
 		});
 	},
-	importData: function(idata){
-
+	importData: function(){
 		var data = this.parsedData; //this.parseImportedData(idata);
 
 		this.datatable.fireEvent("import", [data] );
@@ -4151,10 +4210,16 @@ MWF.xApplication.process.Xform.DatatablePC.Importer = new Class({
 
 		this.datatable.fireEvent("change", [{lines: this.datatable.lineList, type : "import"}]);
 
+		if (this.mask) {
+			this.mask.hide();
+			this.mask = null;
+		}
+
 		this.form.notice( MWF.xApplication.process.Xform.LP.importSuccess );
 
 	},
-	openErrorDlg : function(eData){
+	openErrorDlg : function(){
+		var eData = this.importedData;
 		var _self = this;
 
 		var objectToString = function (obj, type) {
@@ -4227,8 +4292,15 @@ MWF.xApplication.process.Xform.DatatablePC.Importer = new Class({
 			}.bind(this)
 		});
 
+		if (this.mask) {
+			this.mask.hide();
+			this.mask = null;
+		}
+
 	},
-	checkCount: function(idata){
+	checkCount: function(){
+		var idata = this.importedData;
+
 		var lp = MWF.xApplication.process.Xform.LP;
 
 		var exceeded = false;
@@ -4252,107 +4324,134 @@ MWF.xApplication.process.Xform.DatatablePC.Importer = new Class({
 		}
 		return true;
 	},
-	checkData : function( idata ){
+	checkData : function( callback){
+		this.parsedData = this.parseImportedData();
+		this.isImportSuccess = true;
+
+		this.checkLineData(0, function () {
+			var arg = {
+				validted : this.isImportSuccess,
+				data : this.importedData
+			};
+			this.datatable.fireEvent( "validImport", [arg] );
+			callback( arg.validted )
+		}.bind(this));
+	},
+	checkLineData: function(lineIndex, callback){
+		if( lineIndex < this.importedData.length ){
+			this._checkLineData(this.importedData[lineIndex], lineIndex, function (flag) {
+				lineIndex++;
+				if( !flag )this.isImportSuccess = false;
+				this.checkLineData(lineIndex, callback);
+			}.bind(this));
+		}else{
+			if(callback)callback();
+		}
+	},
+	_checkLineData: function(lineData, lineIndex, callback){
+		lineData.errorTextList = lineData.errorTextList || [];
+		lineData.errorTextListExcel = lineData.errorTextListExcel || [];
+
+		var parsedLineData = (this.parsedData && this.parsedData[lineIndex]) ? this.parsedData[lineIndex] : [];
+
+		this.checkModuleData(0, lineData, parsedLineData, function () {
+			var flag = !lineData.errorTextList.length;
+			callback(flag);
+		});
+	},
+	checkModuleData: function(index, lineData, parsedLineData, callback){
+		if( index < this.columnJsonList.length ){
+			var result = this._checkModuleData(this.columnJsonList[index], lineData, parsedLineData);
+			Promise.resolve(result).then(function (flag) {
+				index++;
+				this.checkModuleData(index, lineData, parsedLineData, callback);
+			}.bind(this))
+		}else{
+			if(callback)callback();
+		}
+	},
+	_checkModuleData: function (columnJson, lineData, parsedLineData) {
+		var index = columnJson.index;
+		var json = columnJson.mJson;
+		var module = columnJson.module;
+		var text = columnJson.title;
+
+		var colInfor = this.columnText.replace( "{n}", index+1 );
+		var colInforExcel = this.columnTextExcel.replace( "{n}", this.excelUtil.index2ColName( index ) );
+
+		var d = lineData[text] || "";
+		var parsedD = parsedLineData[json.id] || "";
+		var lp = this.lp;
 		var flag = true;
 
-		var lp = MWF.xApplication.process.Xform.LP;
-		var columnText =  lp.importValidationColumnText;
-		var columnTextExcel = lp.importValidationColumnTextExcel;
-		var excelUtil = new MWF.xApplication.process.Xform.DatatablePC.ExcelUtils( this.datatable );
-
-		var parsedData = this.parseImportedData(idata, true);
-		this.parsedData = parsedData;
-
-		idata.each( function(lineData, lineIndex){
-
-			var errorTextList = [];
-			var errorTextListExcel = [];
-
-			var parsedLineData = (parsedData && parsedData[lineIndex]) ? parsedData[lineIndex] : [];
-
-			this.columnJsonList.each( function (obj, i) {
-				var index = obj.index;
-				var json = obj.mJson;
-				var module = obj.module;
-				var text = obj.title;
-
-				var colInfor = columnText.replace( "{n}", index+1 );
-				var colInforExcel = columnTextExcel.replace( "{n}", excelUtil.index2ColName( index ) );
-
-				var d = lineData[text] || "";
-				var parsedD = parsedLineData[json.id] || "";
-
-				if(d){
-
-					switch (json && json.type) {
-						case "Org":
-						case "Reader":
-						case "Author":
-						case "Personfield":
-						case "Orgfield":
-							var arr = this.stringToArray(d);
-							arr.each( function(d, idx){
-								var obj = this.getOrgData( d );
-								if( obj.errorText ){
-									errorTextList.push( colInfor + obj.errorText + lp.fullstop );
-									errorTextListExcel.push( colInforExcel + obj.errorText + lp.fullstop );
-								}
-							}.bind(this));
-							break;
-						case "Number":
-						case "Elnumber":
-							if (isNaN(d)){
-								errorTextList.push( colInfor + d + lp.notValidNumber + lp.fullstop );
-								errorTextListExcel.push( colInforExcel + d + lp.notValidNumber + lp.fullstop );
-							}
-							break;
-						case "Calendar":
-						case "Eldate":
-						case "Eldatetime":
-							if( !( isNaN(d) && !isNaN(Date.parse(d) ))){
-								errorTextList.push(colInfor + d + lp.notValidDate + lp.fullstop );
-								errorTextListExcel.push( colInforExcel + d + lp.notValidDate + lp.fullstop );
-							}
-							break;
-						default:
-							break;
+		if(d){
+			switch (json && json.type) {
+				case "Org":
+				case "Reader":
+				case "Author":
+				case "Personfield":
+				case "Orgfield":
+					var arr = this.stringToArray(d);
+					arr.each( function(d, idx){
+						var obj = this.getOrgData( d );
+						if( obj.errorText ){
+							lineData.errorTextList.push( colInfor + obj.errorText + lp.fullstop );
+							lineData.errorTextListExcel.push( colInforExcel + obj.errorText + lp.fullstop );
+							flag = false;
+						}
+					}.bind(this));
+					break;
+				case "Number":
+				case "Currency":
+				case "Elnumber":
+					if (isNaN(d)){
+						lineData.errorTextList.push( colInfor + d + lp.notValidNumber + lp.fullstop );
+						lineData.errorTextListExcel.push( colInforExcel + d + lp.notValidNumber + lp.fullstop );
+						flag = false;
 					}
-				}
-				if (module && module.setData && json.type !== "Address"){
-					var hasError = false;
-					if(["Org","Reader","Author","Personfield","Orgfield"].contains(json.type)){
-						if(o2.typeOf(parsedD)==="array" && parsedD.length){
-							hasError = parsedD.some(function (item) { return item.errorText; })
+					break;
+				case "Calendar":
+				case "Eldate":
+				case "Eldatetime":
+					if( json.format === "%Y-%m-%d" || json.format === "%Y-%m-%d %H:%M:%S" ){
+						if( !( isNaN(d) && !isNaN(Date.parse(d) ))){
+							lineData.errorTextList.push(colInfor + d + lp.notValidDate + lp.fullstop );
+							lineData.errorTextListExcel.push( colInforExcel + d + lp.notValidDate + lp.fullstop );
+							flag = false;
 						}
 					}
-					if(!hasError){
-						debugger;
-						module.setExcelData(parsedD);
-						var result = module.validationExcel();
-						if ( result && result.length ){
-							errorTextList.push(colInfor + result.join("\n") );
-							errorTextListExcel.push( colInforExcel + result.join("\n"));
-						}
-						parsedLineData[json.id] = module.getData();
-					}
-				}
-			}.bind(this));
-
-			if(errorTextList.length>0){
-				lineData.errorTextList = errorTextList;
-				lineData.errorTextListExcel = errorTextListExcel;
-				flag = false;
+					break;
+				default:
+					break;
 			}
-
-		}.bind(this));
-
-		var arg = {
-			validted : flag,
-			data : idata
-		};
-		this.datatable.fireEvent( "validImport", [arg] );
-
-		return arg.validted;
+		}
+		if (module && module.setData && json.type !== "Address"){
+			var hasError = false;
+			if(["Org","Reader","Author","Personfield","Orgfield"].contains(json.type)){
+				if(o2.typeOf(parsedD)==="array" && parsedD.length){
+					hasError = parsedD.some(function (item) { return item.errorText; });
+					flag = false;
+				}
+			}
+			if(!hasError){
+				module.setExcelData(parsedD);
+				var ps = [];
+				if( module.moduleExcelAG )ps.push( module.moduleExcelAG );
+				if( module.moduleValueAG && !ps.contains(module.moduleValueAG) )ps.push( module.moduleValueAG );
+				if( module.moduleSelectAG && !ps.contains(module.moduleSelectAG) )ps.push( module.moduleSelectAG );
+				return Promise.all( ps ).then(function () {
+					var result = module.validationExcel();
+					if ( result && result.length ){
+						lineData.errorTextList.push(colInfor + result.join("\n") );
+						lineData.errorTextListExcel.push( colInforExcel + result.join("\n"));
+						flag = false;
+					}
+					parsedLineData[json.id] = module.getData();
+					return flag;
+				})
+			}
+		}
+		return flag
 	},
 	exportWithImportDataToExcel: function(eData){
 		var exporter = new MWF.xApplication.process.Xform.DatatablePC.Exporter(this.datatable);
@@ -4379,10 +4478,10 @@ MWF.xApplication.process.Xform.DatatablePC.Importer = new Class({
 
 		}
 	},
-	listAllOrgData : function (orgTitleList, iData, callback) {
+	listAllOrgData : function (orgTitleList, callback) {
 		var identityList = [], personList = [], unitList = [], groupList = [];
 		if( orgTitleList.length > 0 ){
-			iData.each( function( lineData, lineIndex ){
+			this.importedData.each( function( lineData, lineIndex ){
 				// if( lineIndex === 0 )return;
 
 				orgTitleList.each( function (title, index) {
@@ -4476,5 +4575,9 @@ MWF.xApplication.process.Xform.DatatablePC.Importer = new Class({
 
 MWF.xDesktop.requireApp("Template", "utils.ExcelUtils", null, false);
 MWF.xApplication.process.Xform.DatatablePC.ExcelUtils = new Class({
-	Extends: MWF.xApplication.Template.utils.ExcelUtils
+	Extends: MWF.xApplication.Template.utils.ExcelUtils,
+	initialize: function(){
+		this.sheet2JsonOptions = {};
+		this.pollyfill();
+	}
 });

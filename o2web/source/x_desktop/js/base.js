@@ -55,7 +55,7 @@ if (!window.layout || !layout.desktop || !layout.addReady) {
                 if (callback) callback(baseObject);
             });
         };
-        var _createNewApplication = function (e, appNamespace, appName, options, statusObj, inBrowser, taskitem, notCurrent) {
+        var _createNewApplication = function (e, appNamespace, appName, options, statusObj, inBrowser, taskitem, notCurrent, node) {
             if (options) {
                 options.event = e;
             } else {
@@ -65,6 +65,7 @@ if (!window.layout || !layout.desktop || !layout.addReady) {
             app.desktop = layout.desktop;
             app.status = statusObj;
             app.inBrowser = !!(inBrowser || layout.inBrowser);
+            app.windowNode = node;
 
             if (layout.desktop.type === "layout") {
                 app.appId = (options.appId) ? options.appId : ((appNamespace.options.multitask) ? appName + "-" + (new o2.widget.UUID()) : appName);
@@ -111,6 +112,8 @@ if (!window.layout || !layout.desktop || !layout.addReady) {
                     body.data.workId = options.workId;
                 } else if (options.workCompletedId) {
                     body.data.workCompletedId = options.workCompletedId;
+                } else if (options.draftId) {
+                    body.data.draftId = options.draftId;
                 }
                 window.o2android.postMessage(JSON.stringify(body));
                 return true;
@@ -131,12 +134,14 @@ if (!window.layout || !layout.desktop || !layout.addReady) {
                     window.webkit.messageHandlers.openO2Work.postMessage({
                         "work": options.workId,
                         "workCompleted": "",
+                        "draftId": options.draftId,
                         "title": options.title || options.docTitle || ""
                     });
                 } else if (options.workCompletedId) {
                     window.webkit.messageHandlers.openO2Work.postMessage({
                         "work": "",
                         "workCompleted": options.workCompletedId,
+                        "draftId": options.draftId,
                         "title": options.title || options.docTitle || ""
                     });
                 }
@@ -204,7 +209,8 @@ if (!window.layout || !layout.desktop || !layout.addReady) {
                     type: "openO2CmsApplication",
                     data: {
                         appId : options.columnId,
-                        title: options.title || ""
+                        title: options.title || "",
+                        categoryId: options.categoryId || ""
                     }
                 };
                 window.o2android.postMessage(JSON.stringify(body));
@@ -368,7 +374,7 @@ if (!window.layout || !layout.desktop || !layout.addReady) {
             }
         };
 
-        layout.openApplication = function (e, appNames, options, statusObj, inBrowser, taskitem, notCurrent) {
+        layout.openApplication = function (e, appNames, options, statusObj, inBrowser, taskitem, notCurrent, node) {
             if (appNames.substring(0, 4) === "@url") {
                 var url = appNames.replace(/\@url\:/i, "");
                 var a = new Element("a", {"href": url, "target": "_blank"});
@@ -395,11 +401,20 @@ if (!window.layout || !layout.desktop || !layout.addReady) {
                     } else {
                         if (options) options.appId = appId;
                         if (appNamespace.loading && appNamespace.loading.then){
-                            appNamespace.loading.then(function(){
-                                _createNewApplication(e, appNamespace, appName, (options || {"appId": appId}), statusObj, inBrowser, taskitem, notCurrent);
-                            });
+
+                            if (!layout.desktop.loadingAppIdArr) layout.desktop.loadingAppIdArr = [];
+                            if( !layout.desktop.loadingAppIdArr.contains( appId ) ){
+
+                                if( appId )layout.desktop.loadingAppIdArr.push(appId);
+
+                                appNamespace.loading.then(function(){
+                                    _createNewApplication(e, appNamespace, appName, (options || {"appId": appId}), statusObj, inBrowser, taskitem, notCurrent, node);
+
+                                    if( appId )layout.desktop.loadingAppIdArr.erase(appId);
+                                });
+                            }
                         }else{
-                            _createNewApplication(e, appNamespace, appName, (options || {"appId": appId}), statusObj, inBrowser, taskitem, notCurrent);
+                            _createNewApplication(e, appNamespace, appName, (options || {"appId": appId}), statusObj, inBrowser, taskitem, notCurrent, node);
                         }
                     }
                 }.bind(this));

@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.x.base.core.entity.JsonProperties;
+import com.x.processplatform.core.entity.element.ActivityType;
+import com.x.processplatform.core.entity.ticket.Tickets;
 
 public class WorkLogProperties extends JsonProperties {
 
@@ -11,11 +13,47 @@ public class WorkLogProperties extends JsonProperties {
 
 	private List<String> splitTokenList;
 
-	private List<String> splitValueList = new ArrayList<String>();
+	private List<String> splitValueList = new ArrayList<>();
 
-	private String splitToken;
+	private ActivityType goBackFromActivityType;
 
-	private String splitValue;
+	private String goBackFromActivity;
+
+	private String goBackFromActivityToken;
+
+	private Tickets tickets;
+
+	public Tickets getTickets() {
+		return tickets;
+	}
+
+	public void setTickets(Tickets tickets) {
+		this.tickets = tickets;
+	}
+
+	public ActivityType getGoBackFromActivityType() {
+		return goBackFromActivityType;
+	}
+
+	public void setGoBackFromActivityType(ActivityType goBackFromActivityType) {
+		this.goBackFromActivityType = goBackFromActivityType;
+	}
+
+	public String getGoBackFromActivity() {
+		return goBackFromActivity;
+	}
+
+	public void setGoBackFromActivity(String goBackFromActivity) {
+		this.goBackFromActivity = goBackFromActivity;
+	}
+
+	public String getGoBackFromActivityToken() {
+		return goBackFromActivityToken;
+	}
+
+	public void setGoBackFromActivityToken(String goBackFromActivityToken) {
+		this.goBackFromActivityToken = goBackFromActivityToken;
+	}
 
 	public List<String> getSplitTokenList() {
 		if (null == splitTokenList) {
@@ -37,22 +75,6 @@ public class WorkLogProperties extends JsonProperties {
 
 	public void setSplitValueList(List<String> splitValueList) {
 		this.splitValueList = splitValueList;
-	}
-
-	public String getSplitToken() {
-		return splitToken;
-	}
-
-	public void setSplitToken(String splitToken) {
-		this.splitToken = splitToken;
-	}
-
-	public String getSplitValue() {
-		return splitValue;
-	}
-
-	public void setSplitValue(String splitValue) {
-		this.splitValue = splitValue;
 	}
 
 }

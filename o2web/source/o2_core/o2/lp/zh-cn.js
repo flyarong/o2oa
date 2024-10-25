@@ -235,7 +235,10 @@ o2.LP.desktop = {
         "customMessage": "您收到一条消息",
         "emoji": "表情",
         "processWork": "工作",
-        "cmsDoc": "信息文档"
+        "cmsDoc": "信息文档",
+
+        "bbsReplyCreateMessage" : "论坛回复提醒",
+        "bbsReplyCreate": "{title}"
     },
     "styleMenu": {
         "default": "默认",
@@ -334,6 +337,7 @@ o2.LP.widget = {
     "share": "分享",
     "send": "发送",
     "downloadAll": "全部下载",
+    "downloadBatch": "批量下载",
     "createFolder": "创建文件夹",
     "rename": "重命名",
     "property": "属性",
@@ -436,7 +440,11 @@ o2.LP.widget = {
     "fontSize": "字体大小",
     "fontFamily": "字体",
 
-    "explorerNotSupportFeatures" : "您的浏览器不支持以下特性:"
+    "explorerNotSupportFeatures" : "您的浏览器不支持以下特性:",
+
+    "unit": "组织",
+    "duty": "职务",
+    "selectIdentity": "选择身份"
 };
 
 o2.LP.widget.SimpleEditor = {
@@ -463,6 +471,7 @@ o2.LP.authentication = {
     "inputPicVerificationCode": "请输入右侧的验证码",
     "inputComfirmPassword": "请确认您的密码",
     "inputVerificationCode": "请输入手机验证码",
+    "return": "返回",
     "confirmPassword": "确认密码",
     "sendVerification": "发送验证码",
     "resendVerification": "重新发送",

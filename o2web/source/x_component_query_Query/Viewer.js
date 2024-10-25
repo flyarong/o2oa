@@ -4,7 +4,25 @@ MWF.require("MWF.widget.Common", null, false);
 MWF.require("o2.widget.Paging", null, false);
 MWF.require("MWF.xScript.Macro", null, false);
 MWF.xDesktop.requireApp("query.Query", "lp."+o2.language, null, false);
-MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
+/** @classdesc View 数据中心的视图。本章节的脚本上下文请看<b>{@link module:queryView|queryView}。</b>
+ * @class
+ * @o2cn 视图
+ * @o2category QueryView
+ * @o2range {QueryView}
+ * @hideconstructor
+ * @example
+ * //在视图的事件中获取该类
+ * var view = this.target;
+ * @example
+ * //在视图的条目中，操作条组件中，分页事件中获取该类
+ * var view = this.target.view;
+ * @example
+ * //调用api进行提示
+ * this.queryView.notice("this is my information", "info");
+ * */
+MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class(
+    /** @lends MWF.xApplication.query.Query.Viewer# */
+    {
     Implements: [Options, Events],
     Extends: MWF.widget.Common,
     options: {
@@ -14,11 +32,92 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
         "paging" : "scroll",
         "perPageCount" : 50,
         "isload": "true",
+        "isloadTitle": true,
+        "isloadContent": true,
+        "isloadActionbar": true,
+        "isloadSearchbar": true,
         "export": false,
         "lazy": false,
-        "moduleEvents": ["queryLoad", "postLoad", "postLoadPageData", "postLoadPage", "selectRow", "unselectRow",
-            "queryLoadItemRow", "postLoadItemRow", "queryLoadCategoryRow", "postLoadCategoryRow"]
+        "defaultBundles": [],
+        "moduleEvents": [
+            /**
+             * 加载前触发。可通过this.target获取当前对象。
+             * @event MWF.xApplication.query.Query.Viewer#queryLoad
+             */
+            "queryLoad",
+            /**
+             * 视图界面和当前页数据加载后执行。需注意，翻页也会执行本事件。可通过this.target获取当前对象。
+             * @event MWF.xApplication.query.Query.Viewer#postLoad
+             */
+            "postLoad",
+            /**
+             * 加载当前页数据后，渲染界面前执行，翻页后也会执行本事件。可通过this.target获取当前对象。
+             * @event MWF.xApplication.query.Query.Viewer#postLoadPageData
+             */
+            "postLoadPageData",
+            /**
+             * 渲染当前页内容后执行，翻页后也会执行本事件。可通过this.target获取当前对象。
+             * @event MWF.xApplication.query.Query.Viewer#postLoadPage
+             */
+            "postLoadPage",
+            /**
+             * 选择行后执行。可通过this.target获取视图对象，通过this.event获取行对象。
+             * @event MWF.xApplication.query.Query.Viewer#selectRow
+             */
+            "selectRow",
+            /**
+             * 取消选择行后执行。可通过this.target获取视图对象，通过this.event获取行对象。
+             * @event MWF.xApplication.query.Query.Viewer#unselectRow
+             */
+            "unselectRow",
 
+            /**
+             * 加载每行之前执行（非分类行）。可通过this.target获取视图对象，通过this.event获取行对象。
+             * @event MWF.xApplication.query.Query.Viewer#queryLoadItemRow
+             */
+            "queryLoadItemRow",
+            /**
+             * 加载每行之后执行（非分类行）。可通过this.target获取视图对象，通过this.event获取行对象。
+             * @event MWF.xApplication.query.Query.Viewer#postLoadItemRow
+             */
+            "postLoadItemRow",
+            /**
+             * 加载分类行之前执行。可通过this.target获取视图对象，通过this.event获取行对象。
+             * @event MWF.xApplication.query.Query.Viewer#queryLoadCategoryRow
+             */
+            "queryLoadCategoryRow",
+            /**
+             * 加载分类行后执行。可通过this.target获取视图对象，通过this.event获取行对象。
+             * @event MWF.xApplication.query.Query.Viewer#postLoadCategoryRow
+             */
+            "postLoadCategoryRow",
+
+            /**
+             * 导出查询Excel的事件，这个时候导出数据已经准备好，this.target可获得查询视图对象。this.event如下：
+             * <pre><code class='language-js'>{
+             *       headText: headText, //文本，表格头部文本
+             *       headStyle: headStyle, //对象，表格头部样式
+             *       titleStyle: titleStyle, //对象，表格标题样式
+             *       contentStyle: contentStyle, //对象，表格内容样式
+             *       data : data, //对象数组，导出的数据，第一个数组为标题。修改后导出的excel内容也会修改。
+             *       colWidthArray : colWidthArr, //数组，每列的宽度
+             *       title : excelName //字符串，导出的文件名
+             * }</code></pre>
+             * @event MWF.xApplication.query.Query.Viewer#export
+             */
+            "export",
+
+            /**
+             * 导出查询Excel，产生每行后执行的事件，this.target可获得查询视图对象，可以通过this.event获取下列内容
+             * <pre><code class='language-js'>{
+             *       data : data, //对象，当前行导出的数据。修改后导出的excel内容也会修改。
+             *       index : 1, //数字，导出的行号，从1开始
+             *       source : source //对象，从后台获取的源数据
+             * }</code></pre>
+             * @event MWF.xApplication.query.Query.Viewer#exportRow
+             */
+            "exportRow"
+         ]
         // "actions": {
         //     "lookup": {"uri": "/jaxrs/view/flag/{view}/query/{application}/execute", "method":"PUT"},
         //     "getView": {"uri": "/jaxrs/view/flag/{view}/query/{application}"}
@@ -42,19 +141,49 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
         this.app = app;
 
         this.container = $(container);
+
         this.json = json;
 
         this.parentMacro = parentMacro;
 
         this.originalJson = Object.clone(json);
 
+        /**
+         * @summary 视图的详细配置信息，比如条目的选择类型等.
+         * @member {Object}
+         * @example
+         *  //可以在视图脚本中获取视图基本信息（视图事件中）
+         * var json = this.target.viewJson; //视图配置信息
+         * var name = json.selectList; //视图的列配置
+         * @example
+         *  //可以在视图的组件中获取视图基本信息(在视图的操作条组件中，分页事件中)
+         * var json = this.target.view.viewJson; //视图配置信息
+         * var name = json.selectList; //视图的列配置
+         */
         this.viewJson = null;
         this.filterItems = [];
         this.searchStatus = "none"; //none, custom, default
 
-
+        /**
+         * @summary 视图当前页的所有行对象数组.
+         * @member {Array}
+         * @example
+         * //获取视图当前页的所有行对象数组
+         * var itemList = this.target.items;
+         */
         this.items = [];
 
+        /**
+         * @summary 视图选中行的对象数组.
+         * @member {Array}
+         * @example
+         * //获取视图选中行的对象数组
+         * var itemList = this.target.selectedItems;
+         * itemList.each(function(item){
+         *      //取消选中
+         *     item.unSelected()
+         * })
+         */
         this.selectedItems = [];
         this.hideColumns = [];
         this.openColumns = [];
@@ -63,6 +192,7 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
 
         if (this.options.isload){
             this.init(function(){
+                if( this.json.isTitle==="no" )this.options.isloadTitle = false;
                 this.load();
             }.bind(this));
         }
@@ -73,6 +203,7 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
             this.reload( callback );
         }else{
             this.init(function(){
+                if( this.json.isTitle==="no" )this.options.isloadTitle = false;
                 this.load( callback );
             }.bind(this));
         }
@@ -86,19 +217,30 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
         }
     },
     load: function( callback ){
-        this.loadResource( function () {
-            this._loadModuleEvents();
-            if (this.fireEvent("queryLoad")){
-                this._loadUserInterface( callback );
-                //this._loadStyles();
-                this._loadDomEvents();
-            }
-        }.bind(this))
+        this.loadResource(function () {
+            this.loadLanguage( function () {
+                this._loadModuleEvents();
+                if (this.fireEvent("queryLoad")){
+                    this._loadUserInterface( callback );
+                    //this._loadStyles();
+                    this._loadDomEvents();
+                }
+            }.bind(this))
+        }.bind(this));
     },
-    _loadUserInterface : function( callback ){
+    _loadUserInterface: function( callback ){
+        this.viewJson = this.bindLP( this.viewJson );
+
+        var defaultSelectedScript, selectedAbleScript;
+        if( typeOf(this.json.defaultSelectedScript) === "function" )defaultSelectedScript = this.json.defaultSelectedScript;
+        if( typeOf(this.json.selectedAbleScript) === "function" )selectedAbleScript = this.json.selectedAbleScript;
+        this.json = this.bindLP( this.json );
+        if(defaultSelectedScript)this.json.defaultSelectedScript = defaultSelectedScript;
+        if(selectedAbleScript)this.json.selectedAbleScript = selectedAbleScript;
+
         this.loadLayout();
-        this.createActionbarNode();
-        this.createSearchNode();
+        if( this.options.isloadActionbar )this.createActionbarNode();
+        if( this.options.isloadSearchbar )this.createSearchNode();
         this.createViewNode({"filterList": this.json.filter  ? this.json.filter.clone() : null}, callback);
 
         if (this.options.resizeNode){
@@ -108,12 +250,40 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
         }
     },
     loadLayout: function(){
+
+        /**
+         * @summary 视图的节点，mootools封装过的Dom对象，可以直接使用原生的js和moootools方法访问和操作该对象。
+         * @see https://mootools.net/core/docs/1.6.0/Element/Element
+         * @member {Element}
+         * @example
+         *  //可以在视图脚本中获取视图的Dom
+         * var node = this.target.node;
+         * @example
+         *  //可以在视图的组件中获取视图的Dom(在视图的操作条组件中，分页事件中)
+         * var node = this.target.view.node;
+         */
         this.node = new Element("div", {"styles": this.css.node}).inject(this.container);
+        /**
+         * @summary 操作组件容器
+         * @member {Element}
+         */
         this.actionbarAreaNode =  new Element("div.actionbarAreaNode", {"styles": this.css.actionbarAreaNode}).inject(this.node);
         //if (this.options.export) this.exportAreaNode = new Element("div", {"styles": this.css.exportAreaNode}).inject(this.node);
+        /**
+         * @summary 搜索界面容器
+         * @member {Element}
+         */
         this.searchAreaNode = new Element("div", {"styles": this.css.searchAreaNode}).inject(this.node);
+        /**
+         * @summary 表头和条目容器，
+         * @member {Element}
+         */
         this.viewAreaNode = new Element("div", {"styles": this.css.viewAreaNode}).inject(this.node);
         // this.viewPageNode = new Element("div", {"styles": this.css.viewPageNode}).inject(this.node);
+        /**
+         * @summary 分页组件容器，
+         * @member {Element}
+         */
         this.viewPageAreaNode = new Element("div", {"styles": this.css.viewPageAreaNode}).inject(this.node);
 
         this.fireEvent("loadLayout");
@@ -139,124 +309,49 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
             if (callback) callback();
         }.bind(this));
     },
-    createExportNode: function(){
-        if (this.options.export){
-            MWF.require("MWF.widget.Toolbar", function(){
-                this.toolbar = new MWF.widget.Toolbar(this.actionbarAreaNode, {"style": "simple"}, this); //this.exportAreaNode
-                var actionNode = new Element("div", {
-                    "id": "",
-                    "MWFnodetype": "MWFToolBarButton",
-                    "MWFButtonImage": this.path+""+this.options.style+"/icon/export.png",
-                    "title": this.lp.exportExcel,
-                    "MWFButtonAction": "exportView",
-                    "MWFButtonText": this.lp.exportExcel
-                }).inject(this.actionbarAreaNode); //this.exportAreaNode
-
-                this.toolbar.load();
-            }.bind(this));
-            //this.exportNode = new Element("button", {"text": this.lp.exportExcel}).inject(this.exportAreaNode);
+    loadLanguage: function(callback){
+        if (this.viewJson.languageType!=="script"){
+            if (callback) callback();
+            return true;
         }
-    },
-    getExportTotalCount: function(){
-        return ( this.bundleItems || [] ).length;
-    },
-    getExportMaxCount: function(){
-        return 2000;
-    },
-    exportView: function(){
-        var _self = this;
-        var total = this.getExportTotalCount();
-        var max = this.getExportMaxCount();
 
-        var lp = this.lp.viewExport;
-        var node = this.exportExcelDlgNode = new Element("div");
-        var html = "<div style=\"line-height: 30px; height: 30px; color: #333333; overflow: hidden;margin-top:20px;\">" + lp.exportRange + "：" +
-            "   <input class='start' value='" + ( this.exportExcelStart || 1) +  "'><span>"+ lp.to +"</span>" +
-            "   <input class='end' value='"+ ( this.exportExcelEnd || Math.min( total, max ) ) +"' ><span>"+lp.item+"</span>" +
-            "</div>";
-        html += "<div style=\"clear:both; max-height: 300px; margin-bottom:10px; margin-top:10px; overflow-y:auto;\">"+( lp.description.replace("{count}", total ))+"</div>";
-        node.set("html", html);
-        var check = function () {
-            if(this.value.length == 1){
-                this.value = this.value.replace(/[^1-9]/g,'')
+        var language = MWF.xApplication.query.Query.LP.form;
+        var languageJson = null;
+
+        if (this.viewJson.languageType=="script"){
+            if (this.viewJson.languageScript ){
+                languageJson = this.Macro.exec(this.viewJson.languageScript, this);
+            }
+        }
+
+        if (languageJson){
+            if (languageJson.then && o2.typeOf(languageJson.then)=="function"){
+                languageJson.then(function(json) {
+                    if (!json.data){
+                        var o = Object.clone(json);
+                        json.data = o;
+                    }
+                    MWF.xApplication.query.Query.LP.form = Object.merge(MWF.xApplication.query.Query.LP.form, json);
+                    if (callback) callback(true);
+                }, function(){
+                    if (callback) callback(true);
+                })
             }else{
-                this.value = this.value.replace(/\D/g,'')
+                MWF.xApplication.query.Query.LP.form = Object.merge(MWF.xApplication.query.Query.LP.form, languageJson);
+                if (callback) callback(true);
             }
-            if( this.value.toInt() > total ){
-                this.value = total;
-            }
+        }else{
+            if (callback) callback(true);
         }
-        node.getElement(".start").addEvent( "keyup", function(){ check.call(this) } );
-        node.getElement(".end").addEvent( "keyup", function(){ check.call(this) } );
 
-
-        var dlg = o2.DL.open({
-            "title": this.lp.exportExcel,
-            "style": "user",
-            "isResize": false,
-            "content": node,
-            "width": 600,
-            "height" : 260,
-            "buttonList": [
-                {
-                    "type": "ok",
-                    "text": MWF.LP.process.button.ok,
-                    "action": function (d, e) {
-                        var start = node.getElement(".start").get("value");
-                        var end = node.getElement(".end").get("value");
-                        if( !start || !end ){
-                            MWF.xDesktop.notice("error", {"x": "left", "y": "top"}, lp.inputIntegerNotice, node, {"x": 0, "y": 85});
-                            return false;
-                        }
-                        start = start.toInt();
-                        end = end.toInt();
-                        if( end < start ){
-                            MWF.xDesktop.notice("error", {"x": "left", "y": "top"}, lp.startLargetThanEndNotice, node, {"x": 0, "y": 85});
-                            return false;
-                        }
-                        debugger;
-                        this.exportExcelStart = start;
-                        this.exportExcelEnd = end;
-                        this._exportView(start, end);
-                        dlg.close();
-                    }.bind(this)
-                },
-                {
-                    "type": "cancel",
-                    "text": MWF.LP.process.button.cancel,
-                    "action": function () { dlg.close(); }
-                }
-            ]
-        });
-    },
-    _exportView: function(start, end){
-
-        var bundleList = this.bundleItems.slice(start-1, end);
-        var excelName = this.json.name + "(" + start + "-" + end + ").xlsx";
-
-        var action = MWF.Actions.get("x_query_assemble_surface");
-
-        var filterData = this.json.filter ? this.json.filter.clone() : [];
-        if (this.filterItems.length){
-            this.filterItems.each(function(filter){
-                filterData.push(filter.data);
-            }.bind(this));
-        }
-        var data = {"filterList": filterData};
-        if( bundleList )data.bundleList = bundleList;
-        if( excelName )data.excelName = excelName;
-        data.key = this.bundleKey;
-        action.exportViewWithQuery(this.json.viewName, this.json.application, data, function(json){
-            var uri = action.action.actions.getViewExcel.uri;
-            uri = uri.replace("{flag}", json.data.id);
-            uri = o2.filterUrl( action.action.address+uri );
-            var a = new Element("a", {"href": uri, "target":"_blank"});
-            a.click();
-            a.destroy();
-        }.bind(this));
     },
     setContentHeight: function(){
-        var size = this.node.getSize();
+        var size;
+        if( !this.node.offsetParent === null ){
+            size = this.node.getStyle("height");
+        }else{
+            size = this.node.getSize()
+        }
         var searchSize = this.searchAreaNode.getComputedSize();
         var h = size.y-searchSize.totalHeight;
         //if (this.exportAreaNode){
@@ -289,6 +384,12 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
         if( typeOf(this.json.showActionbar) === "boolean" && this.json.showActionbar !== true )return;
         if( typeOf( this.viewJson.actionbarHidden ) === "boolean" ){
             if( this.viewJson.actionbarHidden === true || !this.viewJson.actionbarList || !this.viewJson.actionbarList.length )return;
+            /**
+             * @summary 视图的操作条对象.
+             * @member {Object}
+             * @example
+             * var actionbar = this.target.actionbar;
+             */
             this.actionbar = new MWF.xApplication.query.Query.Viewer.Actionbar(this.actionbarAreaNode, this.viewJson.actionbarList[0], this, {});
             this.actionbar.load();
         }else{ //兼容以前的ExportNode
@@ -319,10 +420,10 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
             if( viewStyles["table"] )this.viewTable.setStyles(viewStyles["table"]);
         }
 
-        this.createLoadding();
+        if( this.options.isloadContent )this.createLoadding();
 
         var viewTitleCellNode = (viewStyles && viewStyles["titleTd"]) ? viewStyles["titleTd"] : this.css.viewTitleCellNode;
-        if (this.json.isTitle!=="no"){
+        if (this.options.isloadTitle){
             this.viewTitleLine = new Element("tr.viewTitleLine", {
                 "styles": (viewStyles && viewStyles["titleTr"]) ? viewStyles["titleTr"] : this.css.viewTitleLineNode
             }).inject(this.viewTable);
@@ -358,7 +459,6 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
             }
 
             this.entries = {};
-            debugger;
             this.viewJson.selectList.each(function(column){
                 this.entries[column.column] = column;
                 if (!column.hideColumn){
@@ -385,7 +485,7 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
 
                 if (column.allowOpen) this.openColumns.push(column.column);
             }.bind(this));
-            this.lookup(data, callback);
+            if( this.options.isloadContent )this.lookup(data, callback);
         }else{
             this.entries = {};
             this.viewJson.selectList.each(function(column){
@@ -393,7 +493,7 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
                 if (column.hideColumn) this.hideColumns.push(column.column);
                 if (column.allowOpen) this.openColumns.push(column.column);
             }.bind(this));
-            this.lookup(data, callback);
+            if( this.options.isloadContent )this.lookup(data, callback);
         }
     },
     getExpandFlag : function(){
@@ -526,6 +626,7 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
         }
         if( !this.paging ){
             var json;
+
             if( !this.viewJson.pagingList || !this.viewJson.pagingList.length ){
                 json = {
                     "firstPageText": this.lp.firstPage,
@@ -533,7 +634,16 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
                 };
             }else{
                 json = this.viewJson.pagingList[0];
+                // var jsonStr = JSON.stringify(json);
+                // jsonStr = o2.bindJson(jsonStr, {"lp": MWF.xApplication.query.Query.LP.form});
+                // json = JSON.parse(jsonStr);
             }
+            /**
+             * @summary 视图的分页组件对象.
+             * @member {Object}
+             * @example
+             * var paging = this.target.paging;
+             */
             this.paging = new MWF.xApplication.query.Query.Viewer.Paging(this.viewPageAreaNode, json, this, {});
             this.paging.load();
         }else{
@@ -566,11 +676,21 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
                     this._initPage();
                     if (this.bundleItems.length){
                         if( this.noDataTextNode )this.noDataTextNode.destroy();
-                        this.loadCurrentPageData( function () {
-                            this.fireEvent("postLoad"); //用户配置的事件
-                            this.lookuping = false;
-                            if(callback)callback(this);
-                        }.bind(this));
+                            if( this.options.defaultBundles.length && !this.isDefaultDataLoaded ){
+                                this.loadDefaultData(function () {
+                                    this.loadCurrentPageData( function () {
+                                        this.fireEvent("postLoad"); //用户配置的事件
+                                        this.lookuping = false;
+                                        if(callback)callback(this);
+                                    }.bind(this));
+                                }.bind(this))
+                            }else{
+                                this.loadCurrentPageData( function () {
+                                    this.fireEvent("postLoad"); //用户配置的事件
+                                    this.lookuping = false;
+                                    if(callback)callback(this);
+                                }.bind(this));
+                            }
                     }else{
                         //this._loadPageNode();
                         this.viewPageAreaNode.empty();
@@ -588,6 +708,7 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
                             this.loadingAreaNode.destroy();
                             this.loadingAreaNode = null;
                         }
+                        this.fireEvent("loadView"); //options 传入的事件
                         this.fireEvent("postLoad"); //用户配置的事件
                         this.lookuping = false;
                         if(callback)callback(this);
@@ -595,6 +716,35 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
                 }.bind(this));
             }
         }.bind(this));
+    },
+    loadDefaultData: function( callback ){
+        var d = {};
+        d.bundleList = this.options.defaultBundles;
+        d.key = this.bundleKey;
+        this.lookupAction.loadView(this.json.name, this.json.application, d, function(json){
+            var resultJson, viewData = json.data;
+
+            if (this.viewJson.group.column){
+                resultJson = [];
+                json.data.groupGrid.each(function (g) {
+                    resultJson = resultJson.concat( g.list );
+                })
+            }else{
+                resultJson = json.data.grid;
+            }
+
+            resultJson.each(function (data) {
+                this.selectedItems.push({
+                    data: data
+                })
+            }.bind(this));
+
+            this.isDefaultDataLoaded = true;
+            if(callback)callback();
+        }.bind(this), function () {
+            this.isDefaultDataLoaded = true;
+            if(callback)callback();
+        }, true );
     },
     loadCurrentPageData: function( callback, async ){
         //是否需要在翻页的时候清空之前的items ?
@@ -655,16 +805,134 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
             if(callback)callback();
         }.bind(this), null, async === false ? false : true );
     },
+    showAssociatedDocumentResult: function(failureList, successList){
+        debugger;
+        var fL = [];
+        failureList.each(function( f ){
+            if( f.properties.view === this.json.id )fL.push( f.targetBundle );
+        }.bind(this));
+
+        var sl = [];
+        successList.each(function( f ){
+            if( f.properties.view === this.json.id )sl.push( f.targetBundle );
+        }.bind(this));
+
+        var d = {};
+        d.bundleList = fL.concat( sl );
+        d.key = this.bundleKey;
+
+        if( d.bundleList.length ){
+            this.lookupAction.loadView(this.json.name, this.json.application, d, function(json){
+                var resultJson, viewData = json.data;
+
+                if (this.viewJson.group.column){
+                    resultJson = [];
+                    json.data.groupGrid.each(function (g) {
+                        resultJson = resultJson.concat( g.list );
+                    })
+                }else{
+                    resultJson = json.data.grid;
+                }
+
+                this._showAssociatedDocumentResult( resultJson, failureList, successList );
+
+            }.bind(this), null, true );
+        }else{
+            this._showAssociatedDocumentResult( [], failureList, successList );
+        }
+
+    },
+    _showAssociatedDocumentResult: function(resultJson, failureList, successList){
+        this.entries.$result = {
+            "id": "$result",
+            "column": "$result",
+            "events": {},
+            "allowOpen": false,
+            "numberOrder": false,
+            "groupEntry": false,
+            "hideColumn": false,
+            "isName": false,
+            "isHtml": false,
+            "path": "$result"
+        };
+
+        var viewStyles = this.viewJson.viewStyles;
+        if (this.options.isloadTitle && this.selectTitleCell){
+            //if (this.json.select==="single" || this.json.select==="multi") {
+            var titleCell = new Element("td.titleCell", {
+                "styles": (viewStyles && viewStyles["titleTd"]) ? viewStyles["titleTd"] : this.css.viewTitleCellNode,
+                "text": this.lp.associationResult
+            }).inject(this.viewTitleLine);
+            if (this.json.titleStyles) titleCell.setStyles(this.json.titleStyles);
+        }
+
+        if(this.expandAllNode){
+            this.expandAllNode.hide();
+        }
+
+        while (this.viewTable.rows.length>1){
+            this.viewTable.deleteRow(-1);
+        }
+        if( this.viewTable.rows.length>0 && !this.viewTable.rows[0].hasClass("viewTitleLine") ){
+            this.viewTable.deleteRow(0);
+        }
+
+        this.contentAreaNode.scrollTo(0, 0);
+
+        this.gridJson = resultJson.map(function (item) {
+            var flag = true;
+            if( !item.data )item.data = {};
+            failureList.each(function (d) {
+                if( item.bundle === d.bundle ){
+                    item.$failure = true;
+                    item.data.$result = d.$result || this.lp.noPermission;
+                    flag = false;
+                }
+            }.bind(this));
+            if( flag ){
+                item.data.$result = this.lp.associationSuccess;
+            }
+            item.$selectedEnable = false;
+            return item;
+        }.bind(this));
+        //if( this.paging )this.paging.hide();
+        if(this.actionbarAreaNode)this.actionbarAreaNode.hide();
+        if(this.searchAreaNode)this.searchAreaNode.hide();
+        if(this.viewPageAreaNode)this.viewPageAreaNode.hide();
+
+        //this.selectedItems = [];
+
+        if(this.selectAllNode){
+            this.clearSelectAllStyle();
+        }
+
+        if (this.gridJson.length){
+            this.gridJson.each(function(line, i){
+                new MWF.xApplication.query.Query.Viewer.AssociatedResultItem(this, line, null, i, null, false);
+            }.bind(this));
+        }else{
+            if (this.viewPageAreaNode) this.viewPageAreaNode.empty();
+        }
+    },
     setSelectedableFlag : function(){
         this.viewSelectedEnable = false;
         var selectedAbleScript = this.json.selectedAbleScript || this.viewJson.selectedAbleScript;
         if (this.viewJson.group.column){
             this.gridJson.each( function( d ){
                 d.list.each( function( v ){
-                    if( selectedAbleScript ){
-                        v.$selectedEnable = this.Macro.exec( selectedAbleScript, { "data" : v, "groupData" : d ,"view": this });
-                    }else{
-                        v.$selectedEnable = true;
+                    switch (typeOf(selectedAbleScript)) {
+                        case "string":
+                            if( selectedAbleScript ){
+                                v.$selectedEnable = this.Macro.exec( selectedAbleScript, { "data" : v, "groupData" : d ,"view": this });
+                            }else{
+                                v.$selectedEnable = true;
+                            }
+                            break;
+                        case "function":
+                            v.$selectedEnable =  selectedAbleScript({ "data" : v, "groupData" : d ,"view": this });
+                            break;
+                        default:
+                            v.$selectedEnable = true;
                     }
                     if( v.$selectedEnable ){
                         d.$selectedEnable = true;
@@ -674,10 +942,19 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
             }.bind(this))
         }else{
             this.gridJson.each( function( v ){
-                if( selectedAbleScript ){
-                    v.$selectedEnable = this.Macro.exec( selectedAbleScript, { "data" : v, "view": this });
-                }else{
-                    v.$selectedEnable = true;
+                switch (typeOf(selectedAbleScript)) {
+                    case "string":
+                        if( selectedAbleScript ){
+                            v.$selectedEnable = this.Macro.exec( selectedAbleScript, { "data" : v, "view": this });
+                        }else{
+                            v.$selectedEnable = true;
+                        }
+                        break;
+                    case "function":
+                        v.$selectedEnable =  selectedAbleScript({ "data" : v, "view": this });
+                        break;
+                    default:
+                        v.$selectedEnable = true;
                 }
                 if( v.$selectedEnable )this.viewSelectedEnable = true;
             }.bind(this))
@@ -848,6 +1125,11 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
             }
         }.bind(this));
     },
+    bindLP: function( json ){
+        var jsonStr = JSON.stringify( json );
+        jsonStr = o2.bindJson(jsonStr, {"lp": MWF.xApplication.query.Query.LP.form});
+        return JSON.parse(jsonStr);
+    },
     getLookupAction: function(callback){
         if (!this.lookupAction){
             this.lookupAction = MWF.Actions.get("x_query_assemble_surface");
@@ -868,6 +1150,12 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
     hide: function(){
         this.node.setStyle("display", "none");
     },
+    /**
+     * @summary 刷新视图。
+     *  @param {Function} [callback] - 可选，刷新视图后的回调.
+     *  @example
+     *  this.target.reload();
+     */
     reload: function( callback ){
         if( this.lookuping || this.pageloading )return;
         this.node.setStyle("display", "block");
@@ -993,7 +1281,7 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
         if (this.gridJson){
             var key = this.searchSimpleInputNode.get("value");
             var rows = this.viewTable.rows;
-            var first = (this.json.isTitle!=="no") ? 1 : 0;
+            var first = (this.options.isloadTitle) ? 1 : 0;
             for (var i = first; i<rows.length; i++){
                 var tr = rows[i];
                 if (!key || key==this.lp.searchKeywork){
@@ -1100,7 +1388,6 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
         }else{
             this.filterItems = [];
         }
-        debugger;
         this.viewSearchIconNode.setStyle("display", "none");
         this.viewSearchInputBoxNode.setStyle("display", "none");
         this.viewSearchCustomActionNode.setStyle("display", "none");
@@ -1186,7 +1473,7 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
                     }
                     break;
                 case "dateTimeValue":
-                    this.loadComparisonSelect(this.lp.dateFilter);
+                    this.loadComparisonSelect(this.lp.dateTimeFilter);
                     if( selectableList.length > 0 ){
                         this.loadViewSerchCustomSelectByScript(selectableList)
                     }else {
@@ -1202,7 +1489,7 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
                     }
                     break;
                 case "timeValue":
-                    this.loadComparisonSelect(this.lp.dateFilter);
+                    this.loadComparisonSelect(this.lp.dateTimeFilter);
                     if( selectableList.length > 0 ){
                         this.loadViewSerchCustomSelectByScript(selectableList)
                     }else {
@@ -1437,12 +1724,34 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
     //搜索相关结束
 
     //api 使用 开始
+
+    /**
+     * @summary 如果当前视图是嵌入在表单或者页面中，使用该方法获取表单或页面的上下文。
+     * @see {@link module:queryView.getParentEnvironment|详情查看 this.queryViewer.getParentEnvironment}
+     * @return {Object}
+     * @example
+     *  this.target.getParentEnvironment();
+     */
     getParentEnvironment : function(){
         return this.parentMacro ? this.parentMacro.environment : null;
     },
+    /**
+     * @summary 获取视图的配置信息。
+     * @see {@link module:queryView.getViewInfor|详情查看 this.queryViewer.getViewInfor}
+     * @return {Object}
+     * @example
+     *  this.target.getViewInfor();
+     */
     getViewInfor : function(){
         return this.json;
     },
+    /**
+     * @summary 获取视图当前页的基本信息。
+     * @see {@link module:queryView.getPageInfor|详情查看 this.queryViewer.getPageInfor}
+     * @return {Object}
+     * @example
+     *  this.target.getPageInfor();
+     */
     getPageInfor : function(){
         return {
             pages : this.pages,
@@ -1450,13 +1759,54 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
             currentPageNumber : this.currentPage
         };
     },
+    /**
+     * @summary 获取当前页的数据。
+     * @see {@link module:queryView.getPageData|详情查看 this.queryViewer.getPageData}
+     * @return {Object}
+     * @example
+     *  this.target.getPageData();
+     */
     getPageData : function () {
         return this.gridJson;
     },
+    /**
+     * @summary 跳转到指定的页面。
+     * @see {@link module:queryView.toPage|详情查看 this.queryViewer.toPage}
+     * @param {Number} pageNumber 需要跳转的页码
+     * @param {Function} callback 跳转的页面数据加载完成以后的回调方法。
+     * @example
+     *  //　跳转到第2页并且获取该页的数据。
+     *  this.target.toPage( 2, function(){
+     *      var data = this.target.getPageData();
+     *  }.bind(this) )
+     */
     toPage : function( pageNumber, callback ){
         this.currentPage = pageNumber;
         this.loadCurrentPageData( callback );
     },
+    /**
+     * 获取选中的条目的数据。
+     * @method getSelectedData
+     * @see {@link module:queryView.getSelectedData|详情查看 this.queryViewer.getSelectedData}
+     * @memberOf module:queryView
+     * @static
+     * @return {Object[]} 选中的条目的数据。
+     * <div>格式如下：</div>
+     * <pre><code class='language-js'>
+     * [
+     {
+        "bundle": "099ed3c9-dfbc-4094-a8b7-5bfd6c5f7070", //cms 的 documentId, process 的 jobId
+        "data": {  //视图中配置的数据
+          "title": "考勤管理-配置-统计周期设置", //列名称及列值
+          "time": "2018-08-25 11:29:45"
+        }
+      },
+     ...
+     * ]
+     </code></pre>
+     * @o2syntax
+     * var data = this.target.getSelectedData();
+     */
     getSelectedData : function(){
         return this.getData();
     },
@@ -1517,7 +1867,6 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
         }
     },
     clearSelectAllStyle : function(){
-        debugger;
         if(!this.selectAllNode)return;
         var viewStyles = this.viewJson.viewStyles;
         var viewTitleCellNode = (viewStyles && viewStyles["titleTd"]) ? viewStyles["titleTd"] : this.css.viewTitleCellNode;
@@ -1655,6 +2004,12 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
         // }
     },
 
+    /**
+     * @summary 设置视图的过滤条件，该方法不能修改视图中默认的过滤条件（在开发视图的时候添加的过滤条件），而是在这上面新增。
+     * @see {@link module:queryView.setFilter|详情查看 this.queryViewer.setFilter}
+     * @param {(ViewFilter[]|ViewFilter|Null)} [filter] 过滤条件
+     * @param {Function} callback 过滤完成并重新加载数据后的回调方法。
+     */
     setFilter : function( filter, callback ){
         if( this.lookuping || this.pageloading )return;
         if( !filter )filter = [];
@@ -1664,8 +2019,13 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
             this.createViewNode({"filterList": this.json.filter  ? this.json.filter.clone() : null}, callback);
         }
     },
+    /**
+     * @summary 把当前视图切换成另外一个视图。
+     * @see {@link module:queryView.switchView|详情查看 this.queryViewer.switchView}
+     * @param {(ViewFilter[]|ViewFilter|Null)} [filter] 过滤条件
+     * @param {Object} options 需要跳转的参数配置
+     */
     switchView : function( json ){
-        debugger;
         // json = {
         //     "application": application,
         //     "viewName": viewName,
@@ -1681,7 +2041,6 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
 
         this.searchMorph = null;
         this.viewSearchCustomContentNode = null;
-
         this.paging = null;
 
         var newJson = Object.merge( Object.clone(this.originalJson), json );
@@ -1697,10 +2056,83 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
     notice: function (content, type, target, where, offset, option) {
         this.app.notice(content, type, target, where, offset, option)
     },
+    dialog: function( options ){
+        if( !options )options = {};
+        var opts = {
+            "style" : options.style || "user",
+            "title": options.title || "",
+            "width": options.width || 300,
+            "height" : options.height || 150,
+            "isMax": o2.typeOf( options.isMax ) === "boolean" ? options.isMax : false,
+            "isClose": o2.typeOf( options.isClose ) === "boolean"  ? options.isClose : true,
+            "isResize": o2.typeOf( options.isResize ) === "boolean"  ? options.isResize : true,
+            "isMove": o2.typeOf( options.isMove ) === "boolean"  ? options.isMove : true,
+            "isTitle": o2.typeOf( options.isTitle ) === "boolean"  ? options.isTitle : true,
+            "offset": options.offset || null,
+            "mask": o2.typeOf( options.mask ) === "boolean"  ? options.mask : true,
+            "container": options.container ||  ( layout.mobile ? $(document.body) : this.app.content ),
+            "duration": options.duration || 200,
+            "lp": options.lp || null,
+            "zindex": ( options.zindex || 100 ).toInt(),
+            "buttonList": options.buttonList || [
+                {
+                    "type": "ok",
+                    "text": MWF.LP.process.button.ok,
+                    "action": function(){
+                        if(options.ok){
+                            var flag = options.ok.call( this );
+                            if( flag === true || o2.typeOf(flag) === "null" )this.close();
+                        }else{
+                            this.close();
+                        }
+
+                    }
+                },
+                {
+                    "type": "cancel",
+                    "text": MWF.LP.process.button.cancel,
+                    "action": function(){
+                        if(options.close){
+                            var flag = options.close.call(this);
+                            if( flag === true || o2.typeOf(flag) === "null" )this.close();
+                        }else{
+                            this.close();
+                        }
+                    }
+                }
+            ]
+        };
+
+        var positionNode;
+        if( options.content ) {
+            opts.content = options.content;
+            var parent = opts.content.getParent();
+            if(parent)positionNode = new Element("div", {style:"display:none;"}).inject( opts.content, "before" );
+        }
+
+        opts.onQueryClose = function(){
+            if( positionNode && opts.content ){
+                opts.content.inject( positionNode, "after" );
+                positionNode.destroy();
+            }
+            if( o2.typeOf(options.onQueryClose) === "function" )options.onQueryClose.call( this );
+        }
+
+        for( var key in options ){
+            if( !opts.hasOwnProperty( key ) ){
+                opts[key] = options[key];
+            }
+        }
+        var dialog;
+        MWF.require("MWF.xDesktop.Dialog", function(){
+            dialog = o2.DL.open(opts)
+        }, null, false);
+        return dialog;
+    },
+
     //api 使用 结束
 
     loadObserver: function(){
-        debugger;
         if( this.io ){
             this.io.disconnect();
             this.io = null;
@@ -1737,26 +2169,376 @@ MWF.xApplication.query.Query.Viewer = MWF.QViewer = new Class({
         }else{
             o2.load([observerPath, observerPath_ie11], function () { callback(); }.bind(this));
         }
-    }
+    },
+
+
+        createExportNode: function(){
+            if (this.options.export){
+                MWF.require("MWF.widget.Toolbar", function(){
+                    this.toolbar = new MWF.widget.Toolbar(this.actionbarAreaNode, {"style": "simple"}, this); //this.exportAreaNode
+                    var actionNode = new Element("div", {
+                        "id": "",
+                        "MWFnodetype": "MWFToolBarButton",
+                        "MWFButtonImage": this.path+""+this.options.style+"/icon/export.png",
+                        "title": this.lp.exportExcel,
+                        "MWFButtonAction": "exportView",
+                        "MWFButtonText": this.lp.exportExcel
+                    }).inject(this.actionbarAreaNode); //this.exportAreaNode
+
+                    this.toolbar.load();
+                }.bind(this));
+                //this.exportNode = new Element("button", {"text": this.lp.exportExcel}).inject(this.exportAreaNode);
+            }
+        },
+        getExportTotalCount: function(){
+            return ( this.bundleItems || [] ).length;
+        },
+        getExportMaxCount: function(){
+            return 2000;
+        },
+        exportView: function(){
+            var _self = this;
+            var total = this.getExportTotalCount();
+            var max = this.getExportMaxCount();
+
+            var lp = this.lp.viewExport;
+            var node = this.exportExcelDlgNode = new Element("div");
+            var html = "<div style=\"line-height: 30px; height: 30px; color: #333333; overflow: hidden;margin-top:20px;\">" + lp.fileName + "：" +
+                "   <input class='filename' value='' style='margin-left: 14px;width: 350px;'><span>"+
+                "</div>";
+            html += "<div style=\"line-height: 30px; height: 30px; color: #333333; overflow: hidden;margin-top:20px;\">" + lp.exportRange + "：" +
+                "   <input class='start' value='" + ( this.exportExcelStart || 1) +  "'><span>"+ lp.to +"</span>" +
+                "   <input class='end' value='"+ ( this.exportExcelEnd || Math.min( total, max ) ) +"' ><span>"+lp.item+"</span>" +
+                "</div>";
+            html += "<div style=\"clear:both; max-height: 300px; margin-bottom:10px; margin-top:10px; overflow-y:auto;\">"+( lp.description.replace("{count}", total ))+"</div>";
+            node.set("html", html);
+            var check = function () {
+                if(this.value.length == 1){
+                    this.value = this.value.replace(/[^1-9]/g,'')
+                }else{
+                    this.value = this.value.replace(/\D/g,'')
+                }
+                if( this.value.toInt() > total ){
+                    this.value = total;
+                }
+            }
+            node.getElement(".start").addEvent( "keyup", function(){ check.call(this) } );
+            node.getElement(".end").addEvent( "keyup", function(){ check.call(this) } );
+
+
+            var dlg = o2.DL.open({
+                "title": this.lp.exportExcel,
+                "style": "user",
+                "isResize": false,
+                "content": node,
+                "width": 600,
+                "height" : 260,
+                "buttonList": [
+                    {
+                        "type": "ok",
+                        "text": MWF.LP.process.button.ok,
+                        "action": function (d, e) {
+                            var start = node.getElement(".start").get("value");
+                            var end = node.getElement(".end").get("value");
+                            var filename = node.getElement(".filename").get("value");
+                            if( !start || !end ){
+                                MWF.xDesktop.notice("error", {"x": "left", "y": "top"}, lp.inputIntegerNotice, node, {"x": 0, "y": 85});
+                                return false;
+                            }
+                            start = start.toInt();
+                            end = end.toInt();
+                            if( end < start ){
+                                MWF.xDesktop.notice("error", {"x": "left", "y": "top"}, lp.startLargetThanEndNotice, node, {"x": 0, "y": 85});
+                                return false;
+                            }
+                            this.exportExcelStart = start;
+                            this.exportExcelEnd = end;
+                            this._exportView(start, end, filename);
+                            dlg.close();
+                        }.bind(this)
+                    },
+                    {
+                        "type": "cancel",
+                        "text": MWF.LP.process.button.cancel,
+                        "action": function () { dlg.close(); }
+                    }
+                ]
+            });
+        },
+        // _exportView: function(start, end, filename){
+        //
+        //     var bundleList = this.bundleItems.slice(start-1, end);
+        //     var excelName = filename || (this.json.name + "(" + start + "-" + end + ").xlsx");
+        //
+        //     var action = MWF.Actions.get("x_query_assemble_surface");
+        //
+        //     var filterData = this.json.filter ? this.json.filter.clone() : [];
+        //     if (this.filterItems.length){
+        //         this.filterItems.each(function(filter){
+        //             filterData.push(filter.data);
+        //         }.bind(this));
+        //     }
+        //     var data = {"filterList": filterData};
+        //     if( bundleList )data.bundleList = bundleList;
+        //     if( excelName )data.excelName = excelName;
+        //     data.key = this.bundleKey;
+        //     action.exportViewWithQuery(this.json.viewName, this.json.application, data, function(json){
+        //         var uri = action.action.actions.getViewExcel.uri;
+        //         uri = uri.replace("{flag}", json.data.id);
+        //         uri = o2.filterUrl( action.action.address+uri );
+        //         var a = new Element("a", {"href": uri, "target":"_blank"});
+        //         a.click();
+        //         a.destroy();
+        //     }.bind(this));
+        // },
+        _exportView: function(start, end, filename){
+            var excelName = filename || (this.json.name + "(" + start + "-" + end + ").xlsx");
+
+            // var p = this.currentPage;
+            // var d = {
+            //     "filterList": this.filterList,
+            //     "parameter": this.parameter
+            // };
+
+            this.createLoadding();
+
+            var exportArray = [];
+
+            var titleArray = [];
+            var colWidthArr = [];
+            var dateIndexArray = [];
+            var numberIndexArray = [];
+            var totalArray = [];
+            var idx = 0;
+
+            if (this.viewJson.isSequence === "yes") {
+                titleArray.push( this.lp.sequence );
+                colWidthArr.push(100);
+                totalArray.push('');
+                idx = idx + 1;
+            }
+
+            Object.each(this.entries, function (c, k) {
+                if (this.hideColumns.indexOf(k) === -1 && c.exportEnable !== false) {
+                    titleArray.push(c.displayName);
+                    colWidthArr.push(c.exportWidth || 200);
+                    if( c.isTime )dateIndexArray.push(idx);
+                    if( c.isNumber )numberIndexArray.push(idx);
+                    totalArray.push( ['number', 'count'].contains(c.total) ? new Decimal(0) : '' );
+                    idx++;
+                }
+            }.bind(this));
+            exportArray.push(titleArray);
+
+            this.loadExportData(start, end, function (dataList) {
+                var rowIndex = 0;
+                dataList.grid.each(function (data, i) {
+                    // data.each(function (d, i) {
+                    var d = data.data;
+
+                        rowIndex = rowIndex + 1;
+
+                        var columnIndex = 0;
+
+                        var dataArray = [];
+                        if (this.viewJson.isSequence === "yes") {
+                            dataArray.push( (start-1)+rowIndex );
+                            columnIndex++;
+                        }
+                        Object.each(this.entries, function (c, k) {
+                            if (this.hideColumns.indexOf(k) === -1 && c.exportEnable !== false) {
+                                var text = this.getExportText(c, k, d);
+                                dataArray.push( text );
+                                switch (c.total){
+                                    case 'number':
+                                        if( parseFloat(text).toString() !== "NaN" ) { //可以转成数字
+                                            totalArray[columnIndex] = totalArray[columnIndex].plus(text);
+                                        }
+                                        break;
+                                    case 'count':
+                                        totalArray[columnIndex] = totalArray[columnIndex].plus(1);
+                                        break;
+                                }
+
+                                columnIndex++;
+                            }
+                        }.bind(this));
+                        //exportRow事件
+                        var argu = {"index":rowIndex, "source": d, "data":dataArray};
+                        this.fireEvent("exportRow", [argu]);
+                        exportArray.push( argu.data || dataArray );
+                    // }.bind(this));
+                }.bind(this));
+
+                var hasTotal = false;
+                totalArray = totalArray.map(function (d){
+                    if( d ){
+                        hasTotal = true;
+                        return d.toString();
+                    }else{
+                        return '';
+                    }
+                });
+
+                if( hasTotal ){
+                    totalArray[0] = MWF.xApplication.query.Query.LP.total + " " + totalArray[0];
+                    exportArray.push( totalArray );
+                }
+
+
+                var headTextScript = this.viewJson.exportHeadText;
+                var headText = headTextScript ? this.Macro.exec(headTextScript, this) : '';
+
+                var headStyleScript = this.viewJson.exportHeadStyle;
+                var headStyle = headStyleScript ? this.Macro.exec(headStyleScript, this) : null;
+
+                var titleStyleScript = this.viewJson.exportColumnTitleStyle;
+                var titleStyle = titleStyleScript ? this.Macro.exec(titleStyleScript, this) : null;
+
+                var contentStyleScript = this.viewJson.exportColumnContentStyle;
+                var contentStyle = contentStyleScript ? this.Macro.exec(contentStyleScript, this) : null;
+
+                //export事件
+                var arg = {
+                    headText: headText,
+                    headStyle: headStyle,
+                    titleStyle: titleStyle,
+                    contentStyle: contentStyle,
+                    data : exportArray,
+                    colWidthArray : colWidthArr,
+                    title : excelName
+                };
+                this.fireEvent("export", [arg]);
+
+                if (this.loadingAreaNode) {
+                    this.loadingAreaNode.destroy();
+                    this.loadingAreaNode = null;
+                }
+
+                var options = {};
+                if( arg.headText )options.headText = arg.headText;
+                if( arg.headStyle )options.headStyle = arg.headStyle;
+                if( arg.titleStyle )options.columnTitleStyle = arg.titleStyle;
+                if( arg.contentStyle )options.columnContentStyle = arg.contentStyle;
+
+                new MWF.xApplication.query.Query.Viewer.ExcelUtils(
+                    options
+                ).exportToExcel(
+                    arg.data || exportArray,
+                    arg.title || excelName,
+                    arg.colWidthArray || colWidthArr,
+                    dateIndexArray,  //日期格式列下标
+                    numberIndexArray  //数字格式列下标
+                );
+
+            }.bind(this))
+        },
+        loadExportData: function(start, end, callback){
+
+            var bundleList = this.bundleItems.slice(start-1, end);
+
+            var filterData = this.json.filter ? this.json.filter.clone() : [];
+            if (this.filterItems.length){
+                this.filterItems.each(function(filter){
+                    filterData.push(filter.data);
+                }.bind(this));
+            }
+            var data = {"filterList": filterData};
+            if( bundleList )data.bundleList = bundleList;
+            data.key = this.bundleKey;
+
+            var p = o2.Actions.load("x_query_assemble_surface").ViewAction.executeWithQuery(
+                this.json.viewName,
+                this.json.application,
+                data
+            );
+            Promise.resolve( p ).then(function (json) {
+                callback(json.data);
+            });
+        },
+        getExportText: function(column, key, data){
+            var text = data[key];
+            switch (typeOf(text)){
+                case 'string':
+                    return text;
+                case 'array':
+                    return text.join(',');
+                default:
+                    return text;
+            }
+        }
 
 });
 
-MWF.xApplication.query.Query.Viewer.Item = new Class({
+
+/** @classdesc ViewerItem 数据中心的视图条目。本章节的脚本上下文请看<b>{@link module:queryView|queryView}。</b>
+ * @class
+ * @o2cn 视图条目（行）
+ * @o2category QueryView
+ * @o2range {QueryView}
+ * @hideconstructor
+ * @example
+ * //在视图中获取行
+ * var item = this.target.items[0];
+ */
+MWF.xApplication.query.Query.Viewer.Item = new Class(
+    /** @lends MWF.xApplication.query.Query.Viewer.Item# */
+    {
     initialize: function(view, data, prev, i, category, lazy){
+        /**
+         * 加载对应列的每个单元格后触发。可通过this.target获取以下对象：
+         * <pre><code class='language-js'>{
+         *  "json ": {}, //当前行配置
+         *  "data": "",  //当前单元格数据，可能是字符串、数组、布尔值。
+         *  "node": td, //当前单元格
+         *  "view": view, //当前视图对象
+         *  "row": {} //当前行的平台类对象
+         * }</code></pre>
+         * @event MWF.xApplication.query.Query.Viewer.Item#loadContent
+         */
+        /**
+         * 加载对应列的每个单元格后触发。可通过this.target获取以下对象：
+         * <pre><code class='language-js'>{
+         *  "json ": {}, //当前行配置
+         *  "data": "",  //当前单元格数据，可能是字符串、数组、布尔值。
+         *  "node": td, //当前单元格
+         *  "view": view, //当前视图对象
+         *  "row": {} //当前行的平台类对象
+         * }</code></pre>
+         * @event MWF.xApplication.query.Query.Viewer.Item#click
+         */
+
+        /**
+         * @summary 行所属视图.
+         * @member {Object}
+         */
         this.view = view;
+        /**
+         * @summary 行数据.
+         * @member {Object}
+         */
         this.data = data;
         this.css = this.view.css;
+        /**
+         * @summary 行是否被选中.
+         * @member {Boolean}
+         */
         this.isSelected = false;
+        /**
+         * @summary 如果视图有分类，获取分类对象。
+         * @member {Object}
+         */
         this.category = category;
         this.prev = prev;
         this.idx = i;
         this.clazzType = "item";
         this.lazy = lazy;
+        this.odd = this.view.items.length % 2 === 1;
         this.load();
     },
     load: function(){
         if( this.lazy && this.view.io ){
-            this.view.fireEvent("queryLoadItemRow", [null, this]);
+            this.view.fireEvent("queryLoadItemRow", [this]);
             this.loadNode();
             this.view.io.observe( this.node );
         }else{
@@ -1791,11 +2573,14 @@ MWF.xApplication.query.Query.Viewer.Item = new Class({
     _load: function(){
         this.loading = true;
 
-        if(!this.node)this.view.fireEvent("queryLoadItemRow", [null, this]);
+        if(!this.node)this.view.fireEvent("queryLoadItemRow", [this]);
 
         var viewStyles = this.view.viewJson.viewStyles;
         var viewContentTdNode = ( viewStyles && viewStyles["contentTd"] ) ? viewStyles["contentTd"] : this.css.viewContentTdNode;
 
+        if( this.odd ){
+            viewContentTdNode = ( viewStyles && viewStyles["zebraContentTd"] && Object.keys(viewStyles["zebraContentTd"].length > 0)) ? viewStyles["zebraContentTd"] : viewContentTdNode;
+        }
         if(!this.node)this.loadNode();
 
         //if (this.view.json.select==="single" || this.view.json.select==="multi"){
@@ -1834,6 +2619,7 @@ MWF.xApplication.query.Query.Viewer.Item = new Class({
                 "width": "30px",
                 "text-align": "center"
             });
+            if (this.view.json.itemStyles) this.sequenceTd.setStyles(this.view.json.itemStyles);
             this.sequenceTd.set("text", sequence);
         }
 
@@ -1897,8 +2683,15 @@ MWF.xApplication.query.Query.Viewer.Item = new Class({
             // if ( flag ==="single" || flag==="multi"){
             //
             // }
-            selectedFlag = this.view.Macro.exec( defaultSelectedScript,
-                {"node" : this.node, "data" : this.data, "view": this.view, "row" : this});
+            switch (typeOf(defaultSelectedScript)) {
+                case "string":
+                    selectedFlag = this.view.Macro.exec( defaultSelectedScript,
+                        {"node" : this.node, "data" : this.data, "view": this.view, "row" : this});
+                    break;
+                case "function":
+                    selectedFlag =  defaultSelectedScript({"node" : this.node, "data" : this.data, "view": this.view, "row" : this});
+                    break;
+            }
         }
         //判断是不是在selectedItems中，用户手工选择
         if( !this.isSelected && this.view.selectedItems.length ){
@@ -1937,7 +2730,7 @@ MWF.xApplication.query.Query.Viewer.Item = new Class({
 
         this.setEvent();
 
-        this.view.fireEvent("postLoadItemRow", [null, this]);
+        this.view.fireEvent("postLoadItemRow", [this]);
 
         this.loading = false;
         this.loaded = true;
@@ -1977,29 +2770,33 @@ MWF.xApplication.query.Query.Viewer.Item = new Class({
         layout.desktop.openApplication(e, "cms.Document", options);
     },
     openWorkAndCompleted: function(e){
-        MWF.Actions.get("x_processplatform_assemble_surface").listWorkByJob(this.data.bundle, function(json){
-            var workCompletedCount = json.data.workCompletedList.length;
-            var workCount = json.data.workList.length;
-            var count = workCount+workCompletedCount;
-            if (count===1){
-                if (workCompletedCount) {
-                    this.openWorkCompleted(json.data.workCompletedList[0].id, e);
-                }else{
-                    this.openWork(json.data.workList[0].id, e);
-                }
-            }else if (count>1){
-                var worksAreaNode = this.createWorksArea();
-                json.data.workCompletedList.each(function(work){
-                    this.createWorkCompletedNode(work, worksAreaNode);
-                }.bind(this));
-                json.data.workList.each(function(work){
-                    this.createWorkNode(work, worksAreaNode);
-                }.bind(this));
-                this.showWorksArea(worksAreaNode, e);
-            }else{
+        var options = {"jobId": this.data.bundle};
+        this.view.fireEvent("openDocument", [options, this]); //options 传入的事件
+        layout.desktop.openApplication(e, "process.Work", options);
 
-            }
-        }.bind(this));
+        // MWF.Actions.get("x_processplatform_assemble_surface").listWorkByJob(this.data.bundle, function(json){
+        //     var workCompletedCount = json.data.workCompletedList.length;
+        //     var workCount = json.data.workList.length;
+        //     var count = workCount+workCompletedCount;
+        //     if (count===1){
+        //         if (workCompletedCount) {
+        //             this.openWorkCompleted(json.data.workCompletedList[0].id, e);
+        //         }else{
+        //             this.openWork(json.data.workList[0].id, e);
+        //         }
+        //     }else if (count>1){
+        //         var worksAreaNode = this.createWorksArea();
+        //         json.data.workCompletedList.each(function(work){
+        //             this.createWorkCompletedNode(work, worksAreaNode);
+        //         }.bind(this));
+        //         json.data.workList.each(function(work){
+        //             this.createWorkNode(work, worksAreaNode);
+        //         }.bind(this));
+        //         this.showWorksArea(worksAreaNode, e);
+        //     }else{
+        //
+        //     }
+        // }.bind(this));
     },
     createWorkNode: function(work, worksAreaNode){
         var worksAreaContentNode = worksAreaNode.getLast();
@@ -2135,7 +2932,6 @@ MWF.xApplication.query.Query.Viewer.Item = new Class({
     },
 
     select: function(  force ){
-        debugger
         // var flag = force || this.view.json.select || this.view.viewJson.select ||  "none";
         var flag = force || this.view.getSelectFlag();
         if (this.isSelected){
@@ -2153,6 +2949,12 @@ MWF.xApplication.query.Query.Viewer.Item = new Class({
         }
     },
 
+    /**
+     * @summary 选中（多选）。
+     * @example
+     *  item = this.target.items[0];
+     *  item.selected();
+     */
     selected: function( from ){
         for(var i=0; i<this.view.selectedItems.length; i++){
             var item = this.view.selectedItems[i];
@@ -2182,6 +2984,13 @@ MWF.xApplication.query.Query.Viewer.Item = new Class({
             "data": this.data
         }]); //options 传入的事件
     },
+
+    /**
+     * @summary 取消选中（多选）。
+     * @example
+     *  item = this.target.items[0];
+     *  item.unSelected();
+     */
     unSelected: function( from ){
         for(var i=0; i<this.view.selectedItems.length; i++){
             var item = this.view.selectedItems[i];
@@ -2217,6 +3026,13 @@ MWF.xApplication.query.Query.Viewer.Item = new Class({
             "data": this.data
         }]); //options 传入的事件
     },
+
+    /**
+     * @summary 选中（单选）。
+     * @example
+     *  item = this.target.items[0];
+     *  item.selectedSingle();
+     */
     selectedSingle: function(){
         if (this.view.currentSelectedItem) this.view.currentSelectedItem.unSelectedSingle();
         this.view.selectedItems = [this];
@@ -2237,6 +3053,13 @@ MWF.xApplication.query.Query.Viewer.Item = new Class({
             "data": this.data
         }]); //options 传入的事件
     },
+
+    /**
+     * @summary 取消选中（单选）。
+     * @example
+     *  item = this.target.items[0];
+     *  item.unSelectedSingle();
+     */
     unSelectedSingle: function(){
         this.view.selectedItems = [];
         this.view.currentSelectedItem = null;
@@ -2265,6 +3088,7 @@ MWF.xApplication.query.Query.Viewer.Item = new Class({
     }
 });
 
+
 MWF.xApplication.query.Query.Viewer.ItemCategory = new Class({
     initialize: function(view, data, i){
         this.view = view;
@@ -2277,7 +3101,7 @@ MWF.xApplication.query.Query.Viewer.ItemCategory = new Class({
         this.load();
     },
     load: function(){
-        this.view.fireEvent("queryLoadCategoryRow", [null, this]);
+        this.view.fireEvent("queryLoadCategoryRow", [this]);
 
         var viewStyles = this.view.viewJson.viewStyles;
 
@@ -2378,7 +3202,7 @@ MWF.xApplication.query.Query.Viewer.ItemCategory = new Class({
             }
         }.bind(this));
 
-        this.view.fireEvent("postLoadCategoryRow", [null, this]);
+        this.view.fireEvent("postLoadCategoryRow", [this]);
     },
     getSelectAllStatus : function(){
         if ( this.view.getSelectFlag()!=="multi")return;
@@ -2585,25 +3409,76 @@ MWF.xApplication.query.Query.Viewer.Filter = new Class({
     }
 });
 
-MWF.xApplication.query.Query.Viewer.Actionbar = new Class({
+/** @class Actionbar 视图操作条组件。
+ * @o2cn 视图操作条
+ * @example
+ * //可以在视图中获取该组件
+ * var actionbar = this.target.actionbar; //在视图中获取操作条
+ * //方法2
+ * var actionbar = this.target; //在操作条和操作本身的事件脚本中获取
+ * @o2category QueryView
+ * @o2range {QueryView}
+ * @hideconstructor
+ */
+MWF.xApplication.query.Query.Viewer.Actionbar = new Class(
+    /** @lends MWF.xApplication.query.Query.Viewer.Actionbar# */
+    {
     Implements: [Events],
     options: {
         "style" : "default",
-        "moduleEvents": ["load", "queryLoad", "postLoad", "afterLoad"]
+        "moduleEvents": [
+            /**
+             * 视图操作条加载前触发。
+             * @event MWF.xApplication.query.Query.Viewer.Actionbar#queryLoad
+             */
+            "queryLoad",
+            /**
+             * 视图加载时触发。
+             * @event MWF.xApplication.query.Query.Viewer.Actionbar#load
+             */
+            "load",
+            /**
+             * 视图操作条加载后事件.由于加载过程中有异步处理，这个时候操作条有可能还未生成。
+             * @event MWF.xApplication.query.Query.Viewer.Actionbar#postLoad
+             */
+            "postLoad",
+            /**
+             * 视图操作条加载后事件。这个时候操作条已生成。
+             * @event MWF.xApplication.query.Query.Viewer.Actionbar#afterLoad
+             */
+            "afterLoad"
+        ]
     },
     initialize: function(node, json, form, options){
-
+        /**
+         * @summary 操作条组件容器.
+         * @member {Element}
+         */
         this.node = $(node);
         this.node.store("module", this);
+        /**
+         * @summary 操作条组件配置数据.
+         * @member {Object}
+         */
         this.json = json;
         this.form = form;
+        /**
+         * @summary 操作条组件所属视图.
+         * @member {Object}
+         */
         this.view = form;
     },
+    /**
+     * @summary 隐藏操作条。
+     */
     hide: function(){
         var dsp = this.node.getStyle("display");
         if (dsp!=="none") this.node.store("mwf_display", dsp);
         this.node.setStyle("display", "none");
     },
+    /**
+     * @summary 显示操作条。
+     */
     show: function(){
         var dsp = this.node.retrieve("mwf_display", dsp);
         this.node.setStyle("display", dsp);
@@ -2727,6 +3602,9 @@ MWF.xApplication.query.Query.Viewer.Actionbar = new Class({
             //alert(this.readonly)
 
             if( this.json.multiTools ){
+                // var jsonStr = JSON.stringify(this.json.multiTools);
+                // jsonStr = o2.bindJson(jsonStr, {"lp": MWF.xApplication.query.Query.LP.form});
+                // this.json.multiTools = JSON.parse(jsonStr);
                 this.json.multiTools.each( function (tool) {
                     if( tool.system ){
                         if( !this.json.hideSystemTools ){
@@ -2862,26 +3740,83 @@ MWF.xApplication.query.Query.Viewer.Actionbar = new Class({
     }
 });
 
-MWF.xApplication.query.Query.Viewer.Paging = new Class({
+/** @class Actionbar 视图分页组件。
+ * @o2cn 视图分页组件
+ * @example
+ * //可以在视图中获取该组件
+ * var actionbar = this.target.paging; //在视图中获取操作条
+ * //方法2
+ * var actionbar = this.target; //在分页组件本身的事件脚本中获取
+ * @o2category QueryView
+ * @o2range {QueryView}
+ * @hideconstructor
+ */
+MWF.xApplication.query.Query.Viewer.Paging = new Class(
+    /** @lends MWF.xApplication.query.Query.Viewer.Paging# */
+    {
     Implements: [Options, Events],
     options: {
         "style" : "default",
         "useMainColor": false,
-        "moduleEvents": ["load", "queryLoad", "postLoad", "afterLoad","jump"]
+        "moduleEvents": [
+            /**
+             * 分页加载前触发。
+             * @event MWF.xApplication.query.Query.Viewer.Paging#queryLoad
+             */
+            "queryLoad",
+            /**
+             * 分页加载时触发。
+             * @event MWF.xApplication.query.Query.Viewer.Paging#load
+             */
+            "load",
+            /**
+             * 分页加载后事件.由于加载过程中有异步处理，这个时候分页组件有可能还未生成。
+             * @event MWF.xApplication.query.Query.Viewer.Paging#postLoad
+             */
+            "postLoad",
+            /**
+             * 分页加载后事件。这个时候分页界面已生成。
+             * @event MWF.xApplication.query.Query.Viewer.Paging#afterLoad
+             */
+             "afterLoad",
+            /**
+             * 跳页或者分页后执行。
+             * @event MWF.xApplication.query.Query.Viewer.Paging#jump
+             */
+             "jump"
+        ]
     },
     initialize: function(node, json, form, options){
         this.setOptions(options);
+        /**
+         * @summary 分页组件容器.
+         * @member {Element}
+         */
         this.node = $(node);
         this.node.store("module", this);
+        /**
+         * @summary 分页组件所属视图.
+         * @member {Object}
+         */
         this.json = json;
         this.form = form;
+        /**
+         * @summary 分页所属视图.
+         * @member {Object}
+         */
         this.view = form;
     },
+    /**
+     * @summary 隐藏分页。
+     */
     hide: function(){
         var dsp = this.node.getStyle("display");
         if (dsp!=="none") this.node.store("mwf_display", dsp);
         this.node.setStyle("display", "none");
     },
+    /**
+     * @summary 显示分页。
+     */
     show: function(){
         var dsp = this.node.retrieve("mwf_display", dsp);
         this.node.setStyle("display", dsp);
@@ -3040,4 +3975,108 @@ MWF.xApplication.query.Query.Viewer.Paging = new Class({
         }, this.json.pagingStyles || {});
         this.paging.load();
     }
+});
+
+
+MWF.xApplication.query.Query.Viewer.AssociatedResultItem = new Class({
+    Extends: MWF.xApplication.query.Query.Viewer.Item,
+    _load: function(){
+        this.loading = true;
+
+        if(!this.node)this.view.fireEvent("queryLoadItemRow", [this]);
+
+        var viewStyles = this.view.viewJson.viewStyles;
+        var viewContentTdNode = ( viewStyles && viewStyles["contentTd"] ) ? viewStyles["contentTd"] : this.css.viewContentTdNode;
+
+        if(!this.node)this.loadNode();
+
+        //if (this.view.json.select==="single" || this.view.json.select==="multi"){
+        this.selectTd = new Element("td", { "styles": viewContentTdNode }).inject(this.node);
+        if (this.view.json.itemStyles) this.selectTd.setStyles(this.view.json.itemStyles);
+        this.selectTd.setStyles({"cursor": "default"});
+        if( this.data.$failure ){
+            this.selectTd.setStyles({"background": "url(" + "../x_component_query_Query/$Viewer/default/icon/" + "error" + ".png) center center no-repeat"});
+        }else{
+            this.selectTd.setStyles({"background": "url(" + "../x_component_query_Query/$Viewer/default/icon/" + "success" + ".png) center center no-repeat"});
+        }
+
+        //序号
+        var sequence = 1+this.idx;
+        this.data["$sequence"] = sequence;
+        if (this.view.viewJson.isSequence==="yes"){
+            this.sequenceTd = new Element("td", {"styles": viewContentTdNode}).inject(this.node);
+            this.sequenceTd.setStyles({
+                "width": "30px",
+                "text-align": "center"
+            });
+            this.sequenceTd.set("text", sequence);
+        }
+
+        Object.each(this.view.entries, function(c, k){
+            var cell = this.data.data[k];
+            if (cell === undefined) cell = "";
+            //if (cell){
+            if (this.view.hideColumns.indexOf(k)===-1){
+                var td = new Element("td", {"styles": viewContentTdNode}).inject(this.node);
+                //if (k!== this.view.viewJson.group.column){
+                    var v = cell;
+                    if (c.isHtml){
+                        td.set("html", v);
+                    }else{
+                        td.set("text", v);
+                    }
+                    if( typeOf(c.contentProperties) === "object" )td.setProperties(c.contentProperties);
+                    if (this.view.json.itemStyles) td.setStyles(this.view.json.itemStyles);
+                    if( typeOf(c.contentStyles) === "object" )td.setStyles(c.contentStyles);
+                // }else{
+                //     if (this.view.json.itemStyles) td.setStyles(this.view.json.itemStyles);
+                // }
+
+                if (this.view.openColumns.indexOf(k)!==-1){
+                    this.setOpenWork(td, c)
+                }
+
+                if (k!== this.view.viewJson.group.column){
+                    Object.each( c.events || {}, function (e , key) {
+                        if(e.code){
+                            if( key === "loadContent" ){
+                                this.view.Macro.fire( e.code,
+                                    {"node" : td, "json" : c, "data" : v, "view": this.view, "row" : this});
+                            }else if( key !== "loadTitle" ){
+                                td.addEvent(key, function(event){
+                                    return this.view.Macro.fire(
+                                        e.code,
+                                        {"node" : td, "json" : c, "data" : v, "view": this.view, "row" : this},
+                                        event
+                                    );
+                                }.bind(this));
+                            }
+                        }
+                    }.bind(this));
+                }
+            }
+            //}
+        }.bind(this));
+
+        if(this.placeholderTd){
+            this.placeholderTd.destroy();
+            this.placeholderTd = null;
+        }
+
+        //默认选中
+        //判断是不是在selectedItems中，用户手工选择
+
+        this.setEvent();
+
+        this.view.fireEvent("postLoadItemRow", [this]);
+
+        this.loading = false;
+        this.loaded = true;
+    },
+})
+
+
+MWF.xDesktop.requireApp("Template", "utils.ExcelUtils", null, false);
+MWF.xApplication.query.Query.Viewer.ExcelUtils = new Class({
+    Extends: MWF.xApplication.Template.utils.ExcelUtils
 });

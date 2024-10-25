@@ -136,9 +136,10 @@ abstract class BaseAction extends StandardJaxrsAction {
 		this.deleteBatch(business.entityManagerContainer(), Work.class, ids);
 	}
 
-	void deleteRecord(Business business, Process process) throws Exception {
-		List<String> ids = business.entityManagerContainer().idsEqual(Record.class, Record.process_FIELDNAME,
-				process.getId());
+	void deleteRecord(Business business, Process process, boolean onlyRemoveNotCompleted) throws Exception {
+		List<String> ids = onlyRemoveNotCompleted
+				? business.record().listWithProcessWithCompleted(process.getId(), false)
+				: business.record().listWithProcess(process.getId());
 		this.deleteBatch(business.entityManagerContainer(), Record.class, ids);
 	}
 
@@ -160,7 +161,8 @@ abstract class BaseAction extends StandardJaxrsAction {
 		this.deleteBatch(business.entityManagerContainer(), WorkLog.class, ids);
 	}
 
-	<T extends JpaObject> T wrapInJpaList(Object wrap, List<T> list) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {
+	<T extends JpaObject> T wrapInJpaList(Object wrap, List<T> list)
+			throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {
 		for (T t : list) {
 			if (t.getId().equalsIgnoreCase(PropertyUtils.getProperty(wrap, "id").toString())) {
 				return t;
@@ -180,7 +182,7 @@ abstract class BaseAction extends StandardJaxrsAction {
 		return null;
 	}
 
-	List<Agent> createAgent(List<WrapAgent> wraps, Process process)  {
+	List<Agent> createAgent(List<WrapAgent> wraps, Process process) {
 		List<Agent> list = new ArrayList<>();
 		if (null != wraps) {
 			for (WrapAgent w : wraps) {
@@ -365,8 +367,8 @@ abstract class BaseAction extends StandardJaxrsAction {
 		if (null != wraps) {
 			for (WrapService w : wraps) {
 				Service o = new Service();
-				o.setProcess(process.getId());
 				WrapService.inCopier.copy(w, o);
+				o.setProcess(process.getId());
 				o.setDistributeFactor(process.getDistributeFactor());
 				list.add(o);
 			}

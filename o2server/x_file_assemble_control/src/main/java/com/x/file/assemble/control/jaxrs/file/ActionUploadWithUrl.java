@@ -5,6 +5,7 @@ import java.io.ByteArrayInputStream;
 
 import javax.imageio.ImageIO;
 
+import com.x.base.core.project.tools.FileTools;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.commons.lang3.ArrayUtils;
@@ -69,6 +70,7 @@ public class ActionUploadWithUrl extends BaseAction {
 		if(bytes==null || bytes.length==0){
 			throw new ExceptionEntityFieldEmpty(File.class, "bytes");
 		}
+		FileTools.verifyConstraint(bytes.length, fileName, null);
 		Wo wo = new Wo();
 		try (EntityManagerContainer emc = EntityManagerContainerFactory.instance().create();
 			 ByteArrayInputStream in = new ByteArrayInputStream(bytes)) {
@@ -126,7 +128,7 @@ public class ActionUploadWithUrl extends BaseAction {
 
 		private static final long serialVersionUID = -3707551996175419386L;
 
-		@FieldDescribe("文件类型")
+		@FieldDescribe("文件类型：processPlatformJob|processPlatformForm|mindInfo|portalPage|cmsDocument|forumDocument|forumReply|component|teamworkProject")
 		private String referenceType;
 
 		@FieldDescribe("文件名称,带扩展名的文件名.")

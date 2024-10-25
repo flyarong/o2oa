@@ -16,7 +16,7 @@ MWF.xApplication.process.Xform.widget.DocumentHistory = new Class({
         var ua = navigator.userAgent.toLowerCase();
         return (ua.match(/iPad/i)=="ipad");
     },
-    load: function(callback){
+    load: function(callback, nodiff){
         this.getHistroyDocumentList(function(){
             if (this.historyDocumentList && this.historyDocumentList.length){
                 this.getHistoryDataList(function(){
@@ -37,6 +37,7 @@ MWF.xApplication.process.Xform.widget.DocumentHistory = new Class({
                 }.bind(this));
             }else{
                 this.documentEditor.form.app.notice(MWF.xApplication.process.Xform.LP.documentHistory.nodiff, "info", this.documentEditor.node);
+                if (nodiff) nodiff();
             }
         }.bind(this));
     },
@@ -287,8 +288,12 @@ MWF.xApplication.process.Xform.widget.DocumentHistory = new Class({
 
                 //var data = this.documentEditor.getFiletextText(this.documentEditor.data.filetext);
 
-                var data = this.documentEditor.data.filetext;
-                var earlyData = originaData.filetext;
+                var data = this.documentEditor.data.filetext.replace(/<br><\/div>/g, '</div>');
+                var earlyData = originaData.filetext.replace(/<br><\/div>/g, '</div>');
+
+                // var data = this.documentEditor.data.filetext;
+                // var earlyData = originaData.filetext;
+
                 if (data!=earlyData){
                     dataTxt = this.documentEditor.getFiletextText(data);
                     earlyDataTxt = this.documentEditor.getFiletextText(earlyData);
@@ -545,7 +550,7 @@ MWF.xApplication.process.Xform.widget.DocumentHistory = new Class({
 
         this.documentEditor._returnScreen();
     },
-    active: function(callback){
+    active: function(callback, nodiff){
         this.getHistroyDocumentList(function(){
             if (this.historyDocumentList && this.historyDocumentList.length){
                 this.getHistoryDataList(function(){
@@ -587,6 +592,7 @@ MWF.xApplication.process.Xform.widget.DocumentHistory = new Class({
                 }.bind(this));
             }else{
                 this.documentEditor.form.app.notice(MWF.xApplication.process.Xform.LP.documentHistory.nodiff, "info", this.documentEditor.node);
+                if (nodiff) nodiff();
             }
         }.bind(this));
     },

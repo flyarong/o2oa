@@ -15,14 +15,15 @@ export default content({
       lp,
       // 搜索表单
       form: {
-        filter: '',
+        filterList: [],
         startDate: '',
         endDate: ''
       },
       units: [], // 控制组织选择的范围
       filterList: [],
       statisticList: [],
-     
+      tableHeaderList:[] // detail 
+
     };
   },
   beforeRender() {
@@ -45,8 +46,29 @@ export default content({
       this.bind.units = units;
     }
   },
-  afterRender() {
-     
+  // yyyy-MM-dd 
+  _toDate(dateString) {
+    var dateParts = dateString.split("-"); // 将字符串拆分为年、月和日部分
+    var year = parseInt(dateParts[0], 10); // 将年份部分解析为整数
+    var month = parseInt(dateParts[1], 10) - 1; // 将月份部分解析为整数（月份从0开始）
+    var day = parseInt(dateParts[2], 10); // 将日部分解析为整数
+    return new Date(year, month, day); // 创建Date对象
+  },
+  // 间隔天数
+  _dateDiffInDays(date1, date2) {
+    const timeDiff = date2.getTime() - date1.getTime();
+    const daysDiff = Math.floor(timeDiff / (1000 * 3600 * 24));
+    return Math.abs(daysDiff); // 如果需要考虑日期的顺序，请移除 Math.abs
+  },
+  // 日期列表
+  _dateRangeToStringList(startDate, endDate) {
+    const dateList = [];
+    let currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      dateList.push(formatDate(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1); // 增加一天
+    }
+    return dateList;
   },
   validateForm() {
     if (this.bind.filterList.length < 1) {
@@ -61,16 +83,114 @@ export default content({
       o2.api.page.notice(lp.detailStatisticList.endDateEmptyPlaceholder, 'error');
       return false;
     }
+    const start = this._toDate(this.bind.form.startDate);
+    const end = this._toDate(this.bind.form.endDate);
+    if (end < start) {
+      o2.api.page.notice(lp.detailStatisticList.endDateCannotSmaller, 'error');
+      return false;
+    }
+    if (this._dateDiffInDays(start, end) > 31) {
+      o2.api.page.notice(lp.detailStatisticList.startDateAndEndDateMoreThan, 'error');
+      return false;
+    }
     return true;
   },
   search() {
     if (this.validateForm()) {this.loadDetailList();}
   },
   async loadDetailList() {
+    await showLoading(this);
+    this._showTableHeader();
     const form = this.bind.form;
-    form.filter = this.bind.filterList[0];
-    const json = await detailAction("statistic", form);
-    this.bind.statisticList = json || [];
+    form.filterList = this.bind.filterList;
+    try {
+      const json = await detailAction("statistic", form);
+      const list =  json || [];
+      this.bind.statisticList = list;
+    } catch (e) {
+      console.error(e);
+    }
+    await hideLoading(this);
+  },
+  _showTableHeader() {
+    const start = this._toDate(this.bind.form.startDate);
+    const end = this._toDate(this.bind.form.endDate);
+    this.bind.tableHeaderList = this._dateRangeToStringList(start, end);
+  },
+  async openRecordList(date, staticItem) {
+    const list = staticItem.detailList || [];
+    let detail = null;
+    for (let index = 0; index < list.length; index++) {
+      const element = list[index];
+      if (element.recordDateString && element.recordDateString == date) {
+        detail = element;
+        break;
+      }
+    }
+    if (detail) {
+      const recordList = detail.recordList || [];
+      this.$topParent.openRecordListVm({bind: { recordList:  recordList }})
+    }
+  },
+  // 是否有 detail
+  checkDateDetail(date, staticItem) {
+    const list = staticItem.detailList || [];
+    for (let index = 0; index < list.length; index++) {
+      const element = list[index];
+      if (element.recordDateString && element.recordDateString == date) {
+        return true;
+      }
+    }
+    return false;
+  },
+  formatRecordList(date, staticItem){
+    let result = "";
+    const list = staticItem.detailList || [];
+    let detail = null;
+    for (let index = 0; index < list.length; index++) {
+      const element = list[index];
+      if (element.recordDateString && element.recordDateString == date) {
+        detail = element;
+        break;
+      }
+    }
+    if (detail && detail.workDay) {
+      const recordList = detail.recordList || [];
+      for (let index = 0; index < recordList.length; index++) {
+        const element = recordList[index];
+        result +=  (element.checkInType === 'OnDuty' ? lp.onDuty : lp.offDuty) + ": "+ this._formatRecordResult(element);
+        if (index != recordList.length-1) {
+          result += " ";
+        }
+      }
+    }
+    return result;
+  },
+  _formatRecordResult(record) {
+    let span = "";
+    if (record.fieldWork) {
+      span = lp.appeal.fieldWork;
+    } else if(record.leaveData) {
+      span = record.leaveData.leaveType;
+    } else {
+      const result = record.checkInResult;
+      if (result === "PreCheckIn") {
+        span = "";
+      } else if (result === "NotSigned") {
+        span = lp.appeal.notSigned;
+      } else if (result === "Normal") {
+        span = lp.appeal.normal;
+      } else if (result === "Early") {
+        span = lp.appeal.early;
+      } else if (result === "Late") {
+        span = lp.appeal.late;
+      } else if (result === "SeriousLate") {
+        span = lp.appeal.seriousLate;
+      } else {
+        span = "";
+      }
+    }
+    return span;
   },
   // 格式化用户姓名
   formatName(person) {
@@ -87,26 +207,13 @@ export default content({
   statisticExport() {
     if (this.validateForm()) {
       this.exportExcel();
-      // var _self = this;
-      // o2.api.page.confirm(
-      //   "warn",
-      //   this.bind.lp.alert,
-      //   this.bind.lp.detailExportConfirmMsg,
-      //   300,
-      //   100,
-      //   function () {
-      //     _self.exportExcel();
-      //     this.close();
-      //   },
-      //   function () {
-      //     this.close();
-      //   }
-      // );
     }
   },
   async exportExcel() {
-    showLoading(this, lp.detailExportConfirmMsg);
-    detailAction("statisticExport", this.bind.filterList[0], this.bind.form.startDate, this.bind.form.endDate).then( data => {
+    await showLoading(this, lp.detailExportConfirmMsg);
+    const form = this.bind.form;
+    form.filterList = this.bind.filterList;
+    detailAction("statisticExport", form).then( data => {
       if (data ) {
         this.downloadExcelConfirm(data);
       }

@@ -16,13 +16,14 @@ import com.x.base.core.entity.JpaObject;
 import com.x.base.core.project.bean.WrapCopier;
 import com.x.base.core.project.bean.WrapCopierFactory;
 import com.x.base.core.project.exception.ExceptionAccessDenied;
-import com.x.base.core.project.exception.ExceptionEntityNotExist;
 import com.x.base.core.project.http.ActionResult;
 import com.x.base.core.project.http.EffectivePerson;
 import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
 import com.x.base.core.project.tools.ListTools;
 import com.x.processplatform.assemble.surface.Business;
+import com.x.processplatform.assemble.surface.Control;
+import com.x.processplatform.assemble.surface.JobControlBuilder;
 import com.x.processplatform.assemble.surface.ThisApplication;
 import com.x.processplatform.core.entity.content.Read;
 import com.x.processplatform.core.entity.content.ReadCompleted;
@@ -33,31 +34,34 @@ import com.x.processplatform.core.entity.element.ActivityType;
 
 class ActionListRollbackWithWorkOrWorkCompleted extends BaseAction {
 
-	private static Logger logger = LoggerFactory.getLogger(ActionListRollbackWithWorkOrWorkCompleted.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(ActionListRollbackWithWorkOrWorkCompleted.class);
 
 	private static final String TASKCOMPLETEDLIST_FIELDNAME = "taskCompletedList";
 
 	ActionResult<List<Wo>> execute(EffectivePerson effectivePerson, String workOrWorkCompleted) throws Exception {
+
+		LOGGER.debug("execute:{}, workOrWorkCompleted:{}.", effectivePerson::getDistinguishedName,
+				() -> workOrWorkCompleted);
+
 		ActionResult<List<Wo>> result = new ActionResult<>();
 
 		String job = null;
 		try (EntityManagerContainer emc = EntityManagerContainerFactory.instance().create()) {
 			Business business = new Business(emc);
-
-			if (!business.readableWithWorkOrWorkCompleted(effectivePerson, workOrWorkCompleted)) {
-				throw new ExceptionAccessDenied(effectivePerson);
-			}
-
 			job = business.job().findWithWorkOrWorkCompleted(workOrWorkCompleted);
+			Control control = new JobControlBuilder(effectivePerson, business, job).enableAllowVisit().build();
+			if (BooleanUtils.isNotTrue(control.getAllowVisit())) {
+				throw new ExceptionAccessDenied(effectivePerson, workOrWorkCompleted);
+			}
 		}
 
 		final String workLogJob = job;
 
 		CompletableFuture<List<WoTaskCompleted>> futureTaskCompleteds = CompletableFuture
-				.supplyAsync(() -> this.taskCompleteds(workLogJob), ThisApplication.threadPool());
+				.supplyAsync(() -> this.taskCompleteds(workLogJob), ThisApplication.forkJoinPool());
 
 		CompletableFuture<List<Wo>> futureWorkLogs = CompletableFuture.supplyAsync(() -> this.workLogs(workLogJob),
-				ThisApplication.threadPool());
+				ThisApplication.forkJoinPool());
 		List<WoTaskCompleted> taskCompleteds = futureTaskCompleteds.get();
 		List<Wo> wos = futureWorkLogs.get();
 		ListTools.groupStick(wos, taskCompleteds, WorkLog.FROMACTIVITYTOKEN_FIELDNAME,
@@ -69,11 +73,12 @@ class ActionListRollbackWithWorkOrWorkCompleted extends BaseAction {
 	private List<WoTaskCompleted> taskCompleteds(String job) {
 		List<WoTaskCompleted> os = new ArrayList<>();
 		try (EntityManagerContainer emc = EntityManagerContainerFactory.instance().create()) {
-			os = emc.fetchEqual(TaskCompleted.class, WoTaskCompleted.copier, TaskCompleted.job_FIELDNAME, job).stream()
-					.sorted(Comparator.comparing(TaskCompleted::getStartTime, Comparator.nullsLast(Date::compareTo)))
-					.collect(Collectors.toList());
+			os = emc.listEqual(TaskCompleted.class, TaskCompleted.job_FIELDNAME, job).stream()
+					.sorted(Comparator.comparing(TaskCompleted::getCreateTime,
+							Comparator.nullsFirst(Date::compareTo).reversed()))
+					.map(WoTaskCompleted.copier::copy).collect(Collectors.toList());
 		} catch (Exception e) {
-			logger.error(e);
+			LOGGER.error(e);
 		}
 		return os;
 	}
@@ -81,13 +86,14 @@ class ActionListRollbackWithWorkOrWorkCompleted extends BaseAction {
 	private List<Wo> workLogs(String job) {
 		List<Wo> os = new ArrayList<>();
 		try (EntityManagerContainer emc = EntityManagerContainerFactory.instance().create()) {
-			os = emc.fetchEqual(WorkLog.class, Wo.copier, WorkLog.JOB_FIELDNAME, job).stream()
+			os = emc.listEqual(WorkLog.class, WorkLog.JOB_FIELDNAME, job).stream()
 					.filter(o -> (!BooleanUtils.isTrue(o.getSplitting()))
 							&& (Objects.equals(o.getFromActivityType(), ActivityType.manual)))
-					.sorted(Comparator.comparing(WorkLog::getCreateTime, Comparator.nullsLast(Date::compareTo)))
-					.collect(Collectors.toList());
+					.sorted(Comparator.comparing(WorkLog::getCreateTime,
+							Comparator.nullsFirst(Date::compareTo).reversed()))
+					.map(o -> Wo.copier.copy(o)).collect(Collectors.toList());
 		} catch (Exception e) {
-			logger.error(e);
+			LOGGER.error(e);
 		}
 		return os;
 	}
@@ -97,7 +103,7 @@ class ActionListRollbackWithWorkOrWorkCompleted extends BaseAction {
 		private static final long serialVersionUID = -7666329770246726197L;
 
 		static WrapCopier<WorkLog, Wo> copier = WrapCopierFactory.wo(WorkLog.class, Wo.class,
-				ListTools.toList(WorkLog.id_FIELDNAME, WorkLog.FROMACTIVITY_FIELDNAME,
+				ListTools.toList(JpaObject.id_FIELDNAME, WorkLog.FROMACTIVITY_FIELDNAME,
 						WorkLog.FROMACTIVITYTYPE_FIELDNAME, WorkLog.FROMACTIVITYNAME_FIELDNAME,
 						WorkLog.FROMACTIVITYALIAS_FIELDNAME, WorkLog.FROMACTIVITYTOKEN_FIELDNAME,
 						WorkLog.FROMTIME_FIELDNAME, WorkLog.ARRIVEDACTIVITY_FIELDNAME,
@@ -181,7 +187,7 @@ class ActionListRollbackWithWorkOrWorkCompleted extends BaseAction {
 
 		static WrapCopier<Task, WoTask> copier = WrapCopierFactory.wo(Task.class, WoTask.class,
 				ListTools.toList(JpaObject.id_FIELDNAME, Task.person_FIELDNAME, Task.identity_FIELDNAME,
-						Task.unit_FIELDNAME, Task.routeName_FIELDNAME, Task.opinion_FIELDNAME,
+						Task.unit_FIELDNAME, Task.ROUTENAME_FIELDNAME, Task.opinion_FIELDNAME,
 						Task.opinionLob_FIELDNAME, Task.startTime_FIELDNAME, Task.activityName_FIELDNAME,
 						Task.activityToken_FIELDNAME),
 				null);
@@ -195,7 +201,7 @@ class ActionListRollbackWithWorkOrWorkCompleted extends BaseAction {
 				WoTaskCompleted.class,
 				ListTools.toList(JpaObject.id_FIELDNAME, TaskCompleted.person_FIELDNAME,
 						TaskCompleted.activity_FIELDNAME, TaskCompleted.identity_FIELDNAME,
-						TaskCompleted.unit_FIELDNAME, TaskCompleted.routeName_FIELDNAME,
+						TaskCompleted.unit_FIELDNAME, TaskCompleted.ROUTENAME_FIELDNAME,
 						TaskCompleted.opinion_FIELDNAME, TaskCompleted.opinionLob_FIELDNAME,
 						TaskCompleted.startTime_FIELDNAME, TaskCompleted.activityName_FIELDNAME,
 						TaskCompleted.completedTime_FIELDNAME, Task.activityToken_FIELDNAME),

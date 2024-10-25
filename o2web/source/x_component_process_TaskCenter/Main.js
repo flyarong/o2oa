@@ -8,6 +8,7 @@ MWF.xDesktop.requireApp("process.TaskCenter", "ReadList", null, false);
 MWF.xDesktop.requireApp("process.TaskCenter", "ReadCompletedList", null, false);
 MWF.xDesktop.requireApp("process.TaskCenter", "ReviewList", null, false);
 MWF.xDesktop.requireApp("process.TaskCenter", "DraftList", null, false);
+MWF.xDesktop.requireApp("process.TaskCenter", "MyCreatedList", null, false);
 
 if (MWF.xApplication.process.TaskCenter.options) MWF.xApplication.process.TaskCenter.options.multitask = false;
 MWF.xApplication.process.TaskCenter.Main = new Class({
@@ -102,8 +103,8 @@ MWF.xApplication.process.TaskCenter.Main = new Class({
             centerUrl.toURI().go();
         } else {
             layout.openApplication(null, "process.workcenter");
-        }      
-        
+        }
+
     },
     loadTitle: function () {
         this.loadTitleBar();
@@ -218,9 +219,18 @@ MWF.xApplication.process.TaskCenter.Main = new Class({
             this.showReaded();
         }.bind(this));
 
+        this.createTabItem(this.lp.review, "review.png", "review", function () {
+            this.showReview();
+        }.bind(this));
+
         this.createTabItem(this.lp.draftTab, "draft.png", "draft", function () {
             this.showDraft();
         }.bind(this));
+
+        this.createTabItem(this.lp.myCreated, "mycreated.png", "myCreated", function () {
+            this.showMyCreated();
+        }.bind(this));
+
         //this.createTabItem(this.lp.review, "review.png", "review", function(){this.showReview();}.bind(this));
 
         this.getWorkCounts();
@@ -314,10 +324,16 @@ MWF.xApplication.process.TaskCenter.Main = new Class({
                 this["taskCompletedCountNode"].set("text", "( " + ((this.counts.taskCompleted > 100) ? "99+" : this.counts.taskCompleted) + " )");
                 this["readCountNode"].set("text", "( " + ((this.counts.read > 100) ? "99+" : this.counts.read) + " )");
                 this["readCompletedCountNode"].set("text", "( " + ((this.counts.readCompleted > 100) ? "99+" : this.counts.readCompleted) + " )");
-                //this["reviewCountNode"].set("text", "[ "+((this.counts.review>100) ? "99" : this.counts.review)+" ]");
+                this["reviewCountNode"].set("text", "[ "+((this.counts.review>100) ? "99+" : this.counts.review)+" ]");
             }.bind(this), null, this.desktop.session.user.distinguishedName);
             this.action.listDraftNext("(0)", 1, function (json) {
                 this["draftCountNode"].set("text", "( " + ((json.count > 100) ? "99+" : json.count) + " )");
+            }.bind(this));
+            o2.Actions.load("x_processplatform_assemble_surface").ReviewAction.countWithPerson(layout.session.user.id, {
+                creatorPersonList: [layout.session.user.id]
+            }).then(function(json){
+                var myCreated = json.data.count;
+                this["myCreatedCountNode"].set("text", "( " + ((myCreated > 100) ? "99+" : myCreated) + " )");
             }.bind(this));
         }.bind(this));
     },
@@ -365,6 +381,9 @@ MWF.xApplication.process.TaskCenter.Main = new Class({
                 break;
             case "draft":
                 this.showDraft();
+                break;
+            case "myCreated":
+                this.showMyCreated();
                 break;
             default:
                 this.showTask();
@@ -791,7 +810,7 @@ MWF.xApplication.process.TaskCenter.Main = new Class({
     },
     showDraft: function(){
         if (this.currentTab !== "draft") {
-            this.showTab(4);
+            this.showTab(5);
             this.currentTab = "draft";
             if (!this.draftList) {
                 this.createDraftList((this.status) ? this.status.filter : null);
@@ -803,6 +822,28 @@ MWF.xApplication.process.TaskCenter.Main = new Class({
 
         } else {
             if (this.draftList) this.draftList.refresh();
+        }
+        this.searchBarAreaNode.setStyle("display", "none");
+    },
+
+    createMyCreatedList: function (filterData) {
+        if (!this.contentNode) this.loadContent();
+        this.myCreatedList = new MWF.xApplication.process.TaskCenter.MyCreatedList(this.contentListAreaNode, this, filterData);
+    },
+    showMyCreated: function(){
+        if (this.currentTab !== "myCreated") {
+            this.showTab(6);
+            this.currentTab = "myCreated";
+            if (!this.myCreatedList) {
+                this.createMyCreatedList((this.status) ? this.status.filter : null);
+                this.myCreatedList.show();
+            } else {
+                this.myCreatedList.show();
+                if (this.myCreatedList) this.myCreatedList.refresh();
+            }
+
+        } else {
+            if (this.myCreatedList) this.myCreatedList.refresh();
         }
         this.searchBarAreaNode.setStyle("display", "none");
     },
@@ -1000,6 +1041,15 @@ MWF.xApplication.process.TaskCenter.AllApplication = new Class({
     },
     loadChild: function(){
         //this.loadSearch();
+        var mapById = {};
+        this.data.each(function (app) {
+            if (app.processList && app.processList.length){
+                app.processList.each(function (process) {
+                    mapById[ process.id ] = process;
+                });
+            }
+        });
+
         MWF.UD.getDataJson("taskCenter_startTop", function(json){
             this.top5Data = json;
             debugger;
@@ -1009,6 +1059,10 @@ MWF.xApplication.process.TaskCenter.AllApplication = new Class({
 
                 this.top5Data.sort(function(p1, p2){
                     return 0-(p1.count-p2.count);
+                });
+
+                this.top5Data.each(function (d) {
+                    if( mapById[ d.id ] )d.name = mapById[ d.id ].name;
                 });
             }
 
@@ -1063,6 +1117,8 @@ MWF.xApplication.process.TaskCenter.Process = new Class({
             this.starter = this.application.app.starter;
         }else if( this.application.app && this.application.app.processStarter ){
             this.starter = this.application.app.processStarter;
+        }else if( application.startProcessAreaNode ){
+            this.starter = application;
         }
         //this.starter = this.application.starter
         this.container = container;
@@ -1078,8 +1134,9 @@ MWF.xApplication.process.TaskCenter.Process = new Class({
         }else{
             this.iconNode.setStyle("background-image", "url(../x_component_process_ProcessManager/$Explorer/default/processIcon/process.png)");
         }
-        this.actionNode = new Element("div", {"styles": this.css.processActionNode, "text": this.app.lp.start}).inject(this.node);
         this.textNode = new Element("div", {"styles": this.css.processTextNode}).inject(this.node);
+
+        this.actionNode = new Element("div", {"styles": this.css.processActionNode, "text": this.app.lp.start}).inject(this.node);
 
         var appName = "";
         if( typeOf( this.data.applicationName ) === "string" ){
@@ -1112,7 +1169,7 @@ MWF.xApplication.process.TaskCenter.Process = new Class({
         });
     },
     startProcess: function(){
-        this.starter.closeStartProcessArea();
+        if(this.starter)this.starter.closeStartProcessArea();
         MWF.xDesktop.requireApp("process.TaskCenter", "ProcessStarter", function(){
             var starter = new MWF.xApplication.process.TaskCenter.ProcessStarter(this.data, this.app, {
                 "onStarted": function(data, title, processName){
@@ -1213,7 +1270,7 @@ MWF.xApplication.process.TaskCenter.Process = new Class({
                 if( layout.inBrowser ){
                     this.starter.fireEvent("afterStartProcess", [win]);
                 }
-            }            
+            }
 
             if (layout.desktop.message) this.createStartWorkResault(workInfors, title, processName, false);
         }else{
@@ -1276,8 +1333,9 @@ MWF.xApplication.process.TaskCenter.Category = new Class({
 
         this.iconNode.setStyle("background-image", "url(../x_component_process_ProcessManager/$Explorer/default/processIcon/process.png)");
 
-        this.actionNode = new Element("div", {"styles": this.css.processActionNode, "text": this.app.lp.start}).inject(this.node);
         this.textNode = new Element("div", {"styles": this.css.processTextNode}).inject(this.node);
+
+        this.actionNode = new Element("div", {"styles": this.css.processActionNode, "text": this.app.lp.start}).inject(this.node);
 
         var appName = this.data.appName;
         this.textNode.set({
@@ -1360,9 +1418,12 @@ MWF.xApplication.process.TaskCenter.Starter = new Class({
         this.css = app.css;
         this.lp = app.lp;
         this.content = this.app.content;
-        this.startApplications = [];
     },
-    load: function(){
+    load: function(options){
+        this.startApplications = [];
+        this.appList = [];
+        this.columnList = [];
+        this.setOptions(options);
         if (layout.mobile){
             this.showStartProcessArea_mobile();
         }else{
@@ -1370,9 +1431,8 @@ MWF.xApplication.process.TaskCenter.Starter = new Class({
         }
     },
     showStartProcessArea_pc: function () {
-        if (!this.startProcessAreaNode) {
-            this.createStartProcessArea();
-        }
+        if (this.startProcessAreaNode) this.startProcessAreaNode.destroy();
+        this.createStartProcessArea();
         this.content.mask({
             "destroyOnHide": true,
             "id": "process_taskcenter_startProcessMask",
@@ -1477,6 +1537,11 @@ MWF.xApplication.process.TaskCenter.Starter = new Class({
             if(this.allApplicationStarter){
                 this.startProcessSearchNode.setStyle("display", "block");
                 this.allApplicationStarter.selected();
+            }else{
+                var apps = this.appList.length ? this.appList : this.columnList;
+                if( apps.length ){
+                    apps[0].selected();
+                }
             }
         }
     },
@@ -1489,20 +1554,43 @@ MWF.xApplication.process.TaskCenter.Starter = new Class({
             Promise.all([p1, p2]).then(function(data){
                 var json_process = data[0],  json_column = data[1];
 
+                if( this.options.appFlag ){
+                    json_process.data = json_process.data.filter(function (d){
+                        return [d.id, d.name, d.alias].contains(this.options.appFlag);
+                    }.bind(this));
+
+                    json_column.data = json_column.data.filter(function (d){
+                        return [d.id, d.appName, d.appAlias].contains(this.options.appFlag);
+                    }.bind(this));
+                }
+
                 this.appStartableData = json_process.data;
                 this.columnStartableData = json_column.data;
 
                 this.startProcessSearchNode.setStyle("display", "block");
-                this.allApplicationStarter = new MWF.xApplication.process.TaskCenter.AllApplication(json_process.data, this, json_column.data);
-                this.allApplicationStarter.selected();
+                if( !this.options.appFlag ) {
+                    this.allApplicationStarter = new MWF.xApplication.process.TaskCenter.AllApplication(json_process.data, this, json_column.data);
+                    this.allApplicationStarter.selected();
+                }
 
                 json_process.data.each(function (app) {
-                    if (app.processList && app.processList.length) new MWF.xApplication.process.TaskCenter.Application(app, this);
+                    if (app.processList && app.processList.length){
+                       var a = new MWF.xApplication.process.TaskCenter.Application(app, this);
+                       this.appList.push(a);
+                    }
                 }.bind(this));
 
                 json_column.data.each(function (column) {
-                    new MWF.xApplication.process.TaskCenter.Column(column, this);
+                    var c = new MWF.xApplication.process.TaskCenter.Column(column, this);
+                    this.columnList.push(c);
                 }.bind(this));
+
+                if( this.options.appFlag ){
+                    var apps = this.appList.length ? this.appList : this.columnList;
+                    if( apps.length ){
+                        apps[0].selected();
+                    }
+                }
             }.bind(this));
 
         }.bind(this));
@@ -1537,9 +1625,8 @@ MWF.xApplication.process.TaskCenter.Starter = new Class({
         }
     },
     showStartProcessArea_mobile: function(){
-        if (!this.startProcessAreaNode) {
-            this.createStartProcessArea_mobile();
-        }
+        if (this.startProcessAreaNode) this.startProcessAreaNode.destroy();
+        this.createStartProcessArea_mobile();
         this.startProcessAreaNode.setStyle("display", "block");
         //document.body.setStyle("-webkit-overflow-scrolling", "auto");
         var morph = new Fx.Morph(this.startProcessAreaNode, {
@@ -1565,36 +1652,95 @@ MWF.xApplication.process.TaskCenter.Starter = new Class({
             this.closeStartProcessArea(e);
         }.bind(this));
 
+        this.searchProcessNode = new Element("div", {"styles": this.css.searchProcessNode_mobile}).inject(this.startProcessAreaNode);
+        this.searchProcessInput = new Element("input", {
+            "styles": this.css.searchProcessInput_mobile,
+            "placeholder": this.lp.searchProcess
+        }).inject(this.searchProcessNode);
+        this.searchProcessAction = new Element("div", {"styles": this.css.searchProcessAction_mobile}).inject(this.searchProcessNode);
+        this.searchProcessAction.addEvent("click", function (e) {
+            var v = this.searchProcessInput.get("value");
+
+            var flag = false;
+            var top5Node = this.startProcessListNode.getElement(".top5Node");
+            if(top5Node){
+                top5Node.getElements(".processItem").each(function(el){
+                    var isShow = !v || el.get("text").contains(v);
+                    isShow ? el.show() : el.hide();
+                    if( isShow )flag = true;
+                });
+                flag ? top5Node.show() : top5Node.hide();
+            }
+
+            this.startProcessListNode.getElements(".appNode").each(function(appel){
+                var flag1 = false;
+                appel.getElements(".processItem").each(function(el){
+                    var isShow = !v || el.get("text").contains(v);
+                    isShow ? el.show() : el.hide();
+                    if( isShow )flag1 = true;
+                });
+                flag1 ? appel.show() : appel.hide();
+            });
+
+        }.bind(this));
+
         this.startProcessListNode = new Element("div", {"styles": this.css.startProcessListNode_mobile}).inject(this.startProcessAreaNode);
-        var h = size.y-this.startProcessTopNode.getSize().y;
+        var h = size.y-this.startProcessTopNode.getSize().y - this.searchProcessNode.getSize().y;
         this.startProcessListNode.setStyle("height", ""+h+"px");
 
         this.app.getAction(function () {
-            this.app.action.listApplicationStartable(function (appjson) {
-                //this.app = this;
-                MWF.UD.getDataJson("taskCenter_startTop", function(json){
-                    this.top5Data = json;
-                    if (this.top5Data && this.top5Data.length){
-                        new Element("div", {"styles": this.css.applicationChildTitleNode, "text": this.lp.startTop5}).inject(this.startProcessListNode);
-                        var top5ChildNode = new Element("div", {"styles": this.css.applicationChildChildNode}).inject(this.startProcessListNode);
-
-                        this.top5Data.sort(function(p1, p2){
-                            return 0-(p1.count-p2.count);
-                        });
-                        this.top5Data.each(function(process, i){
-                            if (i<5) new MWF.xApplication.process.TaskCenter.Process(process, this, {"name": process.applicationName}, top5ChildNode);
-                        }.bind(this));
-                    }
+            if( this.options.appFlag ){
+                o2.Actions.load("x_processplatform_assemble_surface").ApplicationAction.listWithPersonAndTerminal("mobile", function (appjson) {
+                    appjson.data = appjson.data.filter(function (d){
+                        return [d.id, d.name, d.alias].contains( this.options.appFlag );
+                    }.bind(this));
                     appjson.data.each(function (app) {
-                        new Element("div", {"styles": this.css.applicationChildTitleNode, "text": app.name}).inject(this.startProcessListNode);
-                        var appChildNode = new Element("div", {"styles": this.css.applicationChildChildNode}).inject(this.startProcessListNode);
+                        if (app.processList && app.processList.length > 0) {
+                            var appNode = new Element("div.appNode").inject(this.startProcessListNode);
+                            new Element("div.appTitleNode", {"styles": this.css.applicationChildTitleNode, "text": app.name}).inject(appNode);
+                            var appChildNode = new Element("div.appChildNode", {"styles": this.css.applicationChildChildNode}).inject(appNode);
+                            app.processList.each(function(process){
+                                new MWF.xApplication.process.TaskCenter.Process(process, this, {"name": app.applicationName || app.appName || app.name }, appChildNode);
+                            }.bind(this));
+                        }
+                    }.bind(this));
+
+                }.bind(this));
+            }else{
+                this.loadApplications_mobile();
+            }
+        }.bind(this));
+    },
+    loadApplications_mobile: function(){
+        o2.Actions.load("x_processplatform_assemble_surface").ApplicationAction.listWithPersonAndTerminal("mobile", function (appjson) {
+            //this.app = this;
+            MWF.UD.getDataJson("taskCenter_startTop", function(json){
+                this.top5Data = json;
+                if (this.top5Data && this.top5Data.length){
+                    var top5Node = new Element("div.top5Node").inject(this.startProcessListNode);
+                    new Element("div.top5Title", {"styles": this.css.applicationChildTitleNode, "text": this.lp.startTop5}).inject(top5Node);
+                    var top5ChildNode = new Element("div.top5ChildNode", {"styles": this.css.applicationChildChildNode}).inject(top5Node);
+
+                    this.top5Data.sort(function(p1, p2){
+                        return 0-(p1.count-p2.count);
+                    });
+                    this.top5Data.each(function(process, i){
+                        if (i<5) new MWF.xApplication.process.TaskCenter.Process(process, this, {"name": process.applicationName}, top5ChildNode);
+                    }.bind(this));
+                }
+
+                appjson.data.each(function (app) {
+                    if (app.processList && app.processList.length > 0) {
+                        var appNode = new Element("div.appNode").inject(this.startProcessListNode);
+                        new Element("div.appTitleNode", {"styles": this.css.applicationChildTitleNode, "text": app.name}).inject(appNode);
+                        var appChildNode = new Element("div.appChildNode", {"styles": this.css.applicationChildChildNode}).inject(appNode);
                         app.processList.each(function(process){
                             new MWF.xApplication.process.TaskCenter.Process(process, this, {"name": app.applicationName || app.appName || app.name }, appChildNode);
                         }.bind(this));
-                    }.bind(this));
+                    }
                 }.bind(this));
-
             }.bind(this));
+
         }.bind(this));
     },
     // getAction: function (callback) {

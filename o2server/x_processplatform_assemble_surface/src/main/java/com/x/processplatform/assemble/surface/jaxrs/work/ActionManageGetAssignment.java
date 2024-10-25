@@ -23,8 +23,9 @@ import com.x.base.core.project.http.EffectivePerson;
 import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
 import com.x.processplatform.assemble.surface.Business;
+import com.x.processplatform.assemble.surface.Control;
 import com.x.processplatform.assemble.surface.ThisApplication;
-import com.x.processplatform.assemble.surface.WorkControl;
+import com.x.processplatform.assemble.surface.WorkControlBuilder;
 import com.x.processplatform.core.entity.content.Read;
 import com.x.processplatform.core.entity.content.ReadCompleted;
 import com.x.processplatform.core.entity.content.Review;
@@ -56,12 +57,11 @@ class ActionManageGetAssignment extends BaseAction {
 			Process process = business.process().pick(work.getProcess());
 			Application application = business.application().pick(work.getApplication());
 			// 需要对这个应用的管理权限
-			if (BooleanUtils.isNotTrue(business.canManageApplicationOrProcess(effectivePerson, application, process))) {
+			if (BooleanUtils
+					.isNotTrue(business.ifPersonCanManageApplicationOrProcess(effectivePerson, application, process))) {
 				throw new ExceptionAccessDenied(effectivePerson);
 			}
-
-			WoControl control = business.getControl(effectivePerson, work, WoControl.class);
-			wo.setControl(control);
+			wo.setControl(new WorkControlBuilder(effectivePerson, business, work).enableAll().build());
 		}
 
 		final String job = work.getJob();
@@ -73,7 +73,7 @@ class ActionManageGetAssignment extends BaseAction {
 			} catch (Exception e) {
 				LOGGER.error(e);
 			}
-		}, ThisApplication.threadPool());
+		}, ThisApplication.forkJoinPool());
 		CompletableFuture<Void> futureTaskCompleted = CompletableFuture.runAsync(() -> {
 			try (EntityManagerContainer emc = EntityManagerContainerFactory.instance().create()) {
 				emc.listEqual(TaskCompleted.class, TaskCompleted.work_FIELDNAME, id).stream().sorted(
@@ -89,7 +89,7 @@ class ActionManageGetAssignment extends BaseAction {
 			} catch (Exception e) {
 				LOGGER.error(e);
 			}
-		}, ThisApplication.threadPool());
+		}, ThisApplication.forkJoinPool());
 		CompletableFuture<Void> futureRead = CompletableFuture.runAsync(() -> {
 			try (EntityManagerContainer emc = EntityManagerContainerFactory.instance().create()) {
 				emc.listEqual(Read.class, Read.work_FIELDNAME, id).stream()
@@ -105,7 +105,7 @@ class ActionManageGetAssignment extends BaseAction {
 			} catch (Exception e) {
 				LOGGER.error(e);
 			}
-		}, ThisApplication.threadPool());
+		}, ThisApplication.forkJoinPool());
 		CompletableFuture<Void> futureReadCompleted = CompletableFuture.runAsync(() -> {
 			try (EntityManagerContainer emc = EntityManagerContainerFactory.instance().create()) {
 				emc.listEqual(ReadCompleted.class, ReadCompleted.work_FIELDNAME, id).stream().sorted(
@@ -121,7 +121,7 @@ class ActionManageGetAssignment extends BaseAction {
 			} catch (Exception e) {
 				LOGGER.error(e);
 			}
-		}, ThisApplication.threadPool());
+		}, ThisApplication.forkJoinPool());
 		CompletableFuture<Void> futureReview = CompletableFuture.runAsync(() -> {
 			try (EntityManagerContainer emc = EntityManagerContainerFactory.instance().create()) {
 				emc.listEqual(Review.class, Review.job_FIELDNAME, job).stream()
@@ -137,7 +137,7 @@ class ActionManageGetAssignment extends BaseAction {
 			} catch (Exception e) {
 				LOGGER.error(e);
 			}
-		}, ThisApplication.threadPool());
+		}, ThisApplication.forkJoinPool());
 		futureTask.get(Config.processPlatform().getAsynchronousTimeout(), TimeUnit.SECONDS);
 		futureReview.get(Config.processPlatform().getAsynchronousTimeout(), TimeUnit.SECONDS);
 		futureTaskCompleted.get(Config.processPlatform().getAsynchronousTimeout(), TimeUnit.SECONDS);
@@ -167,7 +167,7 @@ class ActionManageGetAssignment extends BaseAction {
 		private List<WoReview> reviewList = new ArrayList<>();
 
 		@FieldDescribe("权限")
-		private WoControl control;
+		private Control control;
 
 		public List<WoTask> getTaskList() {
 			return taskList;
@@ -209,11 +209,11 @@ class ActionManageGetAssignment extends BaseAction {
 			this.reviewList = reviewList;
 		}
 
-		public WoControl getControl() {
+		public Control getControl() {
 			return control;
 		}
 
-		public void setControl(WoControl control) {
+		public void setControl(Control control) {
 			this.control = control;
 		}
 	}
@@ -227,7 +227,7 @@ class ActionManageGetAssignment extends BaseAction {
 
 		private Long rank;
 
-		private WoControl control;
+		private Control control;
 
 		public Long getRank() {
 			return rank;
@@ -237,11 +237,11 @@ class ActionManageGetAssignment extends BaseAction {
 			this.rank = rank;
 		}
 
-		public WoControl getControl() {
+		public Control getControl() {
 			return control;
 		}
 
-		public void setControl(WoControl control) {
+		public void setControl(Control control) {
 			this.control = control;
 		}
 
@@ -255,7 +255,7 @@ class ActionManageGetAssignment extends BaseAction {
 				WoTaskCompleted.class, null, JpaObject.FieldsInvisible);
 		private Long rank;
 
-		private WoControl control;
+		private Control control;
 
 		public Long getRank() {
 			return rank;
@@ -265,11 +265,11 @@ class ActionManageGetAssignment extends BaseAction {
 			this.rank = rank;
 		}
 
-		public WoControl getControl() {
+		public Control getControl() {
 			return control;
 		}
 
-		public void setControl(WoControl control) {
+		public void setControl(Control control) {
 			this.control = control;
 		}
 
@@ -286,7 +286,7 @@ class ActionManageGetAssignment extends BaseAction {
 
 		private Long rank;
 
-		private WoControl control;
+		private Control control;
 
 		public Long getRank() {
 			return rank;
@@ -296,11 +296,11 @@ class ActionManageGetAssignment extends BaseAction {
 			this.rank = rank;
 		}
 
-		public WoControl getControl() {
+		public Control getControl() {
 			return control;
 		}
 
-		public void setControl(WoControl control) {
+		public void setControl(Control control) {
 			this.control = control;
 		}
 
@@ -315,7 +315,7 @@ class ActionManageGetAssignment extends BaseAction {
 
 		private Long rank;
 
-		private WoControl control;
+		private Control control;
 
 		public Long getRank() {
 			return rank;
@@ -325,11 +325,11 @@ class ActionManageGetAssignment extends BaseAction {
 			this.rank = rank;
 		}
 
-		public WoControl getControl() {
+		public Control getControl() {
 			return control;
 		}
 
-		public void setControl(WoControl control) {
+		public void setControl(Control control) {
 			this.control = control;
 		}
 
@@ -344,7 +344,7 @@ class ActionManageGetAssignment extends BaseAction {
 
 		private Long rank;
 
-		private WoControl control;
+		private Control control;
 
 		public Long getRank() {
 			return rank;
@@ -354,19 +354,14 @@ class ActionManageGetAssignment extends BaseAction {
 			this.rank = rank;
 		}
 
-		public WoControl getControl() {
+		public Control getControl() {
 			return control;
 		}
 
-		public void setControl(WoControl control) {
+		public void setControl(Control control) {
 			this.control = control;
 		}
 
-	}
-
-	public static class WoControl extends WorkControl {
-
-		private static final long serialVersionUID = 2948539010433309335L;
 	}
 
 }

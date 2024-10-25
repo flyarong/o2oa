@@ -1,10 +1,12 @@
 package com.x.processplatform.assemble.surface.jaxrs.attachment;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.BooleanUtils;
 
 import com.x.base.core.container.EntityManagerContainer;
 import com.x.base.core.container.factory.EntityManagerContainerFactory;
 import com.x.base.core.entity.annotation.CheckPersistType;
+import com.x.base.core.project.config.Config;
 import com.x.base.core.project.config.StorageMapping;
 import com.x.base.core.project.exception.ExceptionAccessDenied;
 import com.x.base.core.project.exception.ExceptionEntityNotExist;
@@ -16,6 +18,7 @@ import com.x.base.core.project.logger.LoggerFactory;
 import com.x.base.core.project.tools.DocumentTools;
 import com.x.general.core.entity.GeneralFile;
 import com.x.processplatform.assemble.surface.Business;
+import com.x.processplatform.assemble.surface.JobControlBuilder;
 import com.x.processplatform.assemble.surface.ThisApplication;
 import com.x.processplatform.core.entity.content.Attachment;
 
@@ -37,8 +40,8 @@ class ActionPreviewPdf extends BaseAction {
 			if (null == attachment) {
 				throw new ExceptionEntityNotExist(id, Attachment.class);
 			}
-
-			if (!business.readableWithJob(effectivePerson, attachment.getJob())) {
+			if (BooleanUtils.isNotTrue(new JobControlBuilder(effectivePerson, business, attachment.getJob())
+					.enableAllowVisit().build().getAllowVisit())) {
 				throw new ExceptionAccessDenied(effectivePerson);
 			}
 		}
@@ -51,7 +54,7 @@ class ActionPreviewPdf extends BaseAction {
 			StorageMapping gfMapping = ThisApplication.context().storageMappings().random(GeneralFile.class);
 			GeneralFile generalFile = new GeneralFile(gfMapping.getName(), name,
 					effectivePerson.getDistinguishedName());
-			generalFile.saveContent(gfMapping, bytes, name);
+			generalFile.saveContent(gfMapping, bytes, name, Config.general().getStorageEncrypt());
 			emc.beginTransaction(GeneralFile.class);
 			emc.persist(generalFile, CheckPersistType.all);
 			emc.commit();

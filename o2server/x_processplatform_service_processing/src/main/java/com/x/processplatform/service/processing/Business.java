@@ -3,9 +3,11 @@ package com.x.processplatform.service.processing;
 import com.x.base.core.container.EntityManagerContainer;
 import com.x.organization.core.express.Organization;
 import com.x.processplatform.service.processing.factory.AttachmentFactory;
+import com.x.processplatform.service.processing.factory.DataRecordFactory;
 import com.x.processplatform.service.processing.factory.DocumentVersionFactory;
 import com.x.processplatform.service.processing.factory.ElementFactory;
 import com.x.processplatform.service.processing.factory.ItemFactory;
+import com.x.processplatform.service.processing.factory.ProcessFactory;
 import com.x.processplatform.service.processing.factory.ReadCompletedFactory;
 import com.x.processplatform.service.processing.factory.ReadFactory;
 import com.x.processplatform.service.processing.factory.ReviewFactory;
@@ -22,6 +24,7 @@ public class Business {
 	public static final String EVENT_MANUALSTAY = "manualStay";
 	public static final String EVENT_MANUALBEFORETASK = "manualBeforeTask";
 	public static final String EVENT_MANUALAFTERTASK = "manualAfterTask";
+	public static final String EVENT_MANUALAFTERPROCESSING = "manualAfterProcessing";
 	public static final String EVENT_BEFOREARRIVE = "beforeArrive";
 	public static final String EVENT_AFTERARRIVE = "afterArrive";
 	public static final String EVENT_BEFOREEXECUTE = "beforeExecute";
@@ -35,6 +38,7 @@ public class Business {
 	public static final String EVENT_INVOKEJAXRSBODY = "invokeJaxrsBody";
 	public static final String EVENT_INVOKEJAXRSHEAD = "invokeJaxrsHead";
 	public static final String EVENT_PUBLISHCMSBODY = "publishCmsBody";
+	public static final String EVENT_PUBLISHCMSCREATOR = "publishCmsCreator";
 	public static final String EVENT_SERVICE = "service";
 	public static final String EVENT_ROUTE = "route";
 	public static final String EVENT_ROUTEAPPENDTASKIDENTITY = "routeAppendTaskIdentity";
@@ -56,6 +60,7 @@ public class Business {
 	public static final String EVENT_TASKDUTY = "taskDuty";
 	public static final String EVENT_READDUTY = "readDuty";
 	public static final String EVENT_REVIEWDUTY = "reviewDuty";
+	public static final String EVENT_PERMISSIONWRITE = "permissionWrite";
 
 	private EntityManagerContainer emc;
 
@@ -173,6 +178,24 @@ public class Business {
 			this.element = new ElementFactory(this);
 		}
 		return element;
+	}
+
+	private DataRecordFactory dataRecord;
+
+	public DataRecordFactory dataRecord() throws Exception {
+		if (null == this.dataRecord) {
+			this.dataRecord = new DataRecordFactory(this);
+		}
+		return dataRecord;
+	}
+
+	private ProcessFactory process;
+
+	public ProcessFactory process() throws Exception {
+		if (null == this.process) {
+			this.process = new ProcessFactory(this);
+		}
+		return process;
 	}
 
 	private Organization organization;

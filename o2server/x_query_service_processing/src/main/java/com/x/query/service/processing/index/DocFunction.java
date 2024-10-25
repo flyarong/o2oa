@@ -303,7 +303,7 @@ public class DocFunction {
         List<Item> items = null;
         try {
             if (BooleanUtils.isTrue(workCompleted.getMerged())) {
-                Data data = workCompleted.getProperties().getData();
+                Data data = workCompleted.getData();
                 items = CONVERTER.disassemble(gson.toJsonTree(data));
             } else {
                 items = business.entityManagerContainer().listEqualAndEqual(Item.class, DataItem.bundle_FIELDNAME,
@@ -464,7 +464,7 @@ public class DocFunction {
         StringBuilder builder = new StringBuilder();
         builder.append(storageObject.getName());
         try {
-            StorageMapping mapping = ThisApplication.context().storageMappings().get(Attachment.class,
+            StorageMapping mapping = ThisApplication.context().storageMappings().get(storageObject.getClass(),
                     storageObject.getStorage());
             if (null != mapping) {
                 try (InputStream input = new ByteArrayInputStream(storageObject.readContent(mapping))) {

@@ -660,22 +660,29 @@ MWF.xApplication.Org.UnitExplorer.UnitContent = new Class({
                     var woIdentityList = [];
                     var identityList = [];
 
-                    contentNode.empty();
+                    var dData = Object.clone(dutyData);
                     items.each(function(item, i){
                         woIdentityList.push(item.data);
                         identityList.push(item.data.id);
-
-                        new MWF.widget.O2Identity(item.data, contentNode, {
-                            "canRemove": true,
-                            "onRemove": function(O2Identity, e){
-                                _self.deleteDutyIdentity(dutyData, e, O2Identity);
-                            }
-                        })
                     }.bind(this));
-                    dutyData.identityList = identityList;
-                    dutyData.woIdentityList = woIdentityList;
+                    dData.identityList = identityList;
+                    dData.woIdentityList = woIdentityList;
 
-                    _self.saveDuty(dutyData);
+                    _self.saveDuty(dData, function () {
+                        contentNode.empty();
+                        items.each(function(item, i){
+                            new MWF.widget.O2Identity(item.data, contentNode, {
+                                "canRemove": true,
+                                "onRemove": function(O2Identity, e){
+                                    _self.deleteDutyIdentity(dutyData, e, O2Identity);
+                                }
+                            })
+                        }.bind(this));
+                        dutyData.identityList = identityList;
+                        dutyData.woIdentityList = woIdentityList;
+                    }.bind(this));
+
+
                 }.bind(this)
             });
             selector.load();
@@ -712,7 +719,7 @@ MWF.xApplication.Org.UnitExplorer.UnitContent = new Class({
             var errorText = error;
             if (xhr) errorText = xhr.responseText;
             this.explorer.app.notice("request json error: "+errorText, "error");
-            this.content.propertyContentScrollNode.unmask();
+            this.propertyContentScrollNode.unmask();
         }.bind(this));
     },
     _listAttributes: function(){
@@ -810,13 +817,17 @@ MWF.xApplication.Org.UnitExplorer.UnitContent = new Class({
                 }
             }, {
                 "getHtml": function(){
-                    return "<div style='-webkit-user-select: none; -moz-user-select: none; width:24px; height:24px; cursor: move; background:url(../x_component_Org/$Explorer/"+
-                        _self.explorer.app.options.style+"/icon/move.png) center center no-repeat'></div>";
+                    if(_self.getIdentityActionPermission()){
+                        return "<div style='-webkit-user-select: none; -moz-user-select: none; width:24px; height:24px; cursor: move; background:url(../x_component_Org/$Explorer/"+
+                            _self.explorer.app.options.style+"/icon/move.png) center center no-repeat'></div>";
+                    }else{
+                        return  "<div></div>"
+                    }
                 },
                 "events": {
                     "selectstart": function(e){e.stopPropagation(); e.preventDefault();return false;},
-                    "touchstart": function(e){_self.startOrder(this.item, this.td, e)},
-                    "mousedown": function(e){_self.startOrder(this.item, this.td, e)}
+                    "touchstart": function(e){if(_self.getIdentityActionPermission())_self.startOrder(this.item, this.td, e)},
+                    "mousedown": function(e){if(_self.getIdentityActionPermission())_self.startOrder(this.item, this.td, e)}
                 }
             }],
             "onPostDelete": function(delCount){
@@ -1171,7 +1182,7 @@ MWF.xApplication.Org.UnitExplorer.UnitContent.BaseInfor = new Class({
         if (n) n.set("text", this.data.description || "");
 
         var n = this.editContentNode.getElement(".infor_orderNumber");
-        if (n) n.set("text", this.data.orderNumber || "");
+        if (n) n.set("text", o2.typeOf( this.data.orderNumber ) === 'null' ? "" : this.data.orderNumber);
 
 
         this.editContentNode.getElements("td.inforTitle").setStyles(this.style.baseInforTitleNode);

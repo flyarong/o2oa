@@ -151,6 +151,16 @@ MWF.xApplication.process.Xform.Elswitch = MWF.APPElswitch =  new Class(
             }else{
                 this.node.set("text", (this.json.inactiveText || "false"));
             }
+
+            if( this.json.elProperties ){
+                this.node.set(this.json.elProperties );
+            }
+            if (this.json.elStyles){
+                this.node.setStyles( this._parseStyles(this.json.elStyles) );
+            }
+
+            this.fireEvent("load");
+            this.isLoaded = true;
         }
     },
 

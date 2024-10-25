@@ -39,6 +39,13 @@ MWF.xApplication.cms.ColumnManager.LP = {
     "templateCategory": "模板分类：",
     "all": "全部",
 
+    "sorkKeyNote": "-排序-",
+    "createTime": "创建时间",
+    "updateTime": "更新时间",
+    "asc": "正序",
+    "desc": "倒序",
+    "searchPlacholder": "输入名称/别名/id搜索",
+
     "formType": {
         "empty": "空白表单",
         "publishEdit": "发布类编辑表单",
@@ -177,6 +184,7 @@ MWF.xApplication.cms.ColumnManager.LP = {
         "ignoreTitle" : "忽略标题",
         "latest" : "检查草稿",
         "delayView": "定时视图",
+        "saveDraftOnClose": "自动保存",
         "defaultEditForm": "默认编辑表单",
         "defaultReadForm": "默认阅读表单",
         "editformNote": "注：创建分类时的默认编辑表单",
@@ -301,6 +309,7 @@ MWF.xApplication.cms.ColumnManager.LP = {
     "checkDraftSelectText": ["新建界面检查草稿","新建界面不检查草稿"],
     "showAllDocumentSelectText": ["显示所有文档视图","隐藏所有文档视图"],
     "showDelayDocumentSelectText": ["显示定时发布文档视图","隐藏定时发布文档视图"],
+    "saveDraftOnClose": ["关闭草稿时自动保存文档","关闭草稿时不自动保存文档"],
 
     "selectRelateFormNotice": "请选择需粘贴视图的关联表单",
 
@@ -310,6 +319,7 @@ MWF.xApplication.cms.ColumnManager.LP = {
     "projectionDataName": "数据名称",
     "projectionPath": "数据路径",
     "projectionType":"数据类型",
+    "projectionColumnName":"列名",
     "projectionInputError": "请输入数据名称和数据路径",
     "projectionTypeCountError": "{type}类型的数据映射条目，最多允许{count}条。",
     "projectionSameNameError": "相同的数据名称已存在",

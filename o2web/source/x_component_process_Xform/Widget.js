@@ -99,15 +99,42 @@ MWF.xApplication.process.Xform.Widget = MWF.APPWidget =  new Class(
     },
     loadCss: function(){
         if (this.widgetData.json.css && this.widgetData.json.css.code){
-            var cssText = this.form.parseCSS(this.widgetData.json.css.code);
+
+            var cssText = this.widgetData.json.css.code;
+
+            //删除注释
+            cssText = cssText.replace(/\/\*[\s\S]*?\*\/\n|([^:]|^)\/\/.*\n$/g, '').replace(/\\n/, '');
+            cssText = this.form.parseCSS(cssText);
+
             var rex = new RegExp("(.+)(?=\\{)", "g");
             var match;
             var id = this.form.json.id.replace(/\-/g, "");
+            var prefix = ".css" + id + " ";
+
             while ((match = rex.exec(cssText)) !== null) {
-                var prefix = ".css" + id + " ";
-                var rule = prefix + match[0];
-                cssText = cssText.substring(0, match.index) + rule + cssText.substring(rex.lastIndex, cssText.length);
-                rex.lastIndex = rex.lastIndex + prefix.length;
+                var rulesStr = match[0];
+                var startWith = rulesStr.substring(0, 1);
+                if (startWith === "@" || startWith === ":" || rulesStr.indexOf("%") !== -1) {
+
+                }else if (rulesStr.trim()==='from' || rulesStr.trim()==='to'){
+
+                } else {
+                    if (rulesStr.indexOf(",") != -1) {
+                        //var rules = rulesStr.split(/\s*,\s*/g);
+                        var rules = rulesStr.split(/,/g);
+                        rules = rules.map(function (r) {
+                            return prefix + r;
+                        });
+                        var rule = rules.join(",");
+                        cssText = cssText.substring(0, match.index) + rule + cssText.substring(rex.lastIndex, cssText.length);
+                        rex.lastIndex = rex.lastIndex + (prefix.length * rules.length);
+
+                    } else {
+                        var rule = prefix + match[0];
+                        cssText = cssText.substring(0, match.index) + rule + cssText.substring(rex.lastIndex, cssText.length);
+                        rex.lastIndex = rex.lastIndex + prefix.length;
+                    }
+                }
             }
 
             var styleNode = $("style"+this.form.json.id);
@@ -173,6 +200,9 @@ MWF.xApplication.process.Xform.Widget = MWF.APPWidget =  new Class(
                 }
 
                 this.node.set("html", this.widgetData.html);
+                if( this.widgetData.json.styles ){
+                    this.node.getFirst().setStyles(this.widgetData.json.styles);
+                }
 
                 Object.each(this.widgetData.json.moduleList, function(module, key){
                     var formKey = key;

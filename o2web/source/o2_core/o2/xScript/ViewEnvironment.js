@@ -290,29 +290,29 @@ MWF.xScript.ViewEnvironment = function (ev) {
      *
      * //引用服务管理中的数据字典
      * var dict = new this.Dict({
-     *   "type": "service",
-     *   "name": "dictName"
+     *    "type": "service",
+     *    "name": "dictName"
      * });
      *
      * //引用流程管理中的数据字典
      * var dict = new this.Dict({
-     *   "type": "process",
-     *   "application": "appName",
-     *   "name": "dictName"
+     *    "type": "process",
+     *    "application": "appName",
+     *    "name": "dictName"
      * });
      *
      * //引用内容管理中的数据字典
      * var dict = new this.Dict({
-     *   "type": "cms",
-     *   "application": "appName",
-     *   "name": "dictName"
+     *     "type": "cms",
+     *     "application": "appName",
+     *    "name": "dictName"
      * });
      *
      * //引用门户管理中的数据字典
      * var dict = new this.Dict({
-     *   "type": "portal",
-     *   "application": "appName",
-     *   "name": "dictName"
+     *    "type": "portal",
+     *    "application": "appName",
+     *    "name": "dictName"
      * });
      *
      * </code></pre>
@@ -1470,7 +1470,7 @@ MWF.xScript.ViewEnvironment = function (ev) {
          * @return {Promise|PersonData} 当async为true时，返回
          * {@link https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Promise|Promise}。
          * 否则返回人员对象。
-         * @o2ActionOut x_organization_assemble_express.PersonAction.listObject|example=Person
+         * @o2ActionOut x_organization_assemble_express.PersonAction.get|example=PersonData
          * @o2syntax
          * //同步执行，返回人员对象。
          * var person = this.org.getPersonData( name );
@@ -2425,7 +2425,7 @@ MWF.xScript.ViewEnvironment = function (ev) {
          * 否则如果人员拥有角色返回true, 否则返回false。
          * @o2syntax
          * //同步执行，返回判断结果。
-         * var groupList = this.org.personHasRole( name, roleList );
+         * var flag = this.org.personHasRole( name, roleList );
          *
          * //异步执行，返回Promise对象
          * var promise = this.org.personHasRole( name, roleList, true);
@@ -2450,7 +2450,7 @@ MWF.xScript.ViewEnvironment = function (ev) {
                 return v;
             };
 
-            var promise = orgActions.listRoleWithPerson(data, cb, null, !!async);
+            var promise = orgActions.personHasRole(data, cb, null, !!async);
             return (!!async) ? promise : v;
 
             // var v = false;
@@ -3389,20 +3389,22 @@ MWF.xScript.ViewEnvironment = function (ev) {
          * })
          */
         execute: function (obj, callback, async) {
-                if( obj.format ){
-                    return this._execute(obj, callback, async, obj.format);
+            if( obj.format ){
+                return this._execute(obj, callback, async, obj.format);
+            }else{
+                if( this.needCheckFormat(obj) ){
+                    var result;
+                    var p = MWF.Actions.load("x_query_assemble_surface").StatementAction.getFormat(obj.name, function(json){
+                        result = this._execute(obj, callback, async, json.data.format);
+                        return result;
+                    }.bind(this), null, async);
+                    return result || p;
                 }else{
-                    if( this.needCheckFormat(obj) ){
-                        var p = MWF.Actions.load("x_query_assemble_surface").StatementAction.getFormat(obj.name, null, null, async);
-                        Promise.resolve(p).then(function (json) {
-                            return this._execute(obj, callback, async, json.data.format);
-                        }.bind(this));
-                    }else{
-                        return this._execute(obj, callback, async, "");
-                    }
-
+                    return this._execute(obj, callback, async, "");
                 }
-            },
+
+            }
+        },
             needCheckFormat: function(s){
                 if( s.format )return false;
                 if( typeOf(s.parameter) === "object" ){
@@ -3437,6 +3439,8 @@ MWF.xScript.ViewEnvironment = function (ev) {
                 if( !parameter )parameter = {};
                 var filterList = [];
                 (filter || []).each(function (d) {
+                    if( !d.logic )d.logic = "and";
+
                     //var parameterName = d.path.replace(/\./g, "_");
                     var pName = d.path.replace(/\./g, "_");
 
@@ -3895,6 +3899,8 @@ MWF.xScript.ViewEnvironment = function (ev) {
      * @borrows module:queryView.confirm as confirm
      * @borrows module:queryView.alert as alert
      * @borrows module:queryView.notice as notice
+     * @borrows module:queryView.dialog as dialog
+     * @borrows module:queryView.selectOrg as selectOrg
      * @borrows module:queryView.addEvent as addEvent
      * @borrows module:queryView.openWork as openWork
      * @borrows module:queryView.openJob as openJob
@@ -4490,6 +4496,17 @@ MWF.xScript.ViewEnvironment = function (ev) {
             return  _form.dialog( options );
         },
 
+        /**打开人员组织选择界面
+         * @method selectOrg
+         * @static
+         * @see module:form.selectOrg
+         */
+        "selectOrg": function ( container, options,  delayLoad) {
+            if( !container )container = _form.app.content;
+            MWF.xDesktop.requireApp("Selector", "package", null, false);
+            return new MWF.O2Selector(container, options, delayLoad);
+        },
+
         /**　给视图添加事件。
          * @method addEvent
          * @static
@@ -4531,7 +4548,7 @@ MWF.xScript.ViewEnvironment = function (ev) {
          */
         "openJob": function (id, choice, options, callback) {
             var workData = null, handel;
-            o2.Actions.get("x_processplatform_assemble_surface").listWorkByJob(id, function (json) {
+            o2.Actions.get("x_processplatform_assemble_surface").listWorkByJob(id, function(json){
                 if (json.data) workData = json.data;
             }.bind(this), null, false);
 
@@ -4542,7 +4559,7 @@ MWF.xScript.ViewEnvironment = function (ev) {
                     if( o2.typeOf(queryLoad) === "function" )queryLoad.call(this);
                     callback(this);
                 }
-            };
+            }
 
             runCallback = function ( handel ) {
                 if( o2.typeOf(callback) === "function" ) {
@@ -4551,17 +4568,21 @@ MWF.xScript.ViewEnvironment = function (ev) {
                     } else if (options && options.appId) {
                         if (layout.desktop && layout.desktop.apps && layout.desktop.apps[options.appId]) {
                             callback(layout.desktop.apps[options.appId], true);
+                        }else{
+                            callback(handel, false);
                         }
+                    }else{
+                        callback(handel, false);
                     }
                 }
             };
 
-            if (workData) {
+            if (workData){
                 var len = workData.workList.length + workData.workCompletedList.length;
-                if (len) {
-                    if (len > 1 && choice) {
-                        var node = new Element("div", { "styles": { "padding": "20px", "width": "500px" } }).inject(_form.node);
-                        workData.workList.each(function (work) {
+                if (len){
+                    if (len>1 && choice){
+                        var node = new Element("div", {"styles": {"padding": "20px", "width": "500px"}}).inject(_form.node);
+                        workData.workList.each(function(work){
                             var workNode = new Element("div", {
                                 "styles": {
                                     "background": "#ffffff",
@@ -4573,25 +4594,25 @@ MWF.xScript.ViewEnvironment = function (ev) {
                                 }
                             }).inject(node);
                             var html = "<div style='height: 40px; width: 40px; float: left; background: url(../x_component_process_Xform/$Form/default/icon/work.png) no-repeat center center'></div>" +
-                                "<div style='height: 40px; width: 40px; float: right'><div class='MWFAction' style='height: 20px; width: 40px; margin-top: 10px; border: 1px solid #999999; border-radius: 5px;text-align: center; cursor: pointer'>" + o2.LP.widget.open + "</div></div>" +
-                                "<div style='height: 20px; line-height: 20px; margin: 0px 40px'>" + work.title + "</div>" +
-                                "<div style='margin: 0px 40px'><div style='color:#999999; float: left; margin-right: 10px'>" + work.activityName + "</div>" +
-                                "<div style='color:#999999; float: left; margin-right: 10px'>" + work.activityArrivedTime + "</div>" +
-                                "<div style='color:#999999; float: left; margin-right: 10px'>" + (work.manualTaskIdentityText || "") + "</div></div>";
+                                "<div style='height: 40px; width: 40px; float: right'><div class='MWFAction' style='height: 20px; width: 40px; margin-top: 10px; border: 1px solid #999999; border-radius: 5px;text-align: center; cursor: pointer'>"+o2.LP.widget.open+"</div></div>"+
+                                "<div style='height: 20px; line-height: 20px; margin: 0px 40px'>"+work.title+"</div>" +
+                                "<div style='margin: 0px 40px'><div style='color:#999999; float: left; margin-right: 10px'>"+work.activityName+"</div>" +
+                                "<div style='color:#999999; float: left; margin-right: 10px'>"+work.activityArrivedTime+"</div>" +
+                                "<div style='color:#999999; float: left; margin-right: 10px'>"+(work.manualTaskIdentityText || "")+"</div></div>";
                             workNode.set("html", html);
                             var action = workNode.getElement(".MWFAction");
                             action.store("work", work);
-                            action.addEvent("click", function (e) {
+                            action.addEvent("click", function(e){
                                 var work = e.target.retrieve("work");
                                 if (work){
-                                   handel =  this.openWork(work.id, null, work.title, options);
-                                   runCallback( handel );
+                                    handel =  this.openWork(work.id, null, work.title, options);
+                                    runCallback( handel );
                                 }
                                 dlg.close();
                             }.bind(this));
 
                         }.bind(this));
-                        workData.workCompletedList.each(function (work) {
+                        workData.workCompletedList.each(function(work){
                             var workNode = new Element("div", {
                                 "styles": {
                                     "background": "#ffffff",
@@ -4603,14 +4624,14 @@ MWF.xScript.ViewEnvironment = function (ev) {
                                 }
                             }).inject(node);
                             var html = "<div style='height: 40px; width: 40px; float: left; background: url(../x_component_process_Xform/$Form/default/icon/work.png) no-repeat center center'></div>" +
-                                "<div style='height: 40px; width: 40px; float: right'><div class='MWFAction' style='height: 20px; width: 40px; margin-top: 10px; border: 1px solid #999999; border-radius: 5px;text-align: center; cursor: pointer'>" + o2.LP.widget.open + "</div></div>" +
-                                "<div style='height: 20px; line-height: 20px; margin: 0px 40px'>" + work.title + "</div>" +
-                                "<div style='margin: 0px 40px'><div style='color:#999999; float: left; margin-right: 10px'>" + o2.LP.widget.workcompleted + "</div>" +
-                                "<div style='color:#999999; float: left; margin-right: 10px'>" + work.completedTime + "</div>";
+                                "<div style='height: 40px; width: 40px; float: right'><div class='MWFAction' style='height: 20px; width: 40px; margin-top: 10px; border: 1px solid #999999; border-radius: 5px;text-align: center; cursor: pointer'>"+o2.LP.widget.open+"</div></div>"+
+                                "<div style='height: 20px; line-height: 20px; margin: 0px 40px'>"+work.title+"</div>" +
+                                "<div style='margin: 0px 40px'><div style='color:#999999; float: left; margin-right: 10px'>"+o2.LP.widget.workcompleted+"</div>" +
+                                "<div style='color:#999999; float: left; margin-right: 10px'>"+work.completedTime+"</div>";
                             workNode.set("html", html);
                             var action = workNode.getElement(".MWFAction");
                             action.store("work", work);
-                            action.addEvent("click", function (e) {
+                            action.addEvent("click", function(e){
                                 var work = e.target.retrieve("work");
                                 if (work){
                                     handel =  this.openWork(null, work.id, work.title, options);
@@ -4620,36 +4641,44 @@ MWF.xScript.ViewEnvironment = function (ev) {
                             }.bind(this));
 
                         }.bind(this));
-                        var height = node.getSize().y + 20;
-                        if (height > 600) height = 600;
+                        var height = node.getSize().y+20;
+                        if (height>600) height = 600;
 
                         var dlg = o2.DL.open({
                             "title": o2.LP.widget.choiceWork,
-                            "style": "user",
+                            "style" : "user",
                             "isResize": false,
                             "content": node,
                             "buttonList": [
                                 {
-                                    "type": "cancel",
+                                    "type" : "cancel",
                                     "text": o2.LP.widget.close,
-                                    "action": function () { dlg.close(); }
+                                    "action": function(){dlg.close();}
                                 }
                             ]
                         });
-                    } else {
-                        if (workData.workList.length) {
-                            var work = workData.workList[0];
+                    }else{
+                        if (workData.workList.length){
+                            var work =  workData.workList[0];
                             handel = this.openWork(work.id, null, work.title, options);
-                            runCallback(handel);
+                            runCallback( handel );
                             return handel;
-                        } else {
-                            var work = workData.workCompletedList[0];
+                        }else{
+                            var work =  workData.workCompletedList[0];
                             handel = this.openWork(null, work.id, work.title, options);
-                            runCallback(handel);
+                            runCallback( handel );
                             return handel;
                         }
                     }
+                }else{
+                    runCallback(new Error("Can't open this Job", {
+                        cause: workData
+                    }));
                 }
+            }else{
+                runCallback(new Error("Can't open this Job", {
+                    cause: workData
+                }));
             }
         },
 
@@ -4664,6 +4693,26 @@ MWF.xScript.ViewEnvironment = function (ev) {
             op.documentId = id;
             op.docTitle = title || "";
             op.appId = (op.appId) || ("cms.Document"+id);
+            if( op.onPostPublish ){
+                op.postPublish = op.onPostPublish;
+                delete op.onPostPublish;
+            }
+            if( op.onAfterPublish ){
+                op.afterPublish = op.onAfterPublish;
+                delete op.onAfterPublish;
+            }
+            if( op.onAfterSave ){
+                op.afterSave = op.onAfterSave;
+                delete op.onAfterSave;
+            }
+            if( op.onBeforeClose ){
+                op.beforeClose = op.onBeforeClose;
+                delete op.onBeforeClose;
+            }
+            if( op.onPostDelete ){
+                op.postDelete = op.onPostDelete;
+                delete op.onPostDelete;
+            }
             return layout.desktop.openApplication(this.event, "cms.Document", op);
         },
 
@@ -4777,6 +4826,22 @@ MWF.xScript.ViewEnvironment = function (ev) {
                 if (category) {
                     options["category"] = category
                 }
+                if (data) {
+                    options["data"] = data
+                }
+                if (identity) {
+                    options["identity"] = identity
+                }
+                if (typeof(latest) == 'undefined' || latest === null) {
+                    options["latest"] = true
+                } else {
+                    options["latest"] = latest
+                }
+                if (typeof(ignoreTitle) == 'undefined' || ignoreTitle === null) {
+                    options["ignoreTitle"] = false
+                } else {
+                    options["ignoreTitle"] = ignoreTitle
+                }
                 if (window.o2android && window.o2android.postMessage) {
                         var body = {
                         type: "createO2CmsDocument",
@@ -4832,7 +4897,7 @@ MWF.xScript.ViewEnvironment = function (ev) {
          * @methodOf module:queryView
          * @see module:form.startProcess
          */
-        "startProcess": function (app, process, data, identity, callback, target, latest, afterCreated) {
+        "startProcess": function (app, process, data, identity, callback, target, latest, afterCreated, skipDraftCheck) {
 
             if (arguments.length > 2) {
                 for (var i = 2; i < arguments.length; i++) {
@@ -4875,56 +4940,63 @@ MWF.xScript.ViewEnvironment = function (ev) {
                     }, false);
 
                     if (!cmpt.processStarter) cmpt.processStarter = new o2.xApplication.process.TaskCenter.Starter(obj);
-                    cmpt.processStarter.load();
+                    cmpt.processStarter.load({
+                        "appFlag": app
+                    });
                 }, true, true);
                 return "";
             }
+            MWF.xDesktop.requireApp("process.TaskCenter", "ProcessStarter", null, false);
             var action = MWF.Actions.get("x_processplatform_assemble_surface").getProcessByName(process, app, function (json) {
                 if (json.data) {
-                    MWF.xDesktop.requireApp("process.TaskCenter", "ProcessStarter", function () {
-                        var starter = new MWF.xApplication.process.TaskCenter.ProcessStarter(json.data, _form.app, {
-                            "workData": data,
-                            "identity": identity,
-                            "latest": latest,
-                            "onStarted": function (data, title, processName) {
-                                var application;
-                                if (data.work){
-                                    var work = data.work;
-                                    var options = {"draft": work, "appId": "process.Work"+(new o2.widget.UUID).toString(), "desktopReload": false};
+                    var starter = new MWF.xApplication.process.TaskCenter.ProcessStarter(json.data, _form.app, {
+                        "workData": data,
+                        "identity": identity,
+                        "latest": latest,
+                        "skipDraftCheck": skipDraftCheck,
+                        "onStarted": function (data, title, processName) {
+                            var application;
+                            if (data.work){
+                                var work = data.work;
+                                var options = {
+                                    "draft": work,
+                                    "draftData":data.data||{},
+                                    "appId": "process.Work"+(new o2.widget.UUID).toString(),
+                                    "desktopReload": false
+                                };
+                                if( !layout.inBrowser && afterCreated )options.onPostLoadForm = afterCreated;
+                                application = layout.desktop.openApplication(null, "process.Work", options);
+                            }else{
+                                var currentTask = [];
+                                data.each(function(work){
+                                    if (work.currentTaskIndex != -1) currentTask.push(work.taskList[work.currentTaskIndex].work);
+                                }.bind(this));
+
+                                if (currentTask.length==1){
+                                    var options = {"workId": currentTask[0], "appId": currentTask[0]};
                                     if( !layout.inBrowser && afterCreated )options.onPostLoadForm = afterCreated;
-                                    application = layout.desktop.openApplication(null, "process.Work", options);
-                                }else{
-                                    var currentTask = [];
-                                    data.each(function(work){
-                                        if (work.currentTaskIndex != -1) currentTask.push(work.taskList[work.currentTaskIndex].work);
-                                    }.bind(this));
+                                    application =layout.desktop.openApplication(null, "process.Work", options);
+                                }else{}
+                            }
 
-                                    if (currentTask.length==1){
-                                        var options = {"workId": currentTask[0], "appId": currentTask[0]};
-                                        if( !layout.inBrowser && afterCreated )options.onPostLoadForm = afterCreated;
-                                        application =layout.desktop.openApplication(null, "process.Work", options);
-                                    }else{}
-                                }
+                            // var currentTask = [];
+                            // data.each(function (work) {
+                            //     if (work.currentTaskIndex != -1) currentTask.push(work.taskList[work.currentTaskIndex].work);
+                            // }.bind(this));
+                            //
+                            // if (currentTask.length == 1) {
+                            //     var options = { "workId": currentTask[0], "appId": currentTask[0] };
+                            //     layout.desktop.openApplication(null, "process.Work", options);
+                            // } else { }
 
-                                // var currentTask = [];
-                                // data.each(function (work) {
-                                //     if (work.currentTaskIndex != -1) currentTask.push(work.taskList[work.currentTaskIndex].work);
-                                // }.bind(this));
-                                //
-                                // if (currentTask.length == 1) {
-                                //     var options = { "workId": currentTask[0], "appId": currentTask[0] };
-                                //     layout.desktop.openApplication(null, "process.Work", options);
-                                // } else { }
+                            if (callback) callback(data);
 
-                                if (callback) callback(data);
-
-                                if(layout.inBrowser && afterCreated){
-                                    afterCreated(application)
-                                }
-                            }.bind(this)
-                        });
-                        starter.load();
-                    }.bind(this));
+                            if(layout.inBrowser && afterCreated){
+                                afterCreated(application)
+                            }
+                        }.bind(this)
+                    });
+                    starter.load();
                 }
             });
         }
@@ -5091,9 +5163,9 @@ MWF.xScript.ViewEnvironment = function (ev) {
      *      此参数可以省略，如果省略，系统会自动弹出错误信息。
      *
      *      async : 方法同步或者异步执行，默认为true。
-     *      
+     *
      *      urlEncode : 是否对url进行编码，默认为true。
-     *      
+     *
      *      cache : 是否使用缓存，默认为true。
      *  @o2syntax
      *  <caption>

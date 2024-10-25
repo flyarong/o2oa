@@ -1178,7 +1178,7 @@ MWF.xApplication.process.Xform.Documenteditor = MWF.APPDocumenteditor =  new Cla
         }else{
             this.loadDocumentEditor(callback);
         }
-
+        o2.loadCss('../x_desktop/fonts/fonts.css');
     },
     loadDocumentEditor: function(callback){
         this._loadToolbars();
@@ -1239,7 +1239,7 @@ MWF.xApplication.process.Xform.Documenteditor = MWF.APPDocumenteditor =  new Cla
         var div = document.createElement("div");
         div.style.height = '0px';
         document.body.appendChild(div);
-        div.innerHTML = data;
+        div.innerHTML = data.replace(/<br><\/div>/g, '</div>').replace(/[\n\r]/g, '');
         var text = div.innerText;
         if (div.remove){
             div.remove();
@@ -1247,6 +1247,7 @@ MWF.xApplication.process.Xform.Documenteditor = MWF.APPDocumenteditor =  new Cla
             if (div.parentNode) div.parentNode.removeChild(div);
         }
         return text;
+        // return text.replace(/<br><\/div>/g, '</div>');
 
     },
     checkSaveNewEdition: function(callback){
@@ -1582,22 +1583,26 @@ MWF.xApplication.process.Xform.Documenteditor = MWF.APPDocumenteditor =  new Cla
         this.editMode = false;
 
         this.getHistory(function(){
-            //this.history.play();
-
-            //this._checkScale();
+        }.bind(this), function(){
+            this.historyMode = false;
+            this.resetData();
         }.bind(this));
         this.historyMode = true;
     },
-    getHistory: function(callback){
+    getHistory: function(callback, nodiff){
         if (this.history){
             this.history.active(function(){
                 if (callback) callback();
+            }, function(){
+                if (nodiff) nodiff();
             });
         }else{
             MWF.xDesktop.requireApp("process.Xform", "widget.DocumentHistory", function(){
                 this.history = new MWF.xApplication.process.Xform.widget.DocumentHistory(this);
                 this.history.load(function(){
                     if (callback) callback();
+                }, function(){
+                    if (nodiff) nodiff();
                 });
             }.bind(this));
         }
@@ -1957,7 +1962,12 @@ MWF.xApplication.process.Xform.Documenteditor = MWF.APPDocumenteditor =  new Cla
                 }else{
                     this.options.pageShow="single";
                     this.reload();
-                    //this._singlePage();
+                    // this._singlePage();
+                    var _self = this;
+                    window.setTimeout(function(){
+                        _self.scaleTo(_self.documenteditorScale);
+                    },10);
+
                 }
             }.bind(this));
             if (this.json.canDoublePage==="n" || layout.mobile) this.doublePageAction.hide();
@@ -2159,7 +2169,15 @@ MWF.xApplication.process.Xform.Documenteditor = MWF.APPDocumenteditor =  new Cla
             //this.node.addEvent("wheel", stopFun);
             this.resizeToolbar();
         }
-        this.reload();
+        if (this.options.pageShow!=="double"){
+            this.getData();
+        }
+        // this.getData();
+        var _self = this;
+        window.setTimeout(function(){
+            _self.reload();
+        },20)
+
     },
     /**缩放文件内容
      * @param scale{Number} 缩放的比率
@@ -2386,16 +2404,22 @@ MWF.xApplication.process.Xform.Documenteditor = MWF.APPDocumenteditor =  new Cla
             this.resizeSidebar();
             this.clearWaitSplitPage();
 
+            var s = 0;
             this.pages.forEach(function(page, i){
-                var s = i+1;
+                s++;
+                var styles = {
+                    "bottom": "-60px",
+                    "margin-top": "10px",
+                    "position": "absolute"
+                }
+                if (s % 2 === 0){
+                    styles.left = "0";
+                }else{
+                    styles.right = "0";
+                }
                 var pageNumberNode = new Element("div", {
                     "html": "<span>—</span><span> "+s+" </span><span>—</span>",
-                    "styles": {
-                        "right": "0",
-                        "bottom": "-60px",
-                        "margin-top": "10px",
-                        "position": "absolute"
-                    }
+                    "styles": styles
                 }).inject(page.getFirst());
 
 
@@ -2768,14 +2792,14 @@ MWF.xApplication.process.Xform.Documenteditor = MWF.APPDocumenteditor =  new Cla
 
     loadCkeditorFiletext: function(callback, inline, node, editorName){
         if (node || this.layout_filetext){
-            o2.loadCss('../x_desktop/fonts/fonts.css');
             o2.load("../o2_lib/htmleditor/ckeditor4161/ckeditor.js", function(){
                 CKEDITOR.disableAutoInline = true;
                 (node || this.layout_filetext).setAttribute('contenteditable', true);
 
                 var editor;
                 try{
-                    editor = CKEDITOR.inline(node || this.layout_filetext, this._getEditorConfig(editorName));
+                    var editorConfig = this._getEditorConfig(editorName);
+                    editor = CKEDITOR.inline(node || this.layout_filetext, editorConfig);
                     this[(editorName || "filetextEditor")] = editor;
 
                     editor.on("instanceReady", function(e){
@@ -2817,6 +2841,7 @@ MWF.xApplication.process.Xform.Documenteditor = MWF.APPDocumenteditor =  new Cla
 
                     }.bind(this));
 
+                    const _self = this;
                     editor.on( 'paste', function( e ) {
                         var html = e.data.dataValue;
                         //if (this.json.fullWidth=="y") html = html.replace(/\x20/g, "　");
@@ -2857,14 +2882,20 @@ MWF.xApplication.process.Xform.Documenteditor = MWF.APPDocumenteditor =  new Cla
                         if (tableList && tableList.length){
                             var w = (node || this.layout_filetext).offsetWidth.toFloat()-2;
                             tableList.each(function(table){
-                                var twstyle = table.getStyle("width");
-                                var tws = (twstyle) ? (twstyle.toFloat() || 0) : 0;
-                                var twatt = table.get("width");
-                                var twa = (twatt) ? (twatt.toFloat() || 0) : 0;
-                                var tw = Math.max(tws, twa);
-                                if (tw===0 || tw>w){
-                                    table.setStyle("width", ""+w+"px");
-                                }
+
+                                const rTable = _self.cloneTable(table, editorConfig);
+                                rTable.inject(table, 'after');
+                                table.destroy();
+
+
+                                // var twstyle = table.getStyle("width");
+                                // var tws = (twstyle) ? (twstyle.toFloat() || 0) : 0;
+                                // var twatt = table.get("width");
+                                // var twa = (twatt) ? (twatt.toFloat() || 0) : 0;
+                                // var tw = Math.max(tws, twa);
+                                // if (tw===0 || tw>w){
+                                //     table.setStyle("width", ""+w+"px");
+                                // }
                             });
                             tableList.setStyles({
                                 "margin-left": "",
@@ -2872,20 +2903,20 @@ MWF.xApplication.process.Xform.Documenteditor = MWF.APPDocumenteditor =  new Cla
                                 "word-break": "break-all"
                             });
                         }
-                        var tdList = tmp.getElements("td");
-                        tdList.each(function(td){
-                            var tbw_top = td.getStyle("border-top-width").toFloat() || 0;
-                            var tbw_bottom = td.getStyle("border-bottom-width").toFloat() || 0;
-                            var tbw_left = td.getStyle("border-left-width").toFloat() || 0;
-                            var tbw_right = td.getStyle("border-right-width").toFloat() || 0;
-
-                            td.setStyles({
-                                "border-top-width": (tbw_top/2)+"px",
-                                "border-bottom-width": (tbw_bottom/2)+"px",
-                                "border-left-width": (tbw_left/2)+"px",
-                                "border-right-width": (tbw_right/2)+"px",
-                            });
-                        });
+                        // var tdList = tmp.getElements("td");
+                        // tdList.each(function(td){
+                        //     var tbw_top = td.getStyle("border-top-width").toFloat() || 0;
+                        //     var tbw_bottom = td.getStyle("border-bottom-width").toFloat() || 0;
+                        //     var tbw_left = td.getStyle("border-left-width").toFloat() || 0;
+                        //     var tbw_right = td.getStyle("border-right-width").toFloat() || 0;
+                        //
+                        //     td.setStyles({
+                        //         "border-top-width": (tbw_top/2)+"px",
+                        //         "border-bottom-width": (tbw_bottom/2)+"px",
+                        //         "border-left-width": (tbw_left/2)+"px",
+                        //         "border-right-width": (tbw_right/2)+"px",
+                        //     });
+                        // });
 
                         e.data.dataValue = tmp.get("html");
                         tmp.destroy();
@@ -2959,6 +2990,56 @@ MWF.xApplication.process.Xform.Documenteditor = MWF.APPDocumenteditor =  new Cla
                 }
             }.bind(this));
         }
+    },
+    getTableWidth(table) {
+        var twstyle = table.getStyle("width");
+        var tws = (twstyle) ? (parseFloat(twstyle) || 0) : 0;
+        var twatt = table.get("width");
+        var twa = (twatt) ? (parseFloat(twatt) || 0) : 0;
+        return Math.max(tws, twa);
+    },
+
+    cloneTable(table, editorConfig) {
+        const rows = table.rows;
+        const w = this.getTableWidth(table);
+
+        const rTable = new Element('table');
+        rTable.set({
+            "border": editorConfig.qtBorder,
+            "cellpadding": editorConfig.qtCellPadding || 0,
+            "cellspacing": editorConfig.qtCellSpacing || 0,
+            "class": editorConfig.qtClass
+        });
+        rTable.setStyles(editorConfig.qtStyle);
+        rTable.setStyles({
+            "width": editorConfig.qtWidth,
+            "word-break": "break-all"
+        });
+        rTable.dataset.tableType = 'o2';
+
+        for (let i = 0; i < rows.length; i++) {
+            const r = rows.item(i);
+            const cr = new Element(r.tagName);
+            cr.inject(rTable, 'bottom');
+            const cells = r.getElements('td,th');
+            cells.forEach((c) => {
+                const cc = new Element(c.tagName);
+                const rowspan = c.getAttribute('rowspan');
+                const colspan = c.getAttribute('colspan');
+                if (rowspan) cc.set('rowspan', rowspan);
+                if (colspan) cc.set('colspan', colspan);
+
+                const w = c.getStyle('width');
+                if (w) cc.setStyle('width', w);
+
+                const pw = c.get('width');
+                if (w) cc.set('width', pw);
+
+                cc.set('html', c.get('html'));
+                cc.inject(cr, 'bottom');
+            });
+        }
+        return rTable;
     },
     _loadEvents: function(editorConfig){
         Object.each(this.json.events, function(e, key){
@@ -3099,11 +3180,11 @@ MWF.xApplication.process.Xform.Documenteditor = MWF.APPDocumenteditor =  new Cla
                             this.data[name] = signers;
                             break;
                         case "mainSend":
-                            this.data[name] = strs.join("，") + "：";
+                            this.data[name] = strs.length ? strs.join("，") + "：" : "";
                             break;
                         case "copyto":
                         case "copyto2":
-                            this.data[name] = strs.join("，") + "。";
+                            this.data[name] = strs.length ? strs.join("，") + "。" : "";
                             break;
                         default:
                             this.data[name] = strs.join("，");
@@ -3270,12 +3351,11 @@ MWF.xApplication.process.Xform.Documenteditor = MWF.APPDocumenteditor =  new Cla
         this._computeData(false);
         this.pages = [];
         this.editMode = false;
-
         this._createPage(function(control){
             this._loadPageLayout(control);
             this.setData(this.data, diffFiletext);
             this._repage();
-            if (!this.editMode && this.allowEdit && !this.historyMode) {
+            if (!this.editMode && this.allowEdit && !this.historyMode && this.options.pageShow!=="double") {
                 this._editFiletext("inline");
                 this.editMode = true;
             }
@@ -3490,22 +3570,26 @@ MWF.xApplication.process.Xform.Documenteditor = MWF.APPDocumenteditor =  new Cla
             if (this.layout_signer) this.layout_signer.set("html", data.signer || " ");
             if (this.layout_subject) this.layout_subject.set("html", data.subject || " ");
             if (this.layout_mainSend) this.layout_mainSend.set("text", data.mainSend || " ");
+
             if (diffFiletext) {
                 this.layout_filetext.set("html", diffFiletext);
             }else if (this.layout_filetext){
                 //this.layout_filetext.set("placeholder", this.json.defaultValue.filetext);
-                this.layout_filetext.set("html", data.filetext || "　　");
 
-                var tableList = this.layout_filetext.getElements("table");
-                if (tableList && tableList.length){
-                    // var w = this.layout_filetext.offsetWidth;
-                    // tableList.setStyle("width", ""+w+"px");
-                    tableList.setStyles({
-                        "margin-left": "",
-                        "margin-right": "",
-                        "word-break": "break-all"
-                    });
-                }
+                var html = data.filetext.replace(/(?:<script(?:\s+[\w-]+(?:=(?:"[^"]*"|'[^']*'))?)*\s*>([\s\S]*?)<\/script\s*>)|(?:on\w+\s*=\s*(?:"[^"]*"|'[^']*'))|(?:javascript:.*)/g, '');
+                this.layout_filetext.set("html", html);
+                // this.layout_filetext.set("html", data.filetext || "　　");
+
+                // var tableList = this.layout_filetext.getElements("table");
+                // if (tableList && tableList.length){
+                //     // var w = this.layout_filetext.offsetWidth;
+                //     // tableList.setStyle("width", ""+w+"px");
+                //     tableList.setStyles({
+                //         "margin-left": "",
+                //         "margin-right": "",
+                //         "word-break": "break-all"
+                //     });
+                // }
             }
             if (this.layout_signer) this.layout_signer.set("html", data.signer || "");
             if (this.layout_attachmentTitle) this.layout_attachmentTitle.set("text", data.attachmentTitle || " ");
@@ -3902,49 +3986,56 @@ MWF.xApplication.process.Xform.Documenteditor = MWF.APPDocumenteditor =  new Cla
     toWord: function(callback, name, cb, notSave){
         var docNmae = name || this.json.toWordFilename || this.form.businessData.data.subject || this.form.businessData.data["$work"].title;
         this.getData();
+        this.reload(function(){
+            if (!this.data.attachmentText && this.layout_attachmentText){
+                this.layout_attachmentText.set("text", "");
+            }
 
-        if (!this.data.attachmentText && this.layout_attachmentText){
-            this.layout_attachmentText.set("text", "");
-        }
+            var fileName = docNmae || this.json.toWordFilename || "$doc";
+            var n = fileName.lastIndexOf(".");
 
-        var fileName = docNmae || this.json.toWordFilename || "$doc";
-        var n = fileName.lastIndexOf(".");
+            if (this.json.wordConversionType==="service"){
+                if (n==-1) fileName = fileName+".doc";
+                var content = encodeURIComponent(this.getDocumentHtml());
 
-        if (this.json.wordConversionType==="service"){
-            if (n==-1) fileName = fileName+".doc";
-            var content = encodeURIComponent(this.getDocumentHtml());
+                var body = {
+                    "fileName": fileName,
+                    "site": this.json.toWordSite || "$doc",
+                    "content": content
+                };
+                this.toWordServiceService(body, callback, cb);
+            }else{
+                if (n==-1) fileName = fileName+".docx";
+                var extName = fileName.split('.').pop();
+                if (extName.toLowerCase()!=='docx') fileName = fileName+".docx";
 
-            var body = {
-                "fileName": fileName,
-                "site": this.json.toWordSite || "$doc",
-                "content": content
-            };
-            this.toWordServiceService(body, callback, cb);
-        }else{
-            if (n==-1) fileName = fileName+".docx";
-            var content = this.getDocumentHtml();
-            o2.xDesktop.requireApp("process.Xform", "widget.OOXML", function(){
-                (new o2.OOXML.WML({
-                    "protection": (this.json.wordConversionEncryption===true),
-                    "firstPageNumber": (this.json.firstPageNumber!==false)
-                })).load(content).then(function(oo_content){
+                var content = this.getDocumentHtml();
+                o2.xDesktop.requireApp("process.Xform", "widget.OOXML", function(){
+                    (new o2.OOXML.WML({
+                        "protection": (this.json.wordConversionEncryption===true),
+                        "firstPageNumber": (this.json.firstPageNumber!==false)
+                    })).load(content).then(function(oo_content){
 
-                    if (!notSave) {
-                        oo_content.name = fileName
-                        var formData = new FormData();
-                        formData.append("site", this.json.toWordSite || "$doc");
-                        formData.append("fileName", fileName);
-                        formData.append('file', oo_content);
+                        if (!notSave) {
+                            oo_content.name = fileName
+                            var formData = new FormData();
+                            formData.append("site", this.json.toWordSite || "$doc");
+                            formData.append("fileName", fileName);
+                            formData.append('file', oo_content);
 
-                        this.toWordOOXMLService(formData, oo_content, callback, cb);
-                    }else{
-                        if (callback) callback(oo_content, fileName);
-                        if (cb) cb();
-                    }
+                            this.toWordOOXMLService(formData, oo_content, callback, cb);
+                        }else{
+                            if (callback) callback(oo_content, fileName);
+                            if (cb) cb();
+                        }
 
+                    }.bind(this));
                 }.bind(this));
-            }.bind(this));
-        }
+            }
+
+        }.bind(this));
+
+
     },
     toWordServiceService: function(body, callback, cb){
         if (this.toWordServiceServiceProcessing){

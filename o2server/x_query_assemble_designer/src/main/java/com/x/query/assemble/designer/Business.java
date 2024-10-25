@@ -65,7 +65,7 @@ public class Business {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(Business.class);
 
-	private static ClassLoader dynamicEntityClassLoader = null;
+	private static URLClassLoader dynamicEntityClassLoader = null;
 
 	public static ClassLoader getDynamicEntityClassLoader() throws IOException, URISyntaxException {
 		if (null == dynamicEntityClassLoader) {
@@ -81,6 +81,9 @@ public class Business {
 			urlList.add(o.toURI().toURL());
 		}
 		URL[] urls = new URL[urlList.size()];
+		if (null != dynamicEntityClassLoader) {
+			dynamicEntityClassLoader.close();
+		}
 		dynamicEntityClassLoader = URLClassLoader.newInstance(urlList.toArray(urls),
 				null != ThisApplication.context() ? ThisApplication.context().servletContext().getClassLoader()
 						: Thread.currentThread().getContextClassLoader());
@@ -281,7 +284,7 @@ public class Business {
 			PersistenceXmlHelper.directWriteDynamicEnhance(
 					new File(resources, "META-INF/persistence.xml").getAbsolutePath(), classNames);
 			List<File> classPath = new ArrayList<>();
-			classPath.addAll(FileUtils.listFiles(Config.dir_commons_ext().toFile(),
+			classPath.addAll(FileUtils.listFiles(Config.pathCommonsExt(true).toFile(),
 					FileFilterUtils.suffixFileFilter(DOT_JAR), DirectoryFileFilter.INSTANCE));
 			classPath.addAll(FileUtils.listFiles(Config.dir_store_jars(), FileFilterUtils.suffixFileFilter(DOT_JAR),
 					DirectoryFileFilter.INSTANCE));
@@ -324,7 +327,7 @@ public class Business {
 		List<String> paths = new ArrayList<>();
 
 		paths.add(Config.dir_store_jars().getAbsolutePath() + File.separator + "*");
-		paths.add(Config.dir_commons_ext().toString() + File.separator + "*");
+		paths.add(Config.pathCommonsExt(true).toString() + File.separator + "*");
 		paths.add(target.getAbsolutePath());
 		paths.add(resources.getAbsolutePath());
 

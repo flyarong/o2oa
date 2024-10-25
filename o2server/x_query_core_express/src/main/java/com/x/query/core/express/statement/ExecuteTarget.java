@@ -5,6 +5,10 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import net.sf.jsqlparser.statement.delete.Delete;
+import net.sf.jsqlparser.statement.insert.Insert;
+import net.sf.jsqlparser.statement.select.Select;
+import net.sf.jsqlparser.statement.update.Update;
 import org.apache.commons.lang3.StringUtils;
 
 import com.x.base.core.project.http.EffectivePerson;
@@ -51,7 +55,19 @@ public class ExecuteTarget {
         questionMarkParameter(effectivePerson, organization, runtime, sql);
         this.sql = namedParameterChangeToQuestionMark(effectivePerson, organization, runtime, sql, prevNamedParam);
         LOGGER.debug("sql after namedParameterChangeToQuestionMark:{}.", sql);
-        this.parsedStatement = CCJSqlParserUtil.parse(this.sql);
+        try {
+            this.parsedStatement = CCJSqlParserUtil.parse(this.sql);
+        } catch (JSQLParserException e) {
+            if(sql.toLowerCase().indexOf(Select.class.getSimpleName().toLowerCase()) > -1) {
+                this.parsedStatement = new Select();
+            }else if(sql.toLowerCase().indexOf(Update.class.getSimpleName().toLowerCase()) > -1) {
+                this.parsedStatement = new Update();
+            }else if(sql.toLowerCase().indexOf(Delete.class.getSimpleName().toLowerCase()) > -1) {
+                this.parsedStatement = new Delete();
+            }else if(sql.toLowerCase().indexOf(Insert.class.getSimpleName().toLowerCase()) > -1) {
+                this.parsedStatement = new Insert();
+            }
+        }
     }
 
     // 拼装通过runtime传递的附加选择条件

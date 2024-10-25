@@ -1,16 +1,18 @@
 package com.x.processplatform.assemble.surface;
 
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ForkJoinPool;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.commons.lang3.BooleanUtils;
+
+import com.x.base.core.project.ApplicationForkJoinWorkerThreadFactory;
 import com.x.base.core.project.Context;
 import com.x.base.core.project.cache.CacheManager;
+import com.x.base.core.project.config.Config;
 import com.x.base.core.project.message.MessageConnector;
 import com.x.processplatform.assemble.surface.schedule.CleanKeyLock;
+import com.x.processplatform.assemble.surface.schedule.Expire;
+import com.x.processplatform.assemble.surface.schedule.PassExpired;
+import com.x.processplatform.assemble.surface.schedule.TouchDetained;
 
 public class ThisApplication {
 
@@ -20,18 +22,11 @@ public class ThisApplication {
 
 	protected static Context context;
 
-	private static ExecutorService threadPool;
+	private static final ForkJoinPool FORKJOINPOOL = new ForkJoinPool(Runtime.getRuntime().availableProcessors(),
+			new ApplicationForkJoinWorkerThreadFactory(ThisApplication.class.getPackage()), null, false);
 
-	public static ExecutorService threadPool() {
-		return threadPool;
-	}
-
-	private static void initThreadPool() {
-		int maximumPoolSize = Runtime.getRuntime().availableProcessors() + 1;
-		ThreadFactory threadFactory = new ThreadFactoryBuilder()
-				.setNameFormat(ThisApplication.class.getPackageName() + "-threadpool-%d").build();
-		threadPool = new ThreadPoolExecutor(0, maximumPoolSize, 120, TimeUnit.SECONDS, new ArrayBlockingQueue<>(1000),
-				threadFactory);
+	public static ForkJoinPool forkJoinPool() {
+		return FORKJOINPOOL;
 	}
 
 	public static Context context() {
@@ -42,7 +37,15 @@ public class ThisApplication {
 		try {
 			CacheManager.init(context.clazz().getSimpleName());
 			context.schedule(CleanKeyLock.class, "2 0/2 * * * ?");
-			initThreadPool();
+			if (BooleanUtils.isTrue(Config.processPlatform().getTouchDetained().getEnable())) {
+				context.schedule(TouchDetained.class, Config.processPlatform().getTouchDetained().getCron());
+			}
+			if (BooleanUtils.isTrue(Config.processPlatform().getExpire().getEnable())) {
+				context.schedule(Expire.class, Config.processPlatform().getExpire().getCron());
+			}
+			if (BooleanUtils.isTrue(Config.processPlatform().getPassExpired().getEnable())) {
+				context.schedule(PassExpired.class, Config.processPlatform().getPassExpired().getCron());
+			}
 			MessageConnector.start(context());
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -51,6 +54,7 @@ public class ThisApplication {
 
 	public static void destroy() {
 		try {
+			FORKJOINPOOL.shutdown();
 			CacheManager.shutdown();
 			MessageConnector.stop();
 		} catch (Exception e) {

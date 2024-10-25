@@ -32,6 +32,8 @@ MWF.xApplication.cms.Index.Newer = new Class({
 
         "searchEnable": true,
 
+        "zIndex": "",
+
         //autoSave : "",
         //saveOnClose : "",
 
@@ -109,6 +111,9 @@ MWF.xApplication.cms.Index.Newer = new Class({
             }
             if (typeOf(options.latest) !== "boolean" && typeOf(this.columnData.config.latest) === "boolean") {
                 this.options.latest = this.columnData.config.latest;
+            }
+            if (typeOf(options.saveOnClose) !== "boolean" && typeOf(this.columnData.config.saveDraftOnClose) === "boolean") {
+                this.options.saveOnClose = this.columnData.config.saveDraftOnClose;
             }
         }
     },
@@ -194,6 +199,10 @@ MWF.xApplication.cms.Index.Newer = new Class({
         }
     },
     _createTableContent: function () {
+        if( this.options.zIndex ){
+            this.formMaskNode.setStyle('z-index', this.options.zIndex);
+            this.formAreaNode.setStyle('z-index', this.options.zIndex);
+        }
 
         var categoryName = this.categoryData ? ( this.categoryData.name || this.categoryData.categoryName ) : this.lp.selectCategory;
         var html = "";
@@ -342,7 +351,9 @@ MWF.xApplication.cms.Index.Newer = new Class({
             this.documentAction.listDraftNext("(0)", 1, fielter, function (j) {
 
                 if (j.data && j.data.length > 0 && this.options.latest) {
-                    this._openDocument(j.data[0].id);
+                    //this._openDocument(j.data[0].id);
+                    var handle = this._openDocument( j.data[0].id );
+                    this.fireEvent("started", [j.data[0].id, j.data[0], handle]);
                     this.close();
                 } else {
                     if (this.columnData.appIcon) {
@@ -554,7 +565,6 @@ MWF.xApplication.cms.Index.Newer = new Class({
                     this.fireEvent( "postPublish", args );
                 }.bind(this),
                 "onAfterPublish" : function ( args ) {
-                    debugger;
                     if(_self.view && _self.view.reload )_self.view.reload();
                     _self.fireEvent( "afterPublish", args );
                 }

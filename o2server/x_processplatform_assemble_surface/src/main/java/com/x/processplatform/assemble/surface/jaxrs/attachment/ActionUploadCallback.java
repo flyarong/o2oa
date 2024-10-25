@@ -8,14 +8,16 @@ import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import com.x.base.core.container.EntityManagerContainer;
 import com.x.base.core.container.factory.EntityManagerContainerFactory;
 import com.x.base.core.entity.annotation.CheckPersistType;
+import com.x.base.core.project.config.Config;
 import com.x.base.core.project.config.StorageMapping;
 import com.x.base.core.project.http.ActionResult;
 import com.x.base.core.project.http.EffectivePerson;
 import com.x.base.core.project.jaxrs.WoCallback;
 import com.x.base.core.project.jaxrs.WoId;
 import com.x.processplatform.assemble.surface.Business;
+import com.x.processplatform.assemble.surface.Control;
 import com.x.processplatform.assemble.surface.ThisApplication;
-import com.x.processplatform.assemble.surface.WorkControl;
+import com.x.processplatform.assemble.surface.WorkControlBuilder;
 import com.x.processplatform.core.entity.content.Attachment;
 import com.x.processplatform.core.entity.content.Work;
 
@@ -33,7 +35,7 @@ class ActionUploadCallback extends BaseAction {
 				throw new ExceptionWorkNotExistCallback(callback, workId);
 			}
 			/** 统计待办数量判断用户是否可以上传附件 */
-			WoControl control = business.getControl(effectivePerson, work, WoControl.class);
+			Control control = new WorkControlBuilder(effectivePerson, business, work).enableAllowProcessing().build();
 			if (BooleanUtils.isNotTrue(control.getAllowProcessing())) {
 				throw new ExceptionWorkAccessDeniedCallback(callback, effectivePerson.getDistinguishedName(),
 						work.getTitle(), work.getId());
@@ -51,7 +53,7 @@ class ActionUploadCallback extends BaseAction {
 
 			StorageMapping mapping = ThisApplication.context().storageMappings().random(Attachment.class);
 			Attachment attachment = this.concreteAttachment(work, effectivePerson, site);
-			attachment.saveContent(mapping, bytes, fileName);
+			attachment.saveContent(mapping, bytes, fileName, Config.general().getStorageEncrypt());
 			attachment.setType((new Tika()).detect(bytes, fileName));
 			// emc.beginTransaction(Work.class);
 			emc.beginTransaction(Attachment.class);
@@ -91,8 +93,9 @@ class ActionUploadCallback extends BaseAction {
 	}
 
 	public static class WoObject extends WoId {
+
+		private static final long serialVersionUID = -6126855595194424970L;
+
 	}
 
-	public static class WoControl extends WorkControl {
-	}
 }

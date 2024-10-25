@@ -1,12 +1,56 @@
 MWF.xApplication.query = MWF.xApplication.query || {};
 MWF.xApplication.query.Query = MWF.xApplication.query.Query || {};
 MWF.xDesktop.requireApp("query.Query", "Viewer", null, false);
-
-MWF.xApplication.query.Query.Statement = MWF.QStatement = new Class({
+/** @classdesc Statement 数据中心的查询视图。本章节的脚本上下文请看<b>{@link module:queryStatement|queryStatement}。</b>
+ * @class
+ * @o2cn 查询视图
+ * @extends MWF.xApplication.query.Query.Viewer
+ * @o2category QueryStatement
+ * @o2range {QueryStatement}
+ * @hideconstructor
+ * @example
+ * //在查询视图的事件中获取该类
+ * var view = this.target;
+ * @example
+ * //在查询视图的条目中，操作条组件中，分页事件中获取该类
+ * var view = this.target.view;
+ * @example
+ * //调用api进行提示
+ * this.queryStatement.notice("this is my information", "info");
+ * */
+MWF.xApplication.query.Query.Statement = MWF.QStatement = new Class(
+    /** @lends MWF.xApplication.query.Query.Statement# */
+    {
     Extends: MWF.QViewer,
     options: {
         "lazy": false,
-        "moduleEvents": ["queryLoad", "postLoad", "postLoadPageData", "postLoadPage", "selectRow", "unselectRow",
+        /**
+         * @ignore
+         * @event MWF.xApplication.query.Query.Statement#queryLoadCategoryRow
+         */
+        /**
+         * @ignore
+         * @event MWF.xApplication.query.Query.Statement#postLoadCategoryRow
+         */
+        /**
+         * 导出查询Excel的事件，这个时候导出数据已经准备好，this.target可获得查询视图对象。this.event如下：
+         * <pre><code class='language-js'>{
+         *       data : data, //对象数组，导出的数据，第一个数组为标题。修改后导出的excel内容也会修改。
+         *       colWidthArray : colWidthArr, //数组，每列的宽度
+         *       title : excelName //字符串，导出的文件名
+         * }</code></pre>
+         * @event MWF.xApplication.query.Query.Statement#export
+         */
+        /**
+         * 导出查询Excel，产生每行后执行的事件，this.target可获得查询视图对象，可以通过this.event获取下列内容
+         * <pre><code class='language-js'>{
+         *       data : data, //对象，当前行导出的数据。修改后导出的excel内容也会修改。
+         *       index : 1, //数字，导出的行号，从1开始
+         *       source : source //对象，从后台获取的源数据
+         * }</code></pre>
+         * @event MWF.xApplication.query.Query.Statement#exportRow
+         */
+        "moduleEvents": ["queryLoad", "postLoad", "beforeLoadPageData", "postLoadPageData", "postLoadPage", "selectRow", "unselectRow",
             "queryLoadItemRow", "postLoadItemRow", "queryLoadCategoryRow", "postLoadCategoryRow", "export", "exportRow"]
     },
     initialize: function (container, json, options, app, parentMacro) {
@@ -91,6 +135,9 @@ MWF.xApplication.query.Query.Statement = MWF.QStatement = new Class({
                 };
             } else {
                 json = this.viewJson.pagingList[0];
+                // var jsonStr = JSON.stringify(json);
+                // jsonStr = o2.bindJson(jsonStr, {"lp": MWF.xApplication.query.Query.LP.form});
+                // json = JSON.parse(jsonStr);
             }
             this.paging = new MWF.xApplication.query.Query.Statement.Paging(this.viewPageAreaNode, json, this, {});
             this.paging.load();
@@ -309,9 +356,6 @@ MWF.xApplication.query.Query.Statement = MWF.QStatement = new Class({
     },
     loadCurrentPageData: function (callback, async, type) {
         //是否需要在翻页的时候清空之前的items ?
-
-        debugger;
-
         if (this.pageloading) return;
         this.pageloading = true;
 
@@ -339,6 +383,7 @@ MWF.xApplication.query.Query.Statement = MWF.QStatement = new Class({
         this.contentAreaNode.scrollTo(0, 0);
 
         //this.createLoadding();
+        this.fireEvent("beforeLoadPageData", [d])
 
         this.loadViewRes = o2.Actions.load("x_query_assemble_surface").StatementAction.executeV2(
             this.options.statementId || this.options.statementName || this.options.statementAlias ||
@@ -382,7 +427,6 @@ MWF.xApplication.query.Query.Statement = MWF.QStatement = new Class({
         this.getViewRes = o2.Actions.load("x_query_assemble_surface").StatementAction.get(
             this.json.statementId || this.json.statementName || this.json.statementAlias,
             function (json) {
-                debugger;
                 var viewData = JSON.decode(json.data.view);
                 if (!this.json.pageSize) this.json.pageSize = viewData.pageSize || "20";
                 this.viewJson = viewData.data;
@@ -408,6 +452,7 @@ MWF.xApplication.query.Query.Statement = MWF.QStatement = new Class({
 
         if (this.gridJson.length) {
             // if( !this.options.paging ){
+            this.totalMap = {};
             this.gridJson.each(function (line, i) {
                 this.items.push(new MWF.xApplication.query.Query.Statement.Item(this, line, null, i, null, this.options.lazy));
             }.bind(this));
@@ -424,6 +469,7 @@ MWF.xApplication.query.Query.Statement = MWF.QStatement = new Class({
             var from = Math.min(this.pageNumber * this.options.perPageCount, this.gridJson.length);
             var to = Math.min((this.pageNumber + 1) * this.options.perPageCount + 1, this.gridJson.length);
             this.isItemsLoading = true;
+            this.totalMap = {};
             for (var i = from; i < to; i++) {
                 this.items.push(new MWF.xApplication.query.Query.Statement.Item(this, this.gridJson[i], null, i, null, this.options.lazy));
             }
@@ -597,10 +643,75 @@ MWF.xApplication.query.Query.Statement = MWF.QStatement = new Class({
         }
     },
     //搜索相关结束
+
+    /**
+     * @method MWF.xApplication.query.Query.Statement#getParentEnvironment
+     * @summary 如果当前视图是嵌入在表单或者页面中，使用该方法获取表单或页面的上下文。
+     * @see {@link module:queryStatement.getParentEnvironment|详情查看 this.queryStatement.getParentEnvironment}
+     * @return {Object}
+     * @example
+     *  this.target.getParentEnvironment();
+     */
+
+    /**
+     * @method MWF.xApplication.query.Query.Statement#getPageData
+     * @summary 获取当前页的数据。
+     * @see {@link module:queryStatement.getPageData|详情查看 this.queryStatement.getPageData}
+     * @return {Object}
+     * @example
+     *  this.target.getPageData();
+     */
+
+    /**
+     * @method MWF.xApplication.query.Query.Statement#toPage
+     * @summary 跳转到指定的页面。
+     * @see {@link module:queryStatement.toPage|详情查看 this.queryStatement.toPage}
+     * @param {Number} pageNumber 需要跳转的页码
+     * @param {Function} callback 跳转的页面数据加载完成以后的回调方法。
+     * @example
+     *  //　跳转到第2页并且获取该页的数据。
+     *  this.target.toPage( 2, function(){
+     *      var data = this.target.getPageData();
+     *  }.bind(this) )
+     */
+
+    /**
+     * @method MWF.xApplication.query.Query.Statement#getSelectedData
+     * @summary获取选中的条目的数据。
+     * @see {@link module:queryStatement.getSelectedData|详情查看 this.queryStatement.getSelectedData}
+     * @static
+     * @return {Object[]} 选中的条目的数据。
+     * @o2syntax
+     * var data = this.target.getSelectedData();
+     */
+
+    /**
+     * @method MWF.xApplication.query.Query.Statement#switchView
+     * @ignore
+     */
+
+    /**
+     * @method MWF.xApplication.query.Query.Statement#getViewInfor
+     * @ignore
+     */
+
+    /**
+     * @summary 获取视查询图的配置信息。
+     * @see {@link module:queryStatement.getStatementInfor|详情查看 this.queryStatement.getStatementInfor}
+     * @return {Object}
+     * @example
+     *  this.target.getStatementInfor();
+     */
     getStatementInfor: function () {
-        debugger;
         return this.statementJson;
     },
+    /**
+     * @summary 获取视图当前页的基本信息。
+     * @see {@link module:queryStatement.getPageInfor|详情查看 this.queryStatement.getPageInfor}
+     * @return {Object}
+     * @example
+     *  this.target.getPageInfor();
+     */
     getPageInfor: function () {
         return {
             pages: this.pages,
@@ -608,9 +719,23 @@ MWF.xApplication.query.Query.Statement = MWF.QStatement = new Class({
             currentPageNumber: this.currentPage
         };
     },
+
+    /**
+     * @summary 把当前视图切换成另外一个视图。
+     * @see {@link module:queryStatement.switchStatement|详情查看 this.queryStatement.switchStatement}
+     * @param {Object} json 需要跳转的参数配置
+     */
     switchStatement: function (json) {
         this.switchView(json);
     },
+
+    /**
+     * @summary 设置查询视图的过滤条件，该方法不能修改视图中默认的过滤条件（在开发视图的时候添加的过滤条件），而是在这上面新增。
+     * @see {@link module:queryStatement.setStatementFilter|详情查看 this.queryStatement.setStatementFilter}
+     * @param {(ViewFilter[]|ViewFilter|Null)} [filter] 过滤条件
+     * @param {StatementParameter} [parameter] 过滤条件。
+     * @param {Function} callback 过滤完成并重新加载数据后的回调方法。
+     */
     setFilter: function (filter, parameter, callback) {
         if (this.lookuping || this.pageloading) return;
         if (!filter) filter = [];
@@ -634,7 +759,10 @@ MWF.xApplication.query.Query.Statement = MWF.QStatement = new Class({
 
         var lp = this.lp.viewExport;
         var node = this.exportExcelDlgNode = new Element("div");
-        var html = "<div style=\"line-height: 30px; height: 30px; color: #333333; overflow: hidden;margin-top:20px;\">" + lp.exportRange + "：" +
+        var html = "<div style=\"line-height: 30px; height: 30px; color: #333333; overflow: hidden;margin-top:20px;\">" + lp.fileName + "：" +
+            "   <input class='filename' value='' style='margin-left: 14px;width: 350px;'><span>"+
+            "</div>";
+        html += "<div style=\"line-height: 30px; height: 30px; color: #333333; overflow: hidden;margin-top:20px;\">" + lp.exportRange + "：" +
             "   <input class='start' value='" + ( this.exportExcelStart || 1) +  "'><span>"+ lp.to +"</span>" +
             "   <input class='end' value='"+ ( this.exportExcelEnd || total ) +"' ><span>"+lp.item+"</span>" +
             "</div>";
@@ -668,6 +796,7 @@ MWF.xApplication.query.Query.Statement = MWF.QStatement = new Class({
                     "action": function (d, e) {
                         var start = node.getElement(".start").get("value");
                         var end = node.getElement(".end").get("value");
+                        var filename = node.getElement(".filename").get("value");
                         if( !start || !end ){
                             MWF.xDesktop.notice("error", {"x": "left", "y": "top"}, lp.inputIntegerNotice, node, {"x": 0, "y": 85});
                             return false;
@@ -681,7 +810,7 @@ MWF.xApplication.query.Query.Statement = MWF.QStatement = new Class({
                         debugger;
                         this.exportExcelStart = start;
                         this.exportExcelEnd = end;
-                        this._exportView(start, end);
+                        this._exportView(start, end, filename);
                         dlg.close();
                     }.bind(this)
                 },
@@ -769,8 +898,8 @@ MWF.xApplication.query.Query.Statement = MWF.QStatement = new Class({
     //
     //         }.bind(this));
     // },
-    _exportView: function(start, end){
-        var excelName = this.statementJson.name;
+    _exportView: function(start, end, filename){
+        var excelName = filename || this.statementJson.name;
 
         var p = this.currentPage;
         var d = {
@@ -786,42 +915,101 @@ MWF.xApplication.query.Query.Statement = MWF.QStatement = new Class({
         var colWidthArr = [];
         var dateIndexArray = [];
         var numberIndexArray = [];
+        var totalArray = [];
         var idx = 0;
+
+        if (this.viewJson.isSequence === "yes") {
+            titleArray.push( this.lp.sequence );
+            colWidthArr.push(100);
+            totalArray.push('');
+            idx = idx + 1;
+        }
+
         Object.each(this.entries, function (c, k) {
             if (this.hideColumns.indexOf(k) === -1 && c.exportEnable !== false) {
                 titleArray.push(c.displayName);
                 colWidthArr.push(c.exportWidth || 200);
                 if( c.isTime )dateIndexArray.push(idx);
                 if( c.isNumber )numberIndexArray.push(idx);
+                totalArray.push( ['number', 'count'].contains(c.total) ? new Decimal(0) : '' );
                 idx++;
             }
         }.bind(this));
         exportArray.push(titleArray);
 
         this.loadExportData(start, end, d, function (dataList) {
-            var index = 0;
+            var rowIndex = 0;
             dataList.each(function (data, j) {
                 data.each(function (d, i) {
-                    index = index + 1;
+                    rowIndex = rowIndex + 1;
+
+                    var columnIndex = 0;
+
                     var dataArray = [];
+                    if (this.viewJson.isSequence === "yes") {
+                        dataArray.push( rowIndex );
+                        columnIndex++;
+                    }
                     Object.each(this.entries, function (c, k) {
                         if (this.hideColumns.indexOf(k) === -1 && c.exportEnable !== false) {
                             var text = this.getExportText(c, k, d);
-                            // if( c.isNumber && typeOf(text) === "string" && (parseFloat(text).toString() !== "NaN") ){
-                            //     text = parseFloat(text);
-                            // }
+
                             dataArray.push( text );
+
+                            switch (c.total){
+                                case 'number':
+                                    if( parseFloat(text).toString() !== "NaN" ) { //可以转成数字
+                                        totalArray[columnIndex] = totalArray[columnIndex].plus(text.toString());
+                                    }
+                                    break;
+                                case 'count':
+                                    totalArray[columnIndex] = totalArray[columnIndex].plus(1);
+                                    break;
+                            }
+
+                            columnIndex++;
                         }
                     }.bind(this));
                     //exportRow事件
-                    var argu = {"index":index, "source": d, "data":dataArray};
+                    var argu = {"index":rowIndex, "source": d, "data":dataArray};
                     this.fireEvent("exportRow", [argu]);
                     exportArray.push( argu.data || dataArray );
                 }.bind(this));
             }.bind(this));
 
+            var hasTotal = false;
+            totalArray = totalArray.map(function (d){
+                if( d ){
+                    hasTotal = true;
+                    return d.toString();
+                }else{
+                    return '';
+                }
+            });
+
+            if( hasTotal ){
+                totalArray[0] = this.lp.total + " " + totalArray[0];
+                exportArray.push( totalArray );
+            }
+
+            var headTextScript = this.viewJson.exportHeadText;
+            var headText = headTextScript ? this.Macro.exec(headTextScript, this) : '';
+
+            var headStyleScript = this.viewJson.exportHeadStyle;
+            var headStyle = headStyleScript ? this.Macro.exec(headStyleScript, this) : null;
+
+            var titleStyleScript = this.viewJson.exportColumnTitleStyle;
+            var titleStyle = titleStyleScript ? this.Macro.exec(titleStyleScript, this) : null;
+
+            var contentStyleScript = this.viewJson.exportColumnContentStyle;
+            var contentStyle = contentStyleScript ? this.Macro.exec(contentStyleScript, this) : null;
+
             //export事件
             var arg = {
+                headText: headText,
+                headStyle: headStyle,
+                titleStyle: titleStyle,
+                contentStyle: contentStyle,
                 data : exportArray,
                 colWidthArray : colWidthArr,
                 title : excelName
@@ -833,7 +1021,15 @@ MWF.xApplication.query.Query.Statement = MWF.QStatement = new Class({
                 this.loadingAreaNode = null;
             }
 
-            new MWF.xApplication.query.Query.Statement.ExcelUtils().exportToExcel(
+            var options = {};
+            if( arg.headText )options.headText = arg.headText;
+            if( arg.headStyle )options.headStyle = arg.headStyle;
+            if( arg.titleStyle )options.columnTitleStyle = arg.titleStyle;
+            if( arg.contentStyle )options.columnContentStyle = arg.contentStyle;
+
+            new MWF.xApplication.query.Query.Statement.ExcelUtils(
+                options
+            ).exportToExcel(
                 arg.data || exportArray,
                 arg.title || excelName,
                 arg.colWidthArray || colWidthArr,
@@ -847,15 +1043,6 @@ MWF.xApplication.query.Query.Statement = MWF.QStatement = new Class({
         start = start - 1;
         var differ = end - start;
         var count;
-        // if( differ < 10 ){
-        //    count = 10;
-        // }else if( differ < 100 ){
-        //     count = 100;
-        // }else if( differ < 1000 ){
-        //     count = 1000;
-        // }else{
-        //     count = 10000; bai boi bai boy buy boy
-        // }
         if( differ < 10000 ){
             count = differ;
         }else{
@@ -916,7 +1103,6 @@ MWF.xApplication.query.Query.Statement = MWF.QStatement = new Class({
     getExportText: function (c, k, data) {
         var path = c.path, code = c.code, obj = data;
         if (!path) {
-            return ""
         } else if (path === "$all") {
         } else {
             obj = this.getDataByPath(obj, path);
@@ -930,6 +1116,8 @@ MWF.xApplication.query.Query.Statement = MWF.QStatement = new Class({
                 "json": c
             });
         }catch (e) {}
+
+        if( !obj )return "";
 
         var toName = function (value) {
             if (typeOf(value) === "array") {
@@ -960,7 +1148,20 @@ MWF.xApplication.query.Query.Statement = MWF.QStatement = new Class({
     }
 });
 
-MWF.xApplication.query.Query.Statement.Item = new Class({
+/** @classdesc StatementItem 数据中心的查询视图的条目。本章节的脚本上下文请看<b>{@link module:queryStatement|queryStatement}。</b>
+ * @class
+ * @extends MWF.xApplication.query.Query.Viewer.Item
+ * @o2cn 查询视图的条目（行）
+ * @o2category QueryStatement
+ * @o2range {QueryStatement}
+ * @hideconstructor
+ * @example
+ * //在查询视图中获取行
+ * var item = this.target.items[0];
+ */
+MWF.xApplication.query.Query.Statement.Item = new Class(
+    /** @lends MWF.xApplication.query.Query.Statement.Item# */
+    {
     Extends: MWF.xApplication.query.Query.Viewer.Item,
     initialize: function (view, data, prev, i, category, lazy) {
         this.view = view;
@@ -968,11 +1169,16 @@ MWF.xApplication.query.Query.Statement.Item = new Class({
         this.dataString = JSON.stringify(data);
         this.css = this.view.css;
         this.isSelected = false;
+
+        /**
+         * @ignore
+         */
         this.category = category;
         this.prev = prev;
         this.idx = i;
         this.clazzType = "item";
         this.lazy = lazy;
+        this.odd = this.view.items.length % 2 === 1;
         this.load();
     },
     _load: function () {
@@ -982,6 +1188,9 @@ MWF.xApplication.query.Query.Statement.Item = new Class({
 
         var viewStyles = this.view.viewJson.viewStyles;
         var viewContentTdNode = (viewStyles && viewStyles["contentTd"]) ? viewStyles["contentTd"] : this.css.viewContentTdNode;
+        if( this.odd ){
+            viewContentTdNode = ( viewStyles && viewStyles["zebraContentTd"] && Object.keys(viewStyles["zebraContentTd"].length > 0)) ? viewStyles["zebraContentTd"] : viewContentTdNode;
+        }
 
         if(!this.node)this.loadNode();
 
@@ -1021,6 +1230,7 @@ MWF.xApplication.query.Query.Statement.Item = new Class({
                 "width": "30px",
                 "text-align": "center"
             });
+            if (this.view.json.itemStyles) this.sequenceTd.setStyles(this.view.json.itemStyles);
             this.sequenceTd.set("text", sequence);
         }
 
@@ -1032,13 +1242,28 @@ MWF.xApplication.query.Query.Statement.Item = new Class({
                 var cell = this.getText(c, k, td); //this.data[k];
                 if (cell === undefined || cell === null) cell = "";
 
-                // if (k!== this.view.viewJson.group.column){
                 var v = cell;
                 if (c.isHtml) {
                     td.set("html", v);
                 } else {
                     td.set("text", v);
                 }
+
+                // if (k!== this.view.viewJson.group.column){
+                var total;
+                switch (c.total){
+                    case 'number':
+                        if( parseFloat(v).toString() !== "NaN" ){ //可以转成数字
+                            total = this.view.totalMap[ c.column ];
+                            this.view.totalMap[ c.column ] = total ? total.plus(v.toString()) : new Decimal(v.toString());
+                        }
+                        break;
+                    case 'count':
+                        total = this.view.totalMap[ c.column ];
+                        this.view.totalMap[ c.column ] = total ? total.plus(v) : new Decimal(v);
+                        break;
+                }
+
 
                 if (typeOf(c.contentProperties) === "object") td.setProperties(c.contentProperties);
                 if (this.view.json.itemStyles) td.setStyles(this.view.json.itemStyles);
@@ -1295,10 +1520,34 @@ MWF.xApplication.query.Query.Statement.Filter = new Class({
     Extends: MWF.xApplication.query.Query.Viewer.Filter
 });
 
+/** @class Actionbar 查询视图操作条组件。
+ * @o2cn 查询视图操作条
+ * @example
+ * //可以在查询视图中获取该组件
+ * var actionbar = this.target.actionbar; //在视图中获取操作条
+ * //方法2
+ * var actionbar = this.target; //在操作条和操作本身的事件脚本中获取
+ * @extends MWF.xApplication.query.Query.Viewer.Actionbar
+ * @o2category QueryStatement
+ * @o2range {QueryStatement}
+ * @hideconstructor
+ */
 MWF.xApplication.query.Query.Statement.Actionbar = new Class({
     Extends: MWF.xApplication.query.Query.Viewer.Actionbar
 });
 
+/** @class Actionbar 查询视图分页组件。
+ * @o2cn 视查询图分页组件
+ * @example
+ * //可以在查询视图中获取该组件
+ * var actionbar = this.target.paging; //在视图中获取操作条
+ * //方法2
+ * var actionbar = this.target; //在分页组件本身的事件脚本中获取
+ * @extends MWF.xApplication.query.Query.Viewer.Paging
+ * @o2category QueryStatement
+ * @o2range {QueryStatement}
+ * @hideconstructor
+ */
 MWF.xApplication.query.Query.Statement.Paging = new Class({
     Extends: MWF.xApplication.query.Query.Viewer.Paging
 });

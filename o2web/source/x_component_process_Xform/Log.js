@@ -31,12 +31,12 @@ MWF.xApplication.process.Xform.Log = MWF.APPLog =  new Class(
         /**
          * 加载每行流程信息以后触发，可以通过this.event获得下列信息：
          * <pre><code>
-         {
-            "data" : {}, //当前行流程信息
-            "node" : logTaskNode, //当前节点
-            "log" : object, //指向流程记录
-            "type" : "task"  //"task"表示待办，"taskCompleted"表示已办
-        }
+         * {
+         *    "data" : {}, //当前行流程信息
+         *    "node" : logTaskNode, //当前节点
+         *    "log" : object, //指向流程记录
+         *    "type" : "task"  //"task"表示待办，"taskCompleted"表示已办
+         * }
          </code></pre>
          * @event MWF.xApplication.process.Xform.Log#postLoadLine
          * @see {@link https://www.yuque.com/o2oa/ixsnyt/hm5uft#i0zTS|组件事件说明}
@@ -311,19 +311,20 @@ MWF.xApplication.process.Xform.Log = MWF.APPLog =  new Class(
                 }
             }
 
-            if (this.json.filterActivityAlias){
-                if (this.json.filterActivityAlias.length){
-                    filterActivityAlias = this.json.filterActivityAlias;
-                    //flag = ((log.fromActivityAlias) && filterActivityAlias.indexOf(log.fromActivityAlias)!==-1);
-                    if(log.fromActivityAlias){
-                        if(isExactMatch(this.json.filterActivityAliasExactMatch)){ //精确匹配
-                            flag = filterActivityAlias.split(/[;|,|\n]/gm).contains(log.fromActivityAlias); //用;,和空格分隔成数组
-                        }else{
-                            flag = (filterActivityAlias.indexOf(log.fromActivityAlias)!==-1);
-                        }
+            if (this.json.filterActivityAlias && this.json.filterActivityAlias.length){
+                filterActivityAlias = this.json.filterActivityAlias;
+                //flag = ((log.fromActivityAlias) && filterActivityAlias.indexOf(log.fromActivityAlias)!==-1);
+                if(log.fromActivityAlias){
+                    if(isExactMatch(this.json.filterActivityAliasExactMatch)){ //精确匹配
+                        flag = filterActivityAlias.split(/[;|,|\n]/gm).contains(log.fromActivityAlias); //用;,和空格分隔成数组
+                    }else{
+                        flag = (filterActivityAlias.indexOf(log.fromActivityAlias)!==-1);
                     }
+                }else{
+                    flag = false;
                 }
             }
+
             if (this.json.filterPerson && this.json.filterPerson.length){
                 if(isExactMatch(this.json.filterPersonExactMatch)) { //精确匹配
                     flag = false;
@@ -418,9 +419,9 @@ MWF.xApplication.process.Xform.Log = MWF.APPLog =  new Class(
                 opinion = task.properties.opinion || MWF.xApplication.process.Xform.LP.rollbackTo+": "+task.arrivedActivityName;
                 break;
             case "reset":
-                var resetUser = task.properties.nextManualTaskIdentityList.erase(task.identity);
-                resetUserText = o2.name.cns(resetUser).join(",");
-                router = MWF.xApplication.process.Xform.LP.resetTo+":"+resetUserText;
+                // var resetUser = task.properties.nextManualTaskIdentityList.erase(task.identity);
+                // resetUserText = o2.name.cns(resetUser).join(",");
+                router = task.properties.routeName || MWF.xApplication.process.Xform.LP.reset;
                 opinion = task.properties.opinion || ""
                 break;
             case "appendTask":
@@ -577,10 +578,16 @@ MWF.xApplication.process.Xform.Log = MWF.APPLog =  new Class(
                     opinion = task.properties.opinion || MWF.xApplication.process.Xform.LP.rollbackTo+": "+task.arrivedActivityName;
                     break;
                 case "reset":
-                    var resetUser = task.properties.nextManualTaskIdentityList.erase(task.identity);
-                    resetUserText = o2.name.cns(resetUser).join(",");
-                    router = MWF.xApplication.process.Xform.LP.resetTo+":"+resetUserText;
-                    opinion = task.properties.opinion || ""
+                    // var resetUser = task.properties.nextManualTaskIdentityList.erase(task.identity);
+                    // resetUserText = o2.name.cns(resetUser).join(",");
+                    // router = MWF.xApplication.process.Xform.LP.resetTo+":"+resetUserText;
+                    router = task.properties.routeName || MWF.xApplication.process.Xform.LP.reset;
+                    opinion = task.properties.opinion || "";
+                    break;
+                case "workTriggerProcessing":
+                    router = task.properties.routeName || MWF.xApplication.process.Xform.LP.systemSubmit;
+                    opinion = task.properties.opinion || MWF.xApplication.process.Xform.LP.autoFlowHtml.replace(/{time}/g, task.recordTime);
+                    person = person || MWF.xApplication.process.Xform.LP.system;
                     break;
                 case "appendTask":
                 case "back":

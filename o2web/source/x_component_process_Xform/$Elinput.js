@@ -11,6 +11,19 @@ Object.assign(o2.APP$Elinput.prototype, {
     isReadonly : function(){
         return !!(this.readonly || this.json.isReadonly || this.form.json.isReadonly || this.isSectionMergeRead() );
     },
+    reload: function(){
+        if (!this.vm) return;
+
+        var node = this.vm.$el;
+        this.vm.$destroy();
+        node.empty();
+
+        this.vm = null;
+
+        this.vueApp = null;
+
+        this._loadUserInterface();
+    },
     __setValue: function(value){
         this.moduleValueAG = null;
         this._setBusinessData(value);
@@ -29,7 +42,27 @@ Object.assign(o2.APP$Elinput.prototype, {
         this.validationMode();
     },
     __setReadonly: function(data){
-        if (this.isReadonly()) this.node.set("text", data);
+        if (this.isReadonly()) {
+            this.node.set("text", data);
+            if( this.json.elProperties ){
+                this.node.set(this.json.elProperties );
+            }
+            if (this.json.elStyles){
+                this.node.setStyles( this._parseStyles(this.json.elStyles) );
+            }
+
+            this.fireEvent("postLoad");
+            if( this.moduleSelectAG && typeOf(this.moduleSelectAG.then) === "function" ){
+                this.moduleSelectAG.then(function () {
+                    this.fireEvent("load");
+                    this.isLoaded = true;
+                }.bind(this));
+            }else{
+                this.fireEvent("load");
+                this.isLoaded = true;
+            }
+
+        }
     },
     getInputData: function(){
         return this.json[this.json.$id];
@@ -70,7 +103,7 @@ Object.assign(o2.APP$Elinput.prototype, {
     getValue: function(){
         if (this.moduleValueAG) return this.moduleValueAG;
         var value = this._getBusinessData();
-        if (value || value===false){
+        if (value || value===false || value===0){
             return value;
         }else{
             value = this._computeValue();

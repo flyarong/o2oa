@@ -54,24 +54,6 @@ public class AuthenticationAction extends StandardJaxrsAction {
 		asyncResponse.resume(ResponseFactory.getEntityTagActionResultResponse(request, result));
 	}
 
-	@JaxrsMethodDescribe(value = "检查用户名是否存在.", action = ActionCheckCredential.class)
-	@GET
-	@Path("check/credential/{credential}")
-	@Produces(HttpMediaType.APPLICATION_JSON_UTF_8)
-	@Consumes(MediaType.APPLICATION_JSON)
-	public void checkCredential(@Suspended final AsyncResponse asyncResponse, @Context HttpServletRequest request,
-			@JaxrsParameterDescribe("凭证") @PathParam("credential") String credential) {
-		ActionResult<ActionCheckCredential.Wo> result = new ActionResult<>();
-		EffectivePerson effectivePerson = this.effectivePerson(request);
-		try {
-			result = new ActionCheckCredential().execute(effectivePerson, credential);
-		} catch (Exception e) {
-			LOGGER.error(e, effectivePerson, request, null);
-			result.error(e);
-		}
-		asyncResponse.resume(ResponseFactory.getEntityTagActionResultResponse(request, result));
-	}
-
 	@JaxrsMethodDescribe(value = "用户登录.credential=xxxx,password=xxxx", action = ActionLogin.class)
 	@POST
 	@Produces(HttpMediaType.APPLICATION_JSON_UTF_8)
@@ -153,6 +135,26 @@ public class AuthenticationAction extends StandardJaxrsAction {
 		EffectivePerson effectivePerson = this.effectivePerson(request);
 		try {
 			result = new ActionCaptchaLogin().execute(request, response, effectivePerson, jsonElement);
+		} catch (Exception e) {
+			LOGGER.error(e, effectivePerson, request, null);
+			result.error(e);
+		}
+		// 擦除密码
+		erasePassword(jsonElement);
+		asyncResponse.resume(ResponseFactory.getEntityTagActionResultResponse(request, result, jsonElement));
+	}
+
+	@JaxrsMethodDescribe(value = "双因素登录认证.", action = ActionTwoFactoryLogin.class)
+	@POST
+	@Path("two/factory/login")
+	@Produces(HttpMediaType.APPLICATION_JSON_UTF_8)
+	@Consumes(MediaType.APPLICATION_JSON)
+	public void twoFactoryLogin(@Suspended final AsyncResponse asyncResponse, @Context HttpServletRequest request,
+			@Context HttpServletResponse response, JsonElement jsonElement) {
+		ActionResult<ActionTwoFactoryLogin.Wo> result = new ActionResult<>();
+		EffectivePerson effectivePerson = this.effectivePerson(request);
+		try {
+			result = new ActionTwoFactoryLogin().execute(request, response, effectivePerson, jsonElement);
 		} catch (Exception e) {
 			LOGGER.error(e, effectivePerson, request, null);
 			result.error(e);
@@ -312,7 +314,7 @@ public class AuthenticationAction extends StandardJaxrsAction {
 	@Consumes(MediaType.APPLICATION_JSON)
 	public void qiyeweixinOauthConfig(@Suspended final AsyncResponse asyncResponse,
 			@Context HttpServletRequest request) {
-		ActionResult<Qiyeweixin> result = new ActionResult<>();
+		ActionResult<ActionOauthQiyeweixinConfig.Wo> result = new ActionResult<>();
 		EffectivePerson effectivePerson = this.effectivePerson(request);
 		try {
 			result = new ActionOauthQiyeweixinConfig().execute(effectivePerson);
@@ -329,7 +331,7 @@ public class AuthenticationAction extends StandardJaxrsAction {
 	@Produces(HttpMediaType.APPLICATION_JSON_UTF_8)
 	@Consumes(MediaType.APPLICATION_JSON)
 	public void dingdingOauthConfig(@Suspended final AsyncResponse asyncResponse, @Context HttpServletRequest request) {
-		ActionResult<Dingding> result = new ActionResult<>();
+		ActionResult<ActionOauthDingdingConfig.Wo> result = new ActionResult<>();
 		EffectivePerson effectivePerson = this.effectivePerson(request);
 		try {
 			result = new ActionOauthDingdingConfig().execute(effectivePerson);
@@ -379,7 +381,7 @@ public class AuthenticationAction extends StandardJaxrsAction {
 		asyncResponse.resume(ResponseFactory.getEntityTagActionResultResponse(request, result));
 	}
 
-	@JaxrsMethodDescribe(value = "企业微信oauth登录", action = ActionOauthQiyeweixinLogin.class)
+	@JaxrsMethodDescribe(value = "企业微信oauth登录, 扫码登录", action = ActionOauthQiyeweixinLogin.class)
 	@GET
 	@Path("oauth/login/qywx/code/{code}")
 	@Produces(HttpMediaType.APPLICATION_JSON_UTF_8)
@@ -397,7 +399,7 @@ public class AuthenticationAction extends StandardJaxrsAction {
 		asyncResponse.resume(ResponseFactory.getEntityTagActionResultResponse(request, result));
 	}
 
-	@JaxrsMethodDescribe(value = "钉钉oauth登录", action = ActionOauthDingdingLogin.class)
+	@JaxrsMethodDescribe(value = "钉钉oauth登录, 扫码登录", action = ActionOauthDingdingLogin.class)
 	@GET
 	@Path("oauth/login/dingding/code/{code}")
 	@Produces(HttpMediaType.APPLICATION_JSON_UTF_8)
@@ -492,7 +494,7 @@ public class AuthenticationAction extends StandardJaxrsAction {
 
 	/**
 	 * 由于有日志记录功能,需要将jsonElement中的password进行擦除.
-	 * 
+	 *
 	 * @param jsonElement
 	 */
 	private void erasePassword(JsonElement jsonElement) {

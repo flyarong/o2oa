@@ -1,10 +1,12 @@
 package com.x.bbs.assemble.control.jaxrs.attachment;
 
+import com.x.base.core.project.exception.ExceptionAccessDenied;
 import java.util.Date;
 import java.util.UUID;
 
 import javax.servlet.http.HttpServletRequest;
 
+import com.x.base.core.project.tools.FileTools;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
@@ -21,18 +23,21 @@ import com.x.bbs.entity.BBSSubjectAttachment;
 import com.x.bbs.entity.BBSSubjectInfo;
 
 public class ActionUpload extends BaseAction {
-	
+
 	private static Logger logger = LoggerFactory.getLogger(ActionUpload.class);
 
-	protected ActionResult<Wo> execute( HttpServletRequest request, EffectivePerson effectivePerson, 
-			String subjectId, String site, byte[] bytes, FormDataContentDisposition disposition) {
+	protected ActionResult<Wo> execute( HttpServletRequest request, EffectivePerson effectivePerson,
+			String subjectId, String site, byte[] bytes, FormDataContentDisposition disposition) throws Exception{
+		if(effectivePerson.isAnonymous()){
+			throw new ExceptionAccessDenied(effectivePerson);
+		}
 		ActionResult<Wo> result = new ActionResult<>();
 		BBSSubjectAttachment attachment = null;
 		BBSSubjectInfo subject = null;
 		StorageMapping mapping = null;
 		String fileName = null;
-		Boolean check = true;		
-		
+		Boolean check = true;
+
 		if( check ){
 			if( StringUtils.isEmpty(subjectId) ){
 				check = false;
@@ -40,7 +45,7 @@ public class ActionUpload extends BaseAction {
 				result.error( exception );
 			}
 		}
-		
+
 		if( check ){
 			//判断文档是否已经存在
 			try {
@@ -51,7 +56,7 @@ public class ActionUpload extends BaseAction {
 				logger.error( e, effectivePerson, request, null );
 			}
 		}
-		
+
 		if( check ){
 			try {
 				fileName = FilenameUtils.getName(new String(disposition.getFileName().getBytes(DefaultCharset.name_iso_8859_1), DefaultCharset.name));
@@ -60,15 +65,17 @@ public class ActionUpload extends BaseAction {
 					check = false;
 					Exception exception = new ExceptionEmptyExtension( fileName );
 					result.error( exception );
-				} 
+				}
 			} catch (Exception e) {
 				check = false;
 				result.error( e );
 			}
 		}
-		
+
+		FileTools.verifyConstraint(bytes.length, fileName, null);
+
 		if( check ){
-			
+
 			try {
 				mapping = ThisApplication.context().storageMappings().random( BBSSubjectAttachment.class );
 			} catch (Exception e) {

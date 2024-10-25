@@ -72,10 +72,10 @@ o2.xApplication.systemconfig.LP = {
         "moduleStatus": "模块运行状态",
         "language": "语言环境",
         "languageInfo": "设置服务端语言环境",
-        "languageValues": {
-            "zh-CN": "简体中文",
-            "en": "英文"
-        },
+        "supportedLanguages": "语言环境",
+        "supportedLanguagesInfo": "系统支持的语言环境",
+        "supportedLanguagesInfo2": "添加更多语言环境支持，请从应用市场安装语言包。",
+        "supportedLanguagesSetup": "打开应用市场",
 
         "running": "运行中",
         "stop": "已停用",
@@ -160,7 +160,8 @@ o2.xApplication.systemconfig.LP = {
         "ok": "确定",
         "cancel": "取消",
         "enable": "启用",
-        "disable": "禁用"
+        "disable": "禁用",
+        "add": "添加"
     },
     "_component": {
         "open": "打开",
@@ -330,6 +331,9 @@ o2.xApplication.systemconfig.LP = {
         "passwordRsa": "密码加密传输",
         "passwordRsaInfo": "系统默认使用明文传输，您可以启用此选项，以启用密码的加密传输。(修改后需要重启服务器)",
 
+        "passwordCheck": "密码强制修改",
+        "passwordCheckInfo": "如果需要用户首次登录的时候强制修改密码，可以开启此选项。",
+
 
         "adminPasswordInfo": "您可以在此处修改超级管理员xadmin的密码。(修改后需要重启服务器)",
         "modifyAdminPassword": "修改管理员密码",
@@ -358,7 +362,6 @@ o2.xApplication.systemconfig.LP = {
             "<li>您必须执行以下步骤，才能正常使用系统：<br>使用xadmin账号重新登录系统，并通过任何方式重置所有用户密码</li></ul></div>",
         "tokenEncryptTypeButton": "确定修改密码加密方式",
         "changeTokenEncryptTypeInfo": "您确定要修改密码加密方式码？"
-
     },
     "_loginConfig": {
         "baseConfig": "基本配置",
@@ -368,10 +371,12 @@ o2.xApplication.systemconfig.LP = {
         "codeLogin": "启用短信验证码登录",
         "bindLogin": "启用扫描二维码登录",
         "faceLogin": "启用人脸识别登录",
-        "captchaLoginInfo": "启用后登陆时必须正确输入图片验证码",
-        "codeLoginInfo": "启用后允许通过短信验证码登录",
-        "bindLoginInfo": "启用后允许扫描二维码登录",
-        "faceLoginInfo": "启用后允许人脸识别登录，用户可到个人设置中设置人脸特征。启用后您必须创建一个SSO配置，名称为face，密钥为xplatform（这是一个试验性功能，您必须启用https）",
+        "twoFactorLogin": "启用双因素认证登录",
+        "captchaLoginInfo": "启用后登陆时必须正确输入图片验证码。",
+        "codeLoginInfo": "启用后允许通过短信验证码登录。",
+        "bindLoginInfo": "启用后允许扫描二维码登录。",
+        "faceLoginInfo": "启用后允许人脸识别登录，用户可到个人设置中设置人脸特征。启用后您必须创建一个SSO配置，名称为face，密钥为xplatform（这是一个试验性功能，您必须启用https）。",
+        "twoFactorLoginInfo": "启用后，用户输入账号密码后系统会发送短信验证码，用户再输入短信验证码登录。xadmin和三员管理员不发送短信，在短信验证码界面再次输入密码。双因素认证和短信验证码两种登录方式互斥。",
 
         "loginError": "登录错误处理",
         "loginErrorInfo": "用户登录时，如果连续多次输入错误密码，账号将被锁定。您可以在此处设置连续登录错误次数上限，及账号锁定的时长。",
@@ -379,11 +384,20 @@ o2.xApplication.systemconfig.LP = {
         "loginErrorCount": "登录错误次数上限",
         "lockTime": "锁定时长（分钟）",
 
-        "tokenExpired": "登录有效时长",
-        "tokenExpiredInfo": "用户登录系统后，如果长时间不和服务器发生交互，系统就会注销次此登录。您可以在此处设置登录有效时长，单位为分钟。",
+        "tokenExpired": "pc端登录有效时长",
+        "tokenExpiredInfo": "用户登录系统后，如果长时间不和服务器发生交互，系统就会注销次此登录。您可以在此处设置登录有效时长，单位为分钟。用于PC端。",
+
+        "appTokenExpired": "app端登录有效时长",
+        "appTokenExpiredInfo": "用户登录系统后，如果长时间不和服务器发生交互，系统就会注销次此登录。您可以在此处设置登录有效时长，单位为分钟。用于移动端。",
 
         "tokenName": "token名称",
         "tokenNameInfo": "系统默认的token名称为x-token，您可以在此处修改token名称，以防止在相同Domain下的Cookie冲突，这在相同Domain下部署多套O2OA时尤其有用。(需要重启服务器)",
+
+        "tokenCookieHttpOnly": "启用Cookie HttpOnly",
+        "tokenCookieHttpOnlyInfo": "保存token的cookie是否启用httponly",
+
+        "tokenCookieSecure": "启用Cookie Secure",
+        "tokenCookieSecureInfo": "保存token的cookie是否启用secure，表示仅在https协议才会传输此cookie",
 
         "enableSafeLogout": "启用安全注销",
         "enableSafeLogoutInfo": "启用安全注销后，您在任意终端执行注销操作，将会同时注销所有终端的登录状态。",
@@ -434,7 +448,10 @@ o2.xApplication.systemconfig.LP = {
         "isEnable": "是否启用",
         "ssoConfigName": "鉴权名称",
         "ssoConfigKey": "密钥",
-        "ssoConfigKeyInfo": "密钥长度8位",
+
+        "ssoConfigKeyInfo": "密钥长度为8的倍数",
+        "ssoKeyLengthError": "请保持密钥长度为8的倍数",
+
         "removeSSOConfigTitle": "删除鉴权配置确认",
         "removeSSOConfig": "您确定要删除鉴权配置：“{name}” 吗？",
 
@@ -507,6 +524,9 @@ o2.xApplication.systemconfig.LP = {
 
     },
     "_ternaryManagement": {
+        "ternary": "三员管理配置",
+        "label": "系统密级标识",
+
         "enable": "启用三员管理",
         "enableInfo": "系统支持以系统管理员，安全管理员，安全审计员三员分责分权的方式进行系统安全管理，启动三员管理后会解除xadmin用户及权限同时启用系统的审计日志记录（需重启服务器）<br>" +
             "三员各自角色分工分别是： " +
@@ -520,7 +540,34 @@ o2.xApplication.systemconfig.LP = {
         "logRetainDaysInfo": "设置日志最多保留的天数",
 
         "logBodyEnable": "记录Body内容",
-        "logBodyEnableInfo": "记录Body内容会得到更详细的日志信息，但也会大大增加磁盘空间占用和服务器开销"
+        "logBodyEnableInfo": "记录Body内容会得到更详细的日志信息，但也会大大增加磁盘空间占用和服务器开销",
+
+        "securityClearanceEnable": "启用系统密级标识",
+        "securityClearanceEnableInfo": "如果您的系统涉及相关要求，可启用密级标识<br>" +
+            "可设定主体密级标识和客体密级标识，来控制访问权限。 <br>",
+            // "<b>主体密级：</b>您可在系统配置-三元管理中设置系统的主体密级。<br>" +
+            // "<b>客体密级：</b>可在设计相关表单时增加“密级标识”设计元素，用于设置文档密级标识。",
+
+        "subjectSecurityClearance": "主体密级标识",
+        "subjectSecurityClearanceInfo": "配置主题密级标识，标识值为数字，值越大，密级越高。对应密级的主体，可以访问密级值小于或等于主体密级值的客体。如主体密级值为300，则此主体可访问的客体的密级值必须小于或等于300。",
+
+        "objectSecurityClearance": "客体密级标识",
+        "objectSecurityClearanceInfo": "配置客体密级标识，标识值为数字，值越大，密级越高",
+
+        "labelName": "标识名称",
+        "labelValue": "标识值",
+
+        "defaultSubjectSecurityClearance": "默认主体标识",
+        "defaultSubjectSecurityClearanceInfo": "如果主体未设置密级标识，则应用此标识。",
+
+        "systemSecurityClearance": "系统密级标识",
+        "systemSecurityClearanceInfo": "设置系统的密级标识，所有其他主体或客体的密级标识，都不会高于系统密级。",
+
+        "labelValueSame": "不能设置相同的标识值",
+        "labelNameSame": "不能设置相同的标识名称",
+        "labelValueEmpty": "必须输入标识值",
+        "labelNameEmpty": "必须输入标识名称"
+
     },
     "_databaseServer": {
         "databaseSource": "数据源配置",
@@ -784,12 +831,22 @@ o2.xApplication.systemconfig.LP = {
         "exposeJest": "是否输出Restful API文档页面",
         "exposeJestInfo": "输出Restful API文档可以通过URL：<a href='{url}' target='_blank'>Restful API</a> 访问。",
 
+        "storageEncrypt": "是否对附件进行加密",
+        "storageEncryptInfo": "如果开启，系统将对流程平台、内容管理及企业网盘中上传的附件进行加密存储。",
+
         "scriptingBlockedClasses": "服务端脚本禁用的Java类",
         "scriptingBlockedClassesInfo": "在此设置不允许在服务端脚本中使用的Java类，用逗号分隔。",
+
+        "httpWhiteList": "外部http接口服务地址白名单",
+        "httpWhiteListInfo": "外部http接口服务地址白名单，*代表不限制，用半角逗号分隔。",
 
         "refererHeadCheckRegular": "请求Referer校验",
         "refererHeadCheckRegularInfo": "在此处可配置服务器对于请求的Referer头的校验规则，配置一个正则表达式，通过正则表达式校验Referer值的请求才被允许。" +
             "合理配置此项可有效防止CSRF攻击。如配置 (.+?)o2oa.net(.+?) 仅允许referer包含“o2oa.net”的请求",
+
+        "contentSecurityPolicy": "Content-Security-Policy响应头",
+        "contentSecurityPolicyInfo": "HTTP 响应头 Content-Security-Policy 允许站点管理者控制用户代理能够为指定的页面加载哪些资源。除了少数例外情况，设置的政策主要涉及指定服务器的源和脚本结束点。这将帮助防止跨站脚本攻击（Cross-Site Script）。",
+        "contentSecurityPolicyInfo2": "更多关于Content-Security-Policy响应头的信息请查看：<a target='_blank' href='https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Headers/Content-Security-Policy'>https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Headers/Content-Security-Policy</a>",
 
         "accessControlAllowOrigin": "跨域来源许可",
         "accessControlAllowOriginInfo": "跨源资源共享许可，设置http返回的Access-Control-Allow-Origin标识，可以用于CORS攻击防护，如:https://www.o2oa.net",
@@ -1026,8 +1083,8 @@ o2.xApplication.systemconfig.LP = {
         "searchMaxPageSize": "搜索每页最大数量",
         "searchMaxPageSizeInfo": "搜索返回结果每页的最大数量",
 
-        "moreLikeThisMaxSize": "关联文档最大返回数量",
-        "moreLikeThisMaxSizeInfo": "关联文档检索的最大返回数量",
+        "moreLikeThisMaxSize": "相关推荐最大返回数量",
+        "moreLikeThisMaxSizeInfo": "相关推荐检索的最大返回数量",
 
         "workIndexAttachment": "是否对流转中文档的附件进行索引",
         "workIndexAttachmentInfo": "是否对流转中文档的附件进行索引。（对附件进行索引，根据不同的业务量，可能需要较强的服务器性能和更大的内存）",
@@ -1126,6 +1183,26 @@ o2.xApplication.systemconfig.LP = {
         "simpleMode": "移动端简易模式",
         "simpleModeInfo": "移动端开启简易模式后只显示首页和设置页面",
 
+        "appIndexPage": "移动端页面配置",
+        "appIndexPageInfo": "移动端几个主页面配置是否显示",
+        "appIndexPageHome": "首页",
+        "appIndexPageIM": "消息",
+        "appIndexPageContact": "通讯录",
+        "appIndexPageApp": "应用",
+        "appIndexPageSettings": "设置",
+
+        "appIndexCenteredTitle": "移动App首页是否居中",
+        "appIndexCenteredInfo": "移动App首页居中，页面个数将不可配置",
+
+        "appIndexCmsFilterTitle": "首页信息中心",
+        "appIndexCmsFilterCategoryInfo": "信息中心列表分类查询条件，为空就是都查询",
+        "appIndexTaskFilterTitle": "首页办公中心",
+        "appIndexTaskFilterProcessInfo": "办公中心列表流程查询条件，为空就是都查询",
+        "appIndexTaskFilterProcessSelectorTitle": "流程选择",
+        "appIndexCmsFilterCategroySelectorTitle": "分类选择",
+        
+
+
         "systemMessageSwitch": "显示系统通知",
         "systemMessageSwitchInfo": "移动App消息列表中是否显示系统通知",
         "systemMessageCanClickInfo": "移动App系统通知是否可点击打开",
@@ -1138,7 +1215,7 @@ o2.xApplication.systemconfig.LP = {
         "appExitAlertInfo": "app退出的时候弹出窗口的提示语，为空就不弹窗",
 
         "nativeAppList": "应用列表",
-        "nativeAppListInfo": "您可以在此设置移动端APP中，启用哪些应用，禁用哪些应用",
+        "nativeAppListInfo": "您可以在此设置移动端APP中，启用哪些应用，禁用哪些应用，并可设置在APP中的显示名称",
 
         "imageNames": {
             "application_top": {"text": "应用页面顶部图片", "action": "ApplicationTop"},
@@ -1231,6 +1308,8 @@ o2.xApplication.systemconfig.LP = {
             "syncCron": "同步检查回调信号定时",
             "forceSyncCron": "强制同步定时",
             "apiAddress": "API服务地址",
+            "qrConnectAddress": "扫码登录服务地址",
+            "oauth2Address": "oAuth2服务地址",
             "syncSecret": "通讯录同步Secret",
             "token": "回调Token",
             "encodingAesKey": "回调EncodingAesKey",
@@ -1241,6 +1320,8 @@ o2.xApplication.systemconfig.LP = {
             "attendanceSyncEnable": "是否启用考勤信息",
             "attendanceSyncAgentId": "考勤打卡应用ID",
             "attendanceSyncSecret": "考勤打卡应用Secret",
+            "bindEnable": "是否启用用户绑定",
+            "bindEnableInfo": "默认不要启用，这个是私有化绑定用户用的，跟同步用户组织是互斥的！",
 
             "getUserPrivateInfoMessageTitle": "企业微信获取个人隐私信息的消息发送",
             "getUserPrivateInfoMessageDesc": "企业微信新版本同步API限制了用户隐私信息（比如：手机号码、邮箱等）的获取，目前同步程序只能获取到用户姓名和userId。下面的消息发送功能是给用户发送一个授权获取隐私信息的消息，用户点击这个消息后，本程序就能读取到需要的用户信息！",
@@ -1264,7 +1345,7 @@ o2.xApplication.systemconfig.LP = {
             "workUrlInfo": "企业微信消息打开工作的url地址，如：https://sample.o2oa.net/x_desktop/",
             "messageRedirectPortalInfo": "当企业微信消息处理完成后，可指定跳转到特定的门户页面",
 
-            "enableInfo": "O2OA支持以自建应用的方式集成到企业微信，同步企业微信的企业通讯录作为本地组织人员架构，并且可以将待办等通知直接推送到企业微信进行消息提醒。",
+            "enableInfo": "O2OA支持以自建应用的方式集成到企业微信，同步企业微信的企业通讯录作为本地组织人员架构，并且可以将待办等通知直接推送到企业微信进行消息提醒。(需要重启服务器)",
             "enableInfo2": "更多O2OA与企业微信的内容，请查看：<a href='https://www.o2oa.net/search.html?q=%E4%BC%81%E4%B8%9A%E5%BE%AE%E4%BF%A1' target='_blank'>企业微信</a>",
 
             "saveText": "保存企业微信配置",
@@ -1335,7 +1416,7 @@ o2.xApplication.systemconfig.LP = {
 
         "enableExternal": "启用扩展文件存储",
         "disableExternal": "禁用扩展文件存储",
-        "enableExternalInfo": "如果要启用扩展文件存储，请确保扩展文件存储配置已经完成，否则可能造成服务器运行异常。启用或禁用扩展存储服务都会影响到系统现有的文件存储，强烈建议先备份系统数据。",
+        "enableExternalInfo": "如果要启用扩展文件存储，请确保扩展文件存储配置已经完成，否则可能造成服务器运行异常。启用或禁用扩展存储服务都会影响到系统现有的文件存储，强烈建议先备份系统数据。<span style='color:red'>启用后，请为下方的每种类型的文件分别分配存储节点。</span>",
 
         "enableExternalTitle": "启用扩展文件存储确认",
         "enableExternalConfirm": "您即将启用扩展文件存储，同时会禁用内置文件存储服务。<br><span style='color:red'>这会影响到系统现有已存储的文件</span><br><br>您是否确定要启用扩展文件存？",
@@ -1366,7 +1447,12 @@ o2.xApplication.systemconfig.LP = {
                 "cifs": "cifs",
                 "ali": "阿里云存储",
                 "s3":"亚马逊云存储",
-                "min":"MinIO存储"
+                "min":"MinIO存储",
+                "cos": "腾讯云存储"
+            },
+            "protocolDataInfo": {
+                "ali": "如果您没有在应用市场安装阿里云OSS集成插件，请先安装。",
+                "min":"如果您没有在应用市场安装MinIO云存储集成插件，请先安装。"
             }
         },
         "removeNodeConfigTitle": "删除存储节点确认",
@@ -1521,7 +1607,7 @@ o2.xApplication.systemconfig.LP = {
     },
     "_pushConfig": {
         "pushType": "消息推送服务",
-        "pushTypeInfo": "O2OA支持极光推送服务，您可以在此配置推送的应用参数",
+        "pushTypeInfo": "O2OA支持极光推送服务和华为推送服务，您可以根据需要选择推送服务",
         "pushTypeData": [
             {"value": "jpush", "label": "jpush", "text": "极光推送服务"},
             {"value": "none", "label": "none", "text": "禁用消息推送"}

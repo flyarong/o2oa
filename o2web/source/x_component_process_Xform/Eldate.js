@@ -53,6 +53,29 @@ MWF.xApplication.process.Xform.Eldate = MWF.APPEldate =  new Class(
             }
         }
     },
+    __setReadonly: function(data){
+        if (this.isReadonly()){
+            if( o2.typeOf(data) === "array" ){
+                if( ["monthrange","daterange"].contains(this.json.selectType) ) {
+                    this.node.set("text", this.json.rangeSeparator ? data.join(this.json.rangeSeparator) : data);
+                }else{
+                    this.node.set("text", data );
+                }
+            }else{
+                this.node.set("text", data );
+            }
+            if( this.json.elProperties ){
+                this.node.set(this.json.elProperties );
+            }
+            if (this.json.elStyles){
+                this.node.setStyles( this._parseStyles(this.json.elStyles) );
+            }
+
+            this.fireEvent("postLoad");
+            this.fireEvent("load");
+            this.isLoaded = true;
+        }
+    },
     _appendVueData: function(){
         if (!this.json.isReadonly && !this.form.json.isReadonly) this.json.isReadonly = false;
         if (!this.json.disabled) this.json.disabled = false;
@@ -110,6 +133,19 @@ MWF.xApplication.process.Xform.Eldate = MWF.APPEldate =  new Class(
 
         html += "</el-date-picker>";
         return html;
+    },
+    getInputData: function(){
+        var data = this.json[this.json.$id];
+        if( data === null ){
+            if( ["monthrange","daterange"].contains(this.json.selectType) ) {
+                return [];
+            }else if( ["dates"].contains(this.json.selectType) ){
+                return [];
+            }else{
+                return "";
+            }
+        }
+        return this.json[this.json.$id];
     },
 
         getExcelData: function(){

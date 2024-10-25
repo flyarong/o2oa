@@ -128,11 +128,17 @@ const formatDate = (date) => {
     day < 10 ? "0" + day : day
   }`;
 };
+// 格式化日期为  YYYY-MM
+const formatMonth = (date) => {
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  return `${year}-${month < 10 ? "0" + month : month}`;
+}
 
 // 格式化分钟数为 xx小时xx分钟
 const convertMinutesToHoursAndMinutes = (minutes) => {
   var hours = Math.floor(minutes / 60); // 取得小时数
-  var remainingMinutes = minutes % 60; // 取得剩余的分钟数
+  var remainingMinutes = Math.floor(minutes % 60); // 取得剩余的分钟数
   var result = "";
 
   if (hours > 0) {
@@ -183,8 +189,113 @@ const hideLoading = async (component) => {
   }
 }
 
+/**
+ * 
+ * @param {*} person 
+ * @returns 
+ */
+const formatPersonName = (person) => {
+  if (person && person.indexOf("@") > -1) {
+    return person.split("@")[0];
+  }
+  return person;
+}
+/**
+ * 获取传入日期所在的月份所有日期
+ * @param {Date} inputDate 
+ * @returns []
+ */
+const getAllDatesInMonth = (inputDate) => {
+  const result = [];
+  const currentDate = new Date(inputDate);
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  // 确定月份的第一天
+  const firstDayOfMonth = new Date(year, month, 1);
+  // 从第一天开始，递增日期直到月份变化
+  let currentDateInMonth = firstDayOfMonth;
+  while (currentDateInMonth.getMonth() === month) {
+    result.push(new Date(currentDateInMonth));
+    currentDateInMonth.setDate(currentDateInMonth.getDate() + 1);
+  }
+  return result;
+}
+/**
+ * localStorage 存储
+ * @param {*} key 
+ * @param {*} item 
+ */
+const storageSet = (key, item) => {
+  localStorage.setItem(key, JSON.stringify(item));
+}
+/**
+ * localStorage 获取存储数据
+ * @param {*} key 
+ * @returns 
+ */
+const storageGet = (key) => {
+  const item = localStorage.getItem(key);
+  // 使用JSON.parse将字符串还原为JavaScript对象
+  return JSON.parse(item);
+}
+
+/**
+ * 替换字符串特定内容
+ * @param {*} originalString 原字符串
+ * @param {*} searchString  被替换的内容
+ * @param {*} replacement 替换成的内容
+ * @returns 
+ */
+const replaceCustomString = (originalString, searchString, replacement) => {
+  var replacedString = originalString.replace(new RegExp(searchString, 'g'), replacement);
+  return replacedString;
+}
+
+/**
+ * 根据传入的数字个数，生成Excel列名数组，如：A,B,C,....,AA,AB,AC,....
+ * @param len 数量
+ * @returns {*[]}
+ */
+const generateExcelColumnNames = (len) =>{
+  const columnNames = [];
+  for (let i = 1; i <= len; i++) {
+    let columnName = "";
+    let quotient = i;
+    while (quotient > 0) {
+      const remainder = (quotient - 1) % 26;
+      columnName = String.fromCharCode(65 + remainder) + columnName;
+      quotient = Math.floor((quotient - 1) / 26);
+    }
+    columnNames.push(columnName);
+  }
+  return columnNames;
+}
+
+/**
+ * 选择单个文件功能，并触发回调函数
+ * @param callback 回调函数，返回选中的文件
+ */
+const chooseSingleFile = (callback) => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.style.display = 'none';
+  // 添加 change 事件监听器，接收上传的文件
+  input.addEventListener('change', (event) => {
+    const files = event.target.files;
+    // 处理上传的文件
+    if (files && files.length > 0) {
+      const file = files[0]
+      if (callback) {
+        callback(file)
+      }
+    }
+  });
+  input.click();
+}
 
 export {
+  getAllDatesInMonth,
+  formatPersonName,
   setJSONValue,
   lpFormat,
   isInt,
@@ -192,8 +303,14 @@ export {
   isPositiveInt,
   isEmpty,
   formatDate,
+  formatMonth,
   convertMinutesToHoursAndMinutes,
   convertTo2DArray,
   showLoading,
-  hideLoading
+  hideLoading,
+  storageSet,
+  storageGet,
+  replaceCustomString,
+  generateExcelColumnNames,
+  chooseSingleFile
 };

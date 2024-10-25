@@ -44,6 +44,9 @@ MWF.xApplication.query.StatementDesigner.widget.ViewFilter = new Class({
             o2.Actions.load("x_query_assemble_designer").StatementAction.get( this.options.statementId, function (json) {
                 this.statementData = json.data;
                 _load();
+            }.bind(this), function () {
+                _load();
+                return true;
             }.bind(this))
         }else{
             _load();
@@ -484,7 +487,9 @@ MWF.xApplication.query.StatementDesigner.widget.ViewFilter = new Class({
                 if( noteFlag )this.app.notice( MWF.xApplication.query.StatementDesigner.LP.modifyViewFilterNote, "info" );
 
                 if(callback)callback();
-            }.bind(this))
+            }.bind(this), function () {
+                return true;
+            })
         }else{
             this.options.statementId = "";
             this.statementData = null;
@@ -1146,7 +1151,18 @@ MWF.xApplication.query.StatementDesigner.widget.ViewFilter = new Class({
             this.datatypeInput.onchange();
         }
     },
-
+    orderItem: function(item){
+        var index = this.items.indexOf(item);
+        if(index < 1)return;
+        var itemNode = item.node;
+        var upNode = itemNode.getPrevious();
+        if (upNode) {
+            itemNode.inject(upNode, "before");
+        }
+        this.items[index] = this.items[index-1];
+        this.items[index-1] = item;
+        this.fireEvent("change");
+    },
     deleteItem: function (item) {
         if (this.currentItem == item) item.unSelected();
         this.items.erase(item);
@@ -1186,6 +1202,9 @@ MWF.xApplication.query.StatementDesigner.widget.ViewFilter.ItemParameter = new C
     load: function () {
         this.node = new Element("div", {"styles": this.css.itemNode}).inject(this.container);
         this.deleteNode = new Element("div", {"styles": this.css.itemDeleteNode}).inject(this.node);
+        this.orderNode = new Element("div", {
+            "styles": this.css.itemOrderNode, "text": "↑"
+        }).inject(this.node);
         this.contentNode = new Element("div", {"styles": this.css.itemContentNode}).inject(this.node);
         this.contentNode.set("text", this.getText());
 
@@ -1196,14 +1215,22 @@ MWF.xApplication.query.StatementDesigner.widget.ViewFilter.ItemParameter = new C
         this.deleteNode.addEvent("click", function (e) {
             this.deleteItem(e);
         }.bind(this));
+
+        this.orderNode.addEvent("click", function (e) {
+            this.orderItem(e);
+        }.bind(this));
     },
     getText: function () {
         var lp = MWF.APPDSMD.LP.filter;
-        if (this.data.formatType === "numberValue") {
-            return this.data.title + " " + this.data.parameter + " " + this.data.value;
-        } else {
-            return this.data.title + " " + this.data.parameter + " \"" + this.data.value + "\"";
+        var value = "";
+        if( this.data.valueType === "script" ){
+            var code = (this.data.valueScript && this.data.valueScript.code) ? this.data.valueScript.code : "";
+            value =  " " + (lp.script||"脚本") +":\"" + code.substr(0, 200) + "\"";
+        }else{
+            value = (this.data.formatType === "numberValue") ? (" " + this.data.value) : (" \"" + this.data.value + "\"");
+            value = " " + (lp.input||"输入") + ":" + value;
         }
+        return this.data.title + " " + this.data.parameter + value;
     },
     reload: function (data) {
         this.data = data;
@@ -1237,6 +1264,9 @@ MWF.xApplication.query.StatementDesigner.widget.ViewFilter.ItemParameter = new C
     },
     destroy: function () {
         this.filter.deleteItem(this);
+    },
+    orderItem: function () {
+        this.filter.orderItem(this);
     }
 });
 
@@ -1292,10 +1322,21 @@ MWF.xApplication.query.StatementDesigner.widget.ViewFilter.ItemFilter = new Clas
         this.filter.currentItem = this;
         this.filter.setData(this.data);
     },
-    getText: function () {
+    getText: function(){
         var lp = MWF.APPDSMD.LP.filter;
-        return this.data.title + "(" + this.data.path + ")";
-    },
+        var value = "";
+        if( this.data.code && this.data.code.code ){
+            value =  " " + (lp.script||"脚本") +":\"" + this.data.code.code.substr(0, 200) + "\"";
+        }else if( this.data.value ){
+            value = this.data.formatType === "numberValue" ? this.data.value : " \""+this.data.value+"\""
+        }
+        return this.data.path+" "+lp[this.data.comparison] + " "+value;
+    }
+    // getText: function () {
+    //     debugger;
+    //     var lp = MWF.APPDSMD.LP.filter;
+    //     return this.data.title + "(" + this.data.path + ")";
+    // },
 });
 
 
@@ -1311,8 +1352,21 @@ MWF.xApplication.query.StatementDesigner.widget.ViewFilter.ItemParameterForm = n
     },
     getText: function () {
         var lp = MWF.APPDSMD.LP.filter;
-        return this.data.parameter
+        var value = "";
+        if( this.data.valueType === "script" ){
+            var code = (this.data.valueScript && this.data.valueScript.code) ? this.data.valueScript.code : "";
+            value =  " " + (lp.script||"脚本") +":\"" + code.substr(0, 200) + "\"";
+        }else{
+            value = (this.data.formatType === "numberValue") ? (" " + this.data.value) : (" \"" + this.data.value + "\"");
+            value = " " + (lp.input||"输入") + ":" + value;
+        }
+        return (this.data.title || "") + " " + this.data.parameter + value;
     },
+    // getText: function () {
+    //     debugger;
+    //     var lp = MWF.APPDSMD.LP.filter;
+    //     return this.data.parameter
+    // },
     selected: function () {
         if( this.filter.verificationNode ){
             this.filter.verificationNode.destroy();

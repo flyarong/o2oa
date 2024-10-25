@@ -13,7 +13,6 @@ export default content({
     bind(){
         return {
             lp,
-            bMapV2ApiLoaded: false,
             person: {},
              // 打卡按钮
              checkInCycle: {
@@ -78,10 +77,14 @@ export default content({
     // 加载地图api等资源 因为后面计算距离啥的要用
     async loadBDMap() {
         const bdKey = await getPublicData("baiduAccountKey");
-        const accountkey = bdKey || "Qac4WmBvHXiC87z3HjtRrbotCE3sC9Zg";
+        const accountkey = bdKey || "sM5P4Xq9zsXGlco6RAq2CRDtwjR78WQB";
         this.bind.bdKey = accountkey;
-        const apiPath = "//api.map.baidu.com/getscript?v=2.0&ak="+accountkey+"&s=1&services=";
-        if( !this.bind.bMapV2ApiLoaded ){
+        let apiPath = "http://api.map.baidu.com/getscript?v=2.0&ak="+accountkey+"&s=1&services=";
+        if( window.location.protocol.toLowerCase() === "https:" ){
+            window.HOST_TYPE = '2';
+            apiPath = "//api.map.baidu.com/getscript?v=2.0&ak="+accountkey+"&s=1&services=";
+        }
+        if( !window.bMapV2ApiLoaded ){
             o2.load(apiPath, () => {
                 this.location();
             });
@@ -91,7 +94,7 @@ export default content({
     },
     // 定位
     location() {
-        this.bind.bMapV2ApiLoaded = true;
+        window.bMapV2ApiLoaded = true;
         var self = this;
         const geolocation = new BMap.Geolocation();
         // 开启SDK辅助定位 app webview 支持
@@ -157,8 +160,6 @@ export default content({
     },
     // 百度查询地址
     async getGeoAddress(point) {
-        // const url = "https://api.map.baidu.com/geocoder/v2/?callback=renderReverse&location="+this.bind.location.lnglat.latitude+","+this.bind.location.lnglat.longitude+"&output=json&pois=1&ak=" + this.bind.bdKey;
-        // console.debug(url);
         console.debug("开始查询定位的详细地址")
         const gc = new BMap.Geocoder();
         gc.getLocation(point, (rs) => {

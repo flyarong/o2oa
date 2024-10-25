@@ -63,7 +63,6 @@ export default content({
     }
   },
   afterRender() {
-    this.loadDetailList();
   },
   search() {
     this.bind.pagerData.page = 1;
@@ -85,6 +84,10 @@ export default content({
     if (this.bind.filterList && this.bind.filterList.length>0) {
       form.userId = this.bind.filterList[0];
     } else {
+      if (this.bind.units.length > 0) {
+        o2.api.page.notice(lp.detailStatisticList.filterEmptyPlaceholder, 'error');
+        return;
+      }
       form.userId = "";
     }
     const json = await detailActionListByPaging(
@@ -138,12 +141,8 @@ export default content({
     return convertMinutesToHoursAndMinutes(workTime);
   },
   async openRecordList(detail) {
-    const content = (await import(`./recordList/index.js`)).default;
-    this.recordListVm = await content.generate(".form", {bind: { recordList: detail.recordList||[] }}, this);
-  },
-  closeRecordList() {
-    if (this.recordListVm ) {
-      this.recordListVm.destroy();
-    }
+    // const content = (await import(`./recordList/index.js`)).default;
+    // this.recordListVm = await content.generate(".form", {bind: { recordList: detail.recordList||[] }}, this);
+    this.$topParent.openRecordListVm({bind: { recordList: detail.recordList||[] }})
   }
 });

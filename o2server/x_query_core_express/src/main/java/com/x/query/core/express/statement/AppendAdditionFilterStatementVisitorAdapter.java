@@ -116,7 +116,7 @@ public class AppendAdditionFilterStatementVisitorAdapter extends StatementVisito
 
     private String comparison(FilterEntry entry) {
         if (Comparison.isNotEquals(entry.comparison)) {
-            return "!=";
+            return "<>";
         }
         if (Comparison.isGreaterThan(entry.comparison)) {
             return ">";
@@ -132,6 +132,9 @@ public class AppendAdditionFilterStatementVisitorAdapter extends StatementVisito
         }
         if (Comparison.isLike(entry.comparison)) {
             return "LIKE";
+        }
+        if (Comparison.isNotLike(entry.comparison)) {
+            return "NOT LIKE";
         }
         if (Comparison.isIn(entry.comparison)) {
             return "IN";

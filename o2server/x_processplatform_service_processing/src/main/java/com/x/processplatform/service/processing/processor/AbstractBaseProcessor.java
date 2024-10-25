@@ -3,6 +3,7 @@ package com.x.processplatform.service.processing.processor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.Objects;
 
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -18,9 +19,11 @@ import com.x.processplatform.core.entity.content.Work;
 import com.x.processplatform.core.entity.content.WorkLog;
 import com.x.processplatform.core.entity.content.WorkStatus;
 import com.x.processplatform.core.entity.element.Activity;
+import com.x.processplatform.core.entity.element.ActivityType;
 import com.x.processplatform.core.entity.element.Embed;
 import com.x.processplatform.core.entity.element.Form;
 import com.x.processplatform.core.entity.element.Process;
+import com.x.processplatform.core.entity.ticket.Tickets;
 import com.x.processplatform.service.processing.Business;
 
 /***
@@ -84,6 +87,16 @@ abstract class AbstractBaseProcessor {
 		aeiObjects.getWork().setActivityDescription(aeiObjects.getActivity().getDescription());
 		aeiObjects.getWork().setActivityType(aeiObjects.getActivity().getActivityType());
 		aeiObjects.getWork().setWorkStatus(WorkStatus.processing);
+		// setDestinationRoute 和 setDestinationRouteName 在退回路由中使用到,无需赋空值
+		aeiObjects.getWork().setDestinationActivity(null);
+		aeiObjects.getWork().setDestinationActivityType(null);
+		aeiObjects.getWork().setForceRouteEnable(false);
+		// 除去人工活动环节，其他环节都去掉tickets值,否则会一直传递下去.
+		if (!Objects.equals(ActivityType.manual, aeiObjects.getActivity().getActivityType())){
+			aeiObjects.getWork().setTickets(new Tickets());			
+		}
+//		aeiObjects.getWork().setDestinationRoute(null);
+//		aeiObjects.getWork().setDestinationRouteName(null);
 		if (StringUtils.isNotEmpty(aeiObjects.getActivity().getForm())) {
 			/** 检查表单存在 */
 			Form form = this.business().element().get(aeiObjects.getActivity().getForm(), Form.class);
@@ -113,6 +126,10 @@ abstract class AbstractBaseProcessor {
 			workLog.setCompleted(false);
 			workLog.setConnected(true);
 			workLog.setDuration(Config.workTime().betweenMinutes(workLog.getFromTime(), workLog.getArrivedTime()));
+			workLog.setType(aeiObjects.getProcessingAttributes().getType());
+			if (StringUtils.isNotEmpty(workLog.getGoBackFromActivityToken())) {
+				updateJumpActivityToken(aeiObjects, workLog, token);
+			}
 			aeiObjects.getUpdateWorkLogs().add(workLog);
 		} else {
 			/* 拆分情况下是有可能这样的情况的,多份Work其中一份已经连接了formActivityToken的WorkLog */
@@ -135,6 +152,7 @@ abstract class AbstractBaseProcessor {
 				workLog.setCompleted(false);
 				workLog.setConnected(true);
 				workLog.setDuration(Config.workTime().betweenMinutes(workLog.getFromTime(), workLog.getArrivedTime()));
+				workLog.setType(aeiObjects.getProcessingAttributes().getType());
 				aeiObjects.getCreateWorkLogs().add(workLog);
 			} else {
 				/* 这样的情况应该是不可能的 */
@@ -142,6 +160,38 @@ abstract class AbstractBaseProcessor {
 			}
 		}
 		return workLog;
+	}
+
+	/**
+	 * 退回再次jump到当前节点,需要将所有的已办,已阅,待阅的activityToken进行修改,避免再次退回时由于两个activityToken不同取到了部分已办
+	 * 1、拟稿—办理（多人并行1、2、3），1继续流转到确认，2退回到拟稿，拟稿回到办理，办理2、3生成了待办，2、3继续流转到确认，确认退回只到了2、3，这个不对，应该到1、2、3
+	 * 
+	 * @param aeiObjects
+	 * @param workLog
+	 * @throws Exception
+	 */
+	private void updateJumpActivityToken(AeiObjects aeiObjects, WorkLog workLog, String token) throws Exception {
+		aeiObjects.getTaskCompleteds().stream()
+				.filter(o -> StringUtils.equalsAnyIgnoreCase(o.getActivityToken(), workLog.getGoBackFromActivityToken())
+						&& StringUtils.equalsAnyIgnoreCase(o.getActivity(), workLog.getGoBackFromActivity()))
+				.forEach(o -> {
+					o.setActivityToken(token);
+					aeiObjects.getUpdateTaskCompleteds().add(o);
+				});
+		aeiObjects.getReads().stream()
+				.filter(o -> StringUtils.equalsAnyIgnoreCase(o.getActivityToken(), workLog.getGoBackFromActivityToken())
+						&& StringUtils.equalsAnyIgnoreCase(o.getActivity(), workLog.getGoBackFromActivity()))
+				.forEach(o -> {
+					o.setActivityToken(token);
+					aeiObjects.getUpdateReads().add(o);
+				});
+		aeiObjects.getReadCompleteds().stream()
+				.filter(o -> StringUtils.equalsAnyIgnoreCase(o.getActivityToken(), workLog.getGoBackFromActivityToken())
+						&& StringUtils.equalsAnyIgnoreCase(o.getActivity(), workLog.getGoBackFromActivity()))
+				.forEach(o -> {
+					o.setActivityToken(token);
+					aeiObjects.getUpdateReadCompleteds().add(o);
+				});
 	}
 
 	protected Work copyWork(Work work) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {

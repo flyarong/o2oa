@@ -7,7 +7,6 @@ import java.util.List;
 import com.x.base.core.project.AbstractContext;
 import com.x.base.core.project.annotation.FieldDescribe;
 import com.x.base.core.project.gson.GsonPropertyObject;
-import com.x.base.core.project.gson.XGsonBuilder;
 import com.x.base.core.project.organization.Identity;
 import com.x.base.core.project.organization.WoIdentity;
 
@@ -30,7 +29,7 @@ class ActionListObject extends BaseAction {
 		@FieldDescribe("身份")
 		private List<String> identityList = new ArrayList<>();
 
-		@FieldDescribe("是否关联查询身份所属对象信息：组织、角色、群组")
+		@FieldDescribe("是否关联查询身份所属组织、角色信息")
 		private Boolean referenceFlag;
 
 		public List<String> getIdentityList() {

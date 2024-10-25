@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.BooleanUtils;
+
 import com.x.base.core.container.EntityManagerContainer;
 import com.x.base.core.container.factory.EntityManagerContainerFactory;
 import com.x.base.core.entity.JpaObject;
@@ -19,6 +21,7 @@ import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
 import com.x.base.core.project.tools.ListTools;
 import com.x.processplatform.assemble.surface.Business;
+import com.x.processplatform.assemble.surface.JobControlBuilder;
 import com.x.processplatform.assemble.surface.ThisApplication;
 import com.x.processplatform.core.entity.content.Read;
 import com.x.processplatform.core.entity.content.ReadCompleted;
@@ -41,21 +44,22 @@ class ActionListWithJob extends BaseAction {
 
 			Business business = new Business(emc);
 
-			if (!business.readableWithJob(effectivePerson, job)) {
-				throw new ExceptionAccessDenied(effectivePerson);
+			if (BooleanUtils.isNotTrue(
+					new JobControlBuilder(effectivePerson, business, job).enableAllowVisit().build().getAllowVisit())) {
+				throw new ExceptionAccessDenied(effectivePerson, job);
 			}
 		}
 
 		CompletableFuture<List<WoTask>> futureTasks = CompletableFuture.supplyAsync(() -> this.tasks(job),
-				ThisApplication.threadPool());
+				ThisApplication.forkJoinPool());
 		CompletableFuture<List<WoTaskCompleted>> futureTaskCompleteds = CompletableFuture
-				.supplyAsync(() -> this.taskCompleteds(job), ThisApplication.threadPool());
+				.supplyAsync(() -> this.taskCompleteds(job), ThisApplication.forkJoinPool());
 		CompletableFuture<List<WoRead>> futureReads = CompletableFuture.supplyAsync(() -> this.reads(job),
-				ThisApplication.threadPool());
+				ThisApplication.forkJoinPool());
 		CompletableFuture<List<WoReadCompleted>> futureReadCompleteds = CompletableFuture
-				.supplyAsync(() -> this.readCompleteds(job), ThisApplication.threadPool());
+				.supplyAsync(() -> this.readCompleteds(job), ThisApplication.forkJoinPool());
 		CompletableFuture<List<Wo>> futureWorkLogs = CompletableFuture.supplyAsync(() -> this.workLogs(job),
-				ThisApplication.threadPool());
+				ThisApplication.forkJoinPool());
 		List<WoTask> tasks = futureTasks.get();
 		List<WoTaskCompleted> taskCompleteds = futureTaskCompleteds.get();
 		List<WoRead> reads = futureReads.get();
@@ -210,7 +214,7 @@ class ActionListWithJob extends BaseAction {
 
 		static WrapCopier<Task, WoTask> copier = WrapCopierFactory.wo(Task.class, WoTask.class,
 				ListTools.toList(Task.id_FIELDNAME, Task.person_FIELDNAME, Task.identity_FIELDNAME, Task.unit_FIELDNAME,
-						Task.routeName_FIELDNAME, Task.opinion_FIELDNAME, Task.opinionLob_FIELDNAME,
+						Task.ROUTENAME_FIELDNAME, Task.opinion_FIELDNAME, Task.opinionLob_FIELDNAME,
 						Task.startTime_FIELDNAME, Task.activityName_FIELDNAME, Task.activityToken_FIELDNAME),
 				null);
 	}
@@ -223,7 +227,7 @@ class ActionListWithJob extends BaseAction {
 				WoTaskCompleted.class,
 				ListTools.toList(TaskCompleted.id_FIELDNAME, TaskCompleted.person_FIELDNAME,
 						TaskCompleted.identity_FIELDNAME, TaskCompleted.unit_FIELDNAME,
-						TaskCompleted.routeName_FIELDNAME, TaskCompleted.opinion_FIELDNAME,
+						TaskCompleted.ROUTENAME_FIELDNAME, TaskCompleted.opinion_FIELDNAME,
 						TaskCompleted.opinionLob_FIELDNAME, TaskCompleted.startTime_FIELDNAME,
 						TaskCompleted.activityName_FIELDNAME, TaskCompleted.completedTime_FIELDNAME,
 						TaskCompleted.activityToken_FIELDNAME, TaskCompleted.mediaOpinion_FIELDNAME),

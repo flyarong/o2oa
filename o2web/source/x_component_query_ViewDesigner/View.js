@@ -985,20 +985,36 @@ MWF.xApplication.query.ViewDesigner.View = new Class({
             );
         }.bind(this));
     },
+    isForceClearCustomStyle: function (){
+        return this.json.forceClearCustomStyle &&
+            this.json.forceClearCustomStyle.length &&
+            this.json.forceClearCustomStyle[0] === "yes"
+    },
     removeStyles: function(from, to){
-        if (this.json.data.viewStyles[to]){
-            Object.each(from, function(style, key){
-                if (this.json.data.viewStyles[to][key] && this.json.data.viewStyles[to][key]==style){
-                    delete this.json.data.viewStyles[to][key];
-                }
-            }.bind(this));
+        if( this.isForceClearCustomStyle() ){
+            this.json.data.viewStyles[to] = {};
+        }else {
+            if (this.json.data.viewStyles[to]) {
+                Object.each(from, function (style, key) {
+                    if (this.json.data.viewStyles[to][key] && this.json.data.viewStyles[to][key] == style) {
+                        delete this.json.data.viewStyles[to][key];
+                    }
+                }.bind(this));
+            }
         }
     },
     copyStyles: function(from, to){
-        if (!this.json.data.viewStyles[to]) this.json.data.viewStyles[to] = {};
-        Object.each(from, function(style, key){
-            if (!this.json.data.viewStyles[to][key]) this.json.data.viewStyles[to][key] = style;
-        }.bind(this));
+        if( this.isForceClearCustomStyle() ){
+            this.json.data.viewStyles[to] = {};
+            Object.each(from, function (style, key) {
+                this.json.data.viewStyles[to][key] = style;
+            }.bind(this));
+        }else{
+            if (!this.json.data.viewStyles[to]) this.json.data.viewStyles[to] = {};
+            Object.each(from, function(style, key){
+                if (!this.json.data.viewStyles[to][key]) this.json.data.viewStyles[to][key] = style;
+            }.bind(this));
+        }
     },
     // clearTemplateStyles: function(styles){
     //     if (styles){
@@ -1019,6 +1035,7 @@ MWF.xApplication.query.ViewDesigner.View = new Class({
             if (styles.contentTr) this.removeStyles(styles.contentTr, "contentTr");
             if (styles.contentSelectedTr) this.removeStyles(styles.contentSelectedTr, "contentSelectedTr");
             if (styles.contentTd) this.removeStyles(styles.contentTd, "contentTd");
+            if (styles.zebraContentTd) this.removeStyles(styles.zebraContentTd, "zebraContentTd");
             if (styles.contentGroupTd) this.removeStyles(styles.contentGroupTd, "contentGroupTd");
             if (styles.groupCollapseNode) this.removeStyles(styles.groupCollapseNode, "groupCollapseNode");
             if (styles.groupExpandNode) this.removeStyles(styles.groupExpandNode, "groupExpandNode");
@@ -1038,6 +1055,7 @@ MWF.xApplication.query.ViewDesigner.View = new Class({
         if (styles.contentTr) this.copyStyles(styles.contentTr, "contentTr");
         if (styles.contentSelectedTr) this.copyStyles(styles.contentSelectedTr, "contentSelectedTr");
         if (styles.contentTd) this.copyStyles(styles.contentTd, "contentTd");
+        if (styles.zebraContentTd) this.copyStyles(styles.zebraContentTd, "zebraContentTd");
         if (styles.contentGroupTd) this.copyStyles(styles.contentGroupTd, "contentGroupTd");
         if (styles.groupCollapseNode) this.copyStyles(styles.groupCollapseNode, "groupCollapseNode");
         if (styles.groupExpandNode) this.copyStyles(styles.groupExpandNode, "groupExpandNode");
@@ -1697,9 +1715,12 @@ MWF.xApplication.query.ViewDesigner.View.Column = new Class({
 
         this.view.setViewWidth();
 
+        this._destroy();
+
         MWF.release(this);
         delete this;
     },
+    _destroy: function(){},
     addColumn: function(e, data){
         MWF.require("MWF.widget.UUID", function(){
             var json;
@@ -2079,7 +2100,14 @@ MWF.xApplication.query.ViewDesigner.View.Actionbar = new Class({
     },
     loadMultiToolbar : function(){
         if( this.json.multiTools ){
-            var json = Array.clone(this.json.multiTools);
+            if (MWF.xApplication.query.ViewDesigner.LP.actionBar){
+                var jsonStr = JSON.stringify(this.json.multiTools);
+                jsonStr = o2.bindJson(jsonStr, {"lp": MWF.xApplication.query.ViewDesigner.LP.actionBar});
+                this.multiToolsJson = JSON.parse(jsonStr); //.map( function (d) { d.system = true; return d; });
+            }else{
+                this.multiToolsJson = this.json.multiTools;
+            }
+            var json = Array.clone(this.multiToolsJson);
             this.setMultiToolbars(json, this.toolbarNode);
             this.toolbarWidget.load();
             this._setEditStyle_custom("hideSystemTools");
@@ -2092,16 +2120,22 @@ MWF.xApplication.query.ViewDesigner.View.Actionbar = new Class({
             this.toolbarWidget.load();
             this._setEditStyle_custom("hideSystemTools");
         }else{
-            // MWF.getJSON(this.path+"toolbars.json", function(json){
-            MWF.getJSON(this.getJsonPath(), function(json){
-                this.json.multiTools = json.map( function (d) { d.system = true; return d; });
+            o2.xhr_get(this.getJsonPath(), function(xhr){
+                var jsonStr = xhr.responseText;
+                this.json.multiTools = JSON.parse(jsonStr).map( function (d) { d.system = true; return d; });
                 if (this.json.tools){
                     this.json.multiTools = this.json.multiTools.concat( this.json.tools )
                 }
-                this.setMultiToolbars(Array.clone(this.json.multiTools), this.toolbarNode);
+                if (MWF.xApplication.query.ViewDesigner.LP.actionBar){
+                    jsonStr = o2.bindJson(jsonStr, {"lp": MWF.xApplication.query.ViewDesigner.LP.actionBar});
+                    this.multiToolsJson = JSON.parse(jsonStr).map( function (d) { d.system = true; return d; });
+                }else{
+                    this.multiToolsJson = this.json.multiTools;
+                }
+                this.setMultiToolbars(Array.clone(this.multiToolsJson), this.toolbarNode);
                 this.toolbarWidget.load();
                 this._setEditStyle_custom("hideSystemTools");
-            }.bind(this), false);
+            }.bind(this), null,null, false);
         }
     },
     setMultiToolbars: function(tools, node){

@@ -386,7 +386,7 @@ if (!MWF.xScript || !MWF.xScript.PageEnvironment) {
                     return v;
                 };
 
-                var promise = orgActions.listRoleWithPerson(data, cb, null, !!async);
+                var promise = orgActions.personHasRole(data, cb, null, !!async);
                 return (!!async) ? promise : v;
 
                 // var v = false;
@@ -1314,10 +1314,12 @@ if (!MWF.xScript || !MWF.xScript.PageEnvironment) {
                     return this._execute(obj, callback, async, obj.format);
                 }else{
                     if( this.needCheckFormat(obj) ){
-                        var p = MWF.Actions.load("x_query_assemble_surface").StatementAction.getFormat(obj.name, null, null, async);
-                        Promise.resolve(p).then(function (json) {
-                            return this._execute(obj, callback, async, json.data.format);
-                        }.bind(this));
+                        var result;
+                        var p = MWF.Actions.load("x_query_assemble_surface").StatementAction.getFormat(obj.name, function(json){
+                            result = this._execute(obj, callback, async, json.data.format);
+                            return result;
+                        }.bind(this), null, async);
+                        return result || p;
                     }else{
                         return this._execute(obj, callback, async, "");
                     }
@@ -1358,6 +1360,8 @@ if (!MWF.xScript || !MWF.xScript.PageEnvironment) {
                 if( !parameter )parameter = {};
                 var filterList = [];
                 (filter || []).each(function (d) {
+                    if( !d.logic )d.logic = "and";
+
                     //var parameterName = d.path.replace(/\./g, "_");
                     var pName = d.path.replace(/\./g, "_");
 
@@ -1373,7 +1377,7 @@ if (!MWF.xScript || !MWF.xScript.PageEnvironment) {
                         if (value.substr(value.length - 1, 1) !== "%") value = value + "%";
                         parameter[parameterName] = value; //"%"+value+"%";
                     } else {
-                         if( ["sql", "sqlScript"].contains(format) ) {
+                        if( ["sql", "sqlScript"].contains(format) ) {
                             if (d.formatType === "numberValue") {
                                 value = parseFloat(value);
                             }
@@ -1647,11 +1651,11 @@ if (!MWF.xScript || !MWF.xScript.PageEnvironment) {
                     }
                 }.bind(this);
 
-            if( type === "service" ){
-                scriptAction.getScriptByName(name, includedScripts, successCallback, null, !!async);
-            }else{
-                scriptAction.getScriptByName(application, name, includedScripts, successCallback, null, !!async);
-            }
+                if( type === "service" ){
+                    scriptAction.getScriptByName(name, includedScripts, successCallback, null, !!async);
+                }else{
+                    scriptAction.getScriptByName(application, name, includedScripts, successCallback, null, !!async);
+                }
             }
         };
         this.include = function (optionsOrName, callback, async) {
@@ -1906,6 +1910,16 @@ if (!MWF.xScript || !MWF.xScript.PageEnvironment) {
                 return _form.dialog( options );
             },
 
+            /**打开人员组织选择界面
+             * @method selectOrg
+             * @static
+             * @see module:form.selectOrg
+             */
+            "selectOrg": function ( container, options,  delayLoad) {
+                if( !container )container = _form.app.content;
+                return new MWF.O2Selector(container, options, delayLoad);
+            },
+
             /**给页面添加事件。
              * @method addEvent
              * @static
@@ -1939,7 +1953,7 @@ if (!MWF.xScript || !MWF.xScript.PageEnvironment) {
              */
             "openJob": function (id, choice, options, callback) {
                 var workData = null, handel;
-                o2.Actions.get("x_processplatform_assemble_surface").listWorkByJob(id, function (json) {
+                o2.Actions.get("x_processplatform_assemble_surface").listWorkByJob(id, function(json){
                     if (json.data) workData = json.data;
                 }.bind(this), null, false);
 
@@ -1950,7 +1964,7 @@ if (!MWF.xScript || !MWF.xScript.PageEnvironment) {
                         if( o2.typeOf(queryLoad) === "function" )queryLoad.call(this);
                         callback(this);
                     }
-                };
+                }
 
                 runCallback = function ( handel ) {
                     if( o2.typeOf(callback) === "function" ) {
@@ -1959,24 +1973,21 @@ if (!MWF.xScript || !MWF.xScript.PageEnvironment) {
                         } else if (options && options.appId) {
                             if (layout.desktop && layout.desktop.apps && layout.desktop.apps[options.appId]) {
                                 callback(layout.desktop.apps[options.appId], true);
+                            }else{
+                                callback(handel, false);
                             }
+                        }else{
+                            callback(handel, false);
                         }
                     }
                 };
 
-
-
-                if (workData) {
+                if (workData){
                     var len = workData.workList.length + workData.workCompletedList.length;
-                    if (len) {
-                        if (len > 1 && choice) {
-                            var node = new Element("div", {
-                                "styles": {
-                                    "padding": "20px",
-                                    "width": "500px"
-                                }
-                            }).inject(_form.node);
-                            workData.workList.each(function (work) {
+                    if (len){
+                        if (len>1 && choice){
+                            var node = new Element("div", {"styles": {"padding": "20px", "width": "500px"}}).inject(_form.node);
+                            workData.workList.each(function(work){
                                 var workNode = new Element("div", {
                                     "styles": {
                                         "background": "#ffffff",
@@ -1988,25 +1999,25 @@ if (!MWF.xScript || !MWF.xScript.PageEnvironment) {
                                     }
                                 }).inject(node);
                                 var html = "<div style='height: 40px; width: 40px; float: left; background: url(../x_component_process_Xform/$Form/default/icon/work.png) no-repeat center center'></div>" +
-                                    "<div style='height: 40px; width: 40px; float: right'><div class='MWFAction' style='height: 20px; width: 40px; margin-top: 10px; border: 1px solid #999999; border-radius: 5px;text-align: center; cursor: pointer'>" + o2.LP.widget.open + "</div></div>" +
-                                    "<div style='height: 20px; line-height: 20px; margin: 0px 40px'>" + work.title + "</div>" +
-                                    "<div style='margin: 0px 40px'><div style='color:#999999; float: left; margin-right: 10px'>" + work.activityName + "</div>" +
-                                    "<div style='color:#999999; float: left; margin-right: 10px'>" + work.activityArrivedTime + "</div>" +
-                                    "<div style='color:#999999; float: left; margin-right: 10px'>" + (work.manualTaskIdentityText || "") + "</div></div>";
+                                    "<div style='height: 40px; width: 40px; float: right'><div class='MWFAction' style='height: 20px; width: 40px; margin-top: 10px; border: 1px solid #999999; border-radius: 5px;text-align: center; cursor: pointer'>"+o2.LP.widget.open+"</div></div>"+
+                                    "<div style='height: 20px; line-height: 20px; margin: 0px 40px'>"+work.title+"</div>" +
+                                    "<div style='margin: 0px 40px'><div style='color:#999999; float: left; margin-right: 10px'>"+work.activityName+"</div>" +
+                                    "<div style='color:#999999; float: left; margin-right: 10px'>"+work.activityArrivedTime+"</div>" +
+                                    "<div style='color:#999999; float: left; margin-right: 10px'>"+(work.manualTaskIdentityText || "")+"</div></div>";
                                 workNode.set("html", html);
                                 var action = workNode.getElement(".MWFAction");
                                 action.store("work", work);
-                                action.addEvent("click", function (e) {
+                                action.addEvent("click", function(e){
                                     var work = e.target.retrieve("work");
                                     if (work){
-                                       handel =  this.openWork(work.id, null, work.title, options);
-                                       runCallback( handel );
+                                        handel =  this.openWork(work.id, null, work.title, options);
+                                        runCallback( handel );
                                     }
                                     dlg.close();
                                 }.bind(this));
 
                             }.bind(this));
-                            workData.workCompletedList.each(function (work) {
+                            workData.workCompletedList.each(function(work){
                                 var workNode = new Element("div", {
                                     "styles": {
                                         "background": "#ffffff",
@@ -2018,14 +2029,14 @@ if (!MWF.xScript || !MWF.xScript.PageEnvironment) {
                                     }
                                 }).inject(node);
                                 var html = "<div style='height: 40px; width: 40px; float: left; background: url(../x_component_process_Xform/$Form/default/icon/work.png) no-repeat center center'></div>" +
-                                    "<div style='height: 40px; width: 40px; float: right'><div class='MWFAction' style='height: 20px; width: 40px; margin-top: 10px; border: 1px solid #999999; border-radius: 5px;text-align: center; cursor: pointer'>" + o2.LP.widget.open + "</div></div>" +
-                                    "<div style='height: 20px; line-height: 20px; margin: 0px 40px'>" + work.title + "</div>" +
-                                    "<div style='margin: 0px 40px'><div style='color:#999999; float: left; margin-right: 10px'>" + o2.LP.widget.workcompleted + "</div>" +
-                                    "<div style='color:#999999; float: left; margin-right: 10px'>" + work.completedTime + "</div>";
+                                    "<div style='height: 40px; width: 40px; float: right'><div class='MWFAction' style='height: 20px; width: 40px; margin-top: 10px; border: 1px solid #999999; border-radius: 5px;text-align: center; cursor: pointer'>"+o2.LP.widget.open+"</div></div>"+
+                                    "<div style='height: 20px; line-height: 20px; margin: 0px 40px'>"+work.title+"</div>" +
+                                    "<div style='margin: 0px 40px'><div style='color:#999999; float: left; margin-right: 10px'>"+o2.LP.widget.workcompleted+"</div>" +
+                                    "<div style='color:#999999; float: left; margin-right: 10px'>"+work.completedTime+"</div>";
                                 workNode.set("html", html);
                                 var action = workNode.getElement(".MWFAction");
                                 action.store("work", work);
-                                action.addEvent("click", function (e) {
+                                action.addEvent("click", function(e){
                                     var work = e.target.retrieve("work");
                                     if (work){
                                         handel =  this.openWork(null, work.id, work.title, options);
@@ -2035,38 +2046,44 @@ if (!MWF.xScript || !MWF.xScript.PageEnvironment) {
                                 }.bind(this));
 
                             }.bind(this));
-                            var height = node.getSize().y + 20;
-                            if (height > 600) height = 600;
+                            var height = node.getSize().y+20;
+                            if (height>600) height = 600;
 
                             var dlg = o2.DL.open({
                                 "title": o2.LP.widget.choiceWork,
-                                "style": "user",
+                                "style" : "user",
                                 "isResize": false,
                                 "content": node,
                                 "buttonList": [
                                     {
-                                        "type": "cancel",
+                                        "type" : "cancel",
                                         "text": o2.LP.widget.close,
-                                        "action": function () {
-                                            dlg.close();
-                                        }
+                                        "action": function(){dlg.close();}
                                     }
                                 ]
                             });
-                        } else {
-                            if (workData.workList.length) {
-                                var work = workData.workList[0];
+                        }else{
+                            if (workData.workList.length){
+                                var work =  workData.workList[0];
                                 handel = this.openWork(work.id, null, work.title, options);
-                                runCallback(handel);
+                                runCallback( handel );
                                 return handel;
-                            } else {
-                                var work = workData.workCompletedList[0];
+                            }else{
+                                var work =  workData.workCompletedList[0];
                                 handel = this.openWork(null, work.id, work.title, options);
-                                runCallback(handel);
+                                runCallback( handel );
                                 return handel;
                             }
                         }
+                    }else{
+                        runCallback(new Error("Can't open this Job", {
+                            cause: workData
+                        }));
                     }
+                }else{
+                    runCallback(new Error("Can't open this Job", {
+                        cause: workData
+                    }));
                 }
             },
             /**打开一个内容管理文档
@@ -2079,6 +2096,26 @@ if (!MWF.xScript || !MWF.xScript.PageEnvironment) {
                 op.documentId = id;
                 op.docTitle = title || "";
                 op.appId = (op.appId) || ("cms.Document"+id);
+                if( op.onPostPublish ){
+                    op.postPublish = op.onPostPublish;
+                    delete op.onPostPublish;
+                }
+                if( op.onAfterPublish ){
+                    op.afterPublish = op.onAfterPublish;
+                    delete op.onAfterPublish;
+                }
+                if( op.onAfterSave ){
+                    op.afterSave = op.onAfterSave;
+                    delete op.onAfterSave;
+                }
+                if( op.onBeforeClose ){
+                    op.beforeClose = op.onBeforeClose;
+                    delete op.onBeforeClose;
+                }
+                if( op.onPostDelete ){
+                    op.postDelete = op.onPostDelete;
+                    delete op.onPostDelete;
+                }
                 return layout.desktop.openApplication(this.event, "cms.Document", op);
             },
             /**打开一个门户页面
@@ -2182,6 +2219,22 @@ if (!MWF.xScript || !MWF.xScript.PageEnvironment) {
                     if (category) {
                         options["category"] = category
                     }
+                    if (data) {
+                        options["data"] = data
+                    }
+                    if (identity) {
+                        options["identity"] = identity
+                    }
+                    if (typeof(latest) == 'undefined' || latest === null) {
+                        options["latest"] = true
+                    } else {
+                        options["latest"] = latest
+                    }
+                    if (typeof(ignoreTitle) == 'undefined' || ignoreTitle === null) {
+                        options["ignoreTitle"] = false
+                    } else {
+                        options["ignoreTitle"] = ignoreTitle
+                    }
                     if (window.o2android && window.o2android.postMessage) {
                         var body = {
                             type: "createO2CmsDocument",
@@ -2236,7 +2289,7 @@ if (!MWF.xScript || !MWF.xScript.PageEnvironment) {
              * @static
              * @see module:form.startProcess
              */
-            "startProcess": function (app, process, data, identity, callback, target, latest, afterCreated) {
+            "startProcess": function (app, process, data, identity, callback, target, latest, afterCreated, skipDraftCheck) {
                 if (arguments.length > 2) {
                     for (var i = 2; i < arguments.length; i++) {
                         if (typeOf(arguments[i]) == "boolean") {
@@ -2278,61 +2331,64 @@ if (!MWF.xScript || !MWF.xScript.PageEnvironment) {
                         }, false);
 
                         if (!cmpt.processStarter) cmpt.processStarter = new o2.xApplication.process.TaskCenter.Starter(obj);
-                        cmpt.processStarter.load();
+                        cmpt.processStarter.load({
+                            "appFlag": app
+                        });
                     }, true, true);
                     return "";
                 }
+                MWF.xDesktop.requireApp("process.TaskCenter", "ProcessStarter", null, false);
                 var action = MWF.Actions.get("x_processplatform_assemble_surface").getProcessByName(process, app, function (json) {
                     if (json.data) {
-                        MWF.xDesktop.requireApp("process.TaskCenter", "ProcessStarter", function () {
-                            var starter = new MWF.xApplication.process.TaskCenter.ProcessStarter(json.data, _form.app, {
-                                "workData": data,
-                                "identity": identity,
-                                "latest": latest,
-                                "onStarted": function (data, title, processName) {
-                                    var application;
-                                    if (data.work) {
-                                        var work = data.work;
-                                        var options = {
-                                            "draft": work,
-                                            "appId": "process.Work" + (new o2.widget.UUID).toString(),
-                                            "desktopReload": false
-                                        };
+                        var starter = new MWF.xApplication.process.TaskCenter.ProcessStarter(json.data, _form.app, {
+                            "workData": data,
+                            "identity": identity,
+                            "latest": latest,
+                            "skipDraftCheck": skipDraftCheck,
+                            "onStarted": function (data, title, processName) {
+                                var application;
+                                if (data.work) {
+                                    var work = data.work;
+                                    var options = {
+                                        "draft": work,
+                                        "draftData":data.data||{},
+                                        "appId": "process.Work" + (new o2.widget.UUID).toString(),
+                                        "desktopReload": false
+                                    };
+                                    if( !layout.inBrowser && afterCreated )options.onPostLoadForm = afterCreated;
+                                    application = layout.desktop.openApplication(null, "process.Work", options);
+                                } else {
+                                    var currentTask = [];
+                                    data.each(function (work) {
+                                        if (work.currentTaskIndex != -1) currentTask.push(work.taskList[work.currentTaskIndex].work);
+                                    }.bind(this));
+
+                                    if (currentTask.length == 1) {
+                                        var options = {"workId": currentTask[0], "appId": currentTask[0]};
                                         if( !layout.inBrowser && afterCreated )options.onPostLoadForm = afterCreated;
                                         application = layout.desktop.openApplication(null, "process.Work", options);
                                     } else {
-                                        var currentTask = [];
-                                        data.each(function (work) {
-                                            if (work.currentTaskIndex != -1) currentTask.push(work.taskList[work.currentTaskIndex].work);
-                                        }.bind(this));
-
-                                        if (currentTask.length == 1) {
-                                            var options = {"workId": currentTask[0], "appId": currentTask[0]};
-                                            if( !layout.inBrowser && afterCreated )options.onPostLoadForm = afterCreated;
-                                            application = layout.desktop.openApplication(null, "process.Work", options);
-                                        } else {
-                                        }
                                     }
+                                }
 
-                                    // var currentTask = [];
-                                    // data.each(function (work) {
-                                    //     if (work.currentTaskIndex != -1) currentTask.push(work.taskList[work.currentTaskIndex].work);
-                                    // }.bind(this));
-                                    //
-                                    // if (currentTask.length == 1) {
-                                    //     var options = { "workId": currentTask[0], "appId": currentTask[0] };
-                                    //     layout.desktop.openApplication(null, "process.Work", options);
-                                    // } else { }
+                                // var currentTask = [];
+                                // data.each(function (work) {
+                                //     if (work.currentTaskIndex != -1) currentTask.push(work.taskList[work.currentTaskIndex].work);
+                                // }.bind(this));
+                                //
+                                // if (currentTask.length == 1) {
+                                //     var options = { "workId": currentTask[0], "appId": currentTask[0] };
+                                //     layout.desktop.openApplication(null, "process.Work", options);
+                                // } else { }
 
-                                    if (callback) callback(data);
+                                if (callback) callback(data);
 
-                                    if(layout.inBrowser && afterCreated){
-                                        afterCreated(application)
-                                    }
-                                }.bind(this)
-                            });
-                            starter.load();
-                        }.bind(this));
+                                if(layout.inBrowser && afterCreated){
+                                    afterCreated(application)
+                                }
+                            }.bind(this)
+                        });
+                        starter.load();
                     }
                 });
             },

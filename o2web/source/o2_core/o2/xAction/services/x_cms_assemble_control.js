@@ -391,6 +391,12 @@ MWF.xAction.RestActions.Action["x_cms_assemble_control"] = new Class({
             this.addData(success, failure, id, data, async);
         }
     },
+    addData: function(success, failure, id, data, async){
+        this.action.invoke({"name": "addData","data": data, "parameter": {"id": id}, "success": success,"failure": failure,"async": async});
+    },
+    updateData: function(success, failure, id, data, async){
+        this.action.invoke({"name": "updateData","data": data,"parameter": {"id": id},"success": success,"failure": failure, "async": async});
+    },
     uploadAttachment: function(id, success, failure, formData, file){
         this.action.invoke({"name": "uploadAttachment", "parameter": {"id": id},"data": formData,"file": file,"success": success,"failure": failure});
     },
@@ -399,14 +405,15 @@ MWF.xAction.RestActions.Action["x_cms_assemble_control"] = new Class({
     },
     getAttachmentData: function(id, documentid){
         this.action.getActions(function(){
-            var url = layout.user.tokenType === "anonymous"?this.action.actions.getAttachmentDataByAnonymous.uri:this.action.actions.getAttachmentData.uri;            url = url.replace("{id}", encodeURIComponent(id));
+            var url = layout.user.tokenType === "anonymous"?this.action.actions.getAttachmentDataByAnonymous.uri:this.action.actions.getAttachmentData.uri;
+            url = url.replace("{id}", encodeURIComponent(id));
             url = url.replace("{documentid}", encodeURIComponent(documentid));
             window.open(o2.filterUrl(this.action.address+url));
         }.bind(this));
     },
     getAttachmentStream: function(id, documentid){
         this.action.getActions(function(){
-            var url = this.action.actions.getAttachmentStream.uri;
+            var url = layout.user.tokenType === "anonymous" ? this.action.actions.getAttachmentStreamByAnonymous.uri : this.action.actions.getAttachmentStream.uri;
             url = url.replace("{id}", encodeURIComponent(id));
             url = url.replace("{documentid}", encodeURIComponent(documentid));
             window.open(o2.filterUrl(this.action.address+url));
@@ -414,11 +421,18 @@ MWF.xAction.RestActions.Action["x_cms_assemble_control"] = new Class({
     },
     getAttachmentUrl: function(id, documentid, callback){
         this.action.getActions(function(){
-            var url = this.action.actions.getAttachmentData.uri;
+            var url = layout.user.tokenType === "anonymous" ? this.action.actions.getAttachmentDataByAnonymous.uri : this.action.actions.getAttachmentData.uri;
             url = url.replace("{id}", encodeURIComponent(id));
             url = url.replace("{documentid}", encodeURIComponent(documentid));
             if (callback) callback(o2.filterUrl(this.action.address+url));
         }.bind(this));
+    },
+    getAttachment: function(id, documentid, success, failure){
+        if( layout.user.tokenType === "anonymous" ){
+            this.action.invoke({"name": "getAttachmentByAnonymous", "parameter": {"id": id, "documentid": documentid},"success": success,"failure": failure});
+        }else{
+            this.action.invoke({"name": "getAttachment", "parameter": {"id": id, "documentid": documentid}, "success": success,"failure": failure});
+        }
     },
     convertLocalImageToBase64: function(size, success, failure, formData, file){
         this.action.invoke({"name": "convertLocalImageToBase64", "parameter": {"size": size},"data": formData,"file": file,"success": success,"failure": failure});

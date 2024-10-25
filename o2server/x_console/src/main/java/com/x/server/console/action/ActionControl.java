@@ -1,5 +1,7 @@
 package com.x.server.console.action;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -17,6 +19,7 @@ import org.apache.commons.lang3.math.NumberUtils;
 import com.x.base.core.project.config.Config;
 import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
+import com.x.server.console.ResourceFactory;
 
 /*
 @author zhourui
@@ -26,7 +29,6 @@ public class ActionControl extends ActionBase {
 
 	private static Logger logger = LoggerFactory.getLogger(ActionControl.class);
 
-	private static final String CMD_PPE = "ppe";
 	private static final String CMD_OS = "os";
 	private static final String CMD_HS = "hs";
 	private static final String CMD_HD = "hd";
@@ -42,6 +44,9 @@ public class ActionControl extends ActionBase {
 	private static final String CMD_EN = "en";
 	private static final String CMD_DE = "de";
 	private static final String CMD_GC = "gc";
+	private static final String CMD_INITRESOURCEFACTORY = "initResourceFactory";
+	private static final String CMD_FLUSHCONFIG = "flushConfig";
+	private static final String CMD_REGENERATECONFIG = "regenerateConfig";
 
 	private static final int REPEAT_MAX = 100;
 	private static final int REPEAT_MIN = 1;
@@ -50,9 +55,7 @@ public class ActionControl extends ActionBase {
 		try {
 			CommandLineParser parser = new DefaultParser();
 			CommandLine cmd = parser.parse(options(), args);
-			if (cmd.hasOption(CMD_PPE)) {
-				ppe(cmd);
-			} else if (cmd.hasOption(CMD_OS)) {
+			if (cmd.hasOption(CMD_OS)) {
 				os(cmd);
 			} else if (cmd.hasOption(CMD_HS)) {
 				hs(cmd);
@@ -82,6 +85,12 @@ public class ActionControl extends ActionBase {
 				de(cmd);
 			} else if (cmd.hasOption(CMD_GC)) {
 				gc();
+			} else if (cmd.hasOption(CMD_INITRESOURCEFACTORY)) {
+				initResourceFactory();
+			} else if (cmd.hasOption(CMD_FLUSHCONFIG)) {
+				flushConfig();
+			} else if (cmd.hasOption(CMD_REGENERATECONFIG)) {
+				regenerateConfig();
 			} else {
 				HelpFormatter formatter = new HelpFormatter();
 				formatter.printHelp("control command", displayOptions());
@@ -93,7 +102,6 @@ public class ActionControl extends ActionBase {
 
 	private static Options options() {
 		Options options = new Options();
-		options.addOption(ppeOption());
 		options.addOption(osOption());
 		options.addOption(hsOption());
 		options.addOption(hdOption());
@@ -109,12 +117,14 @@ public class ActionControl extends ActionBase {
 		options.addOption(enOption());
 		options.addOption(deOption());
 		options.addOption(gcOption());
+		options.addOption(initResourceFactoryOption());
+		options.addOption(flushConfigOption());
+		options.addOption(regenerateConfigOption());
 		return options;
 	}
 
 	private static Options displayOptions() {
 		Options displayOptions = new Options();
-		displayOptions.addOption(ppeOption());
 		displayOptions.addOption(osOption());
 		displayOptions.addOption(hsOption());
 		displayOptions.addOption(hdOption());
@@ -130,10 +140,6 @@ public class ActionControl extends ActionBase {
 		displayOptions.addOption(enOption());
 		displayOptions.addOption(gcOption());
 		return displayOptions;
-	}
-
-	private static Option ppeOption() {
-		return Option.builder(CMD_PPE).longOpt("processPlatformExecutor").hasArg(false).desc("显示流程平台执行线程状态.").build();
 	}
 
 	private static Option osOption() {
@@ -205,6 +211,21 @@ public class ActionControl extends ActionBase {
 		return Option.builder(CMD_GC).longOpt("jvm garbage collection").hasArg(false).desc("垃圾收集.").build();
 	}
 
+	private static Option initResourceFactoryOption() {
+		return Option.builder(CMD_INITRESOURCEFACTORY).longOpt("init resource factory").hasArg(false).desc("初始资源工厂.")
+				.build();
+	}
+
+	private static Option flushConfigOption() {
+		return Option.builder(CMD_FLUSHCONFIG).longOpt("flush config").hasArg(false)
+				.desc("重置Config对象,不更新externalDataSources,externalStorageSources.").build();
+	}
+
+	private static Option regenerateConfigOption() {
+		return Option.builder(CMD_REGENERATECONFIG).longOpt("regenerate config").hasArg(false)
+				.desc("重新生成Config对象,销毁所有配置对象.").build();
+	}
+
 	private void ec(CommandLine cmd) throws Exception {
 		String type = Objects.toString(cmd.getOptionValue("ec"));
 		switch (type) {
@@ -269,11 +290,6 @@ public class ActionControl extends ActionBase {
 		httpStatus.start();
 	}
 
-	private void ppe(CommandLine cmd) throws Exception {
-		ProcessPlatformExecutor processPlatformExecutor = new ProcessPlatformExecutor();
-		processPlatformExecutor.execute();
-	}
-
 	private void os(CommandLine cmd) {
 		final Integer command = this.getArgInteger(cmd, CMD_OS, 1);
 		OperatingSystem operatingSystem = new OperatingSystem(command);
@@ -323,6 +339,19 @@ public class ActionControl extends ActionBase {
 	private void gc() {
 		GarbageCollection garbageCollection = new GarbageCollection();
 		garbageCollection.execute();
+	}
+
+	private void initResourceFactory() throws Exception {
+		ResourceFactory.destory();
+		ResourceFactory.init();
+	}
+
+	private void flushConfig() {
+		Config.flush();
+	}
+
+	private void regenerateConfig() {
+		Config.regenerate();
 	}
 
 	private Integer getArgInteger(CommandLine cmd, String opt, Integer defaultValue) {

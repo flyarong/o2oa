@@ -118,13 +118,26 @@
     <div class="systemconfig_item_info" v-html="lp._serversConfig.exposeJestInfo.replaceAll('{url}', getJestUrl())"></div>
     <BaseBoolean v-model:value="generalData.exposeJest" @change="(v)=>{saveConfig('general', 'exposeJest', v)}"/>
 
+    <div class="systemconfig_item_title">{{lp._serversConfig.storageEncrypt}}</div>
+    <div class="systemconfig_item_info" v-html="lp._serversConfig.storageEncryptInfo"></div>
+    <BaseBoolean v-model:value="generalData.storageEncrypt" @change="(v)=>{saveConfig('general', 'storageEncrypt', !v ? 0 : 1)}"/>
+
+<!--    <BaseItem-->
+<!--        :title="lp._serversConfig.scriptingBlockedClasses"-->
+<!--        :info="lp._serversConfig.scriptingBlockedClassesInfo"-->
+<!--        :config="generalData.scriptingBlockedClasses"-->
+<!--        :allowEditor="true"-->
+<!--        type="textarea"-->
+<!--        @changeConfig="(value)=>{const v = (value && !Array.isArray(value)) ? value.split(/\s*,\s*/g): (value||[]); generalData.scriptingBlockedClasses=v; saveConfig('general', 'scriptingBlockedClasses', v)}"-->
+<!--    ></BaseItem>-->
+
     <BaseItem
-        :title="lp._serversConfig.scriptingBlockedClasses"
-        :info="lp._serversConfig.scriptingBlockedClassesInfo"
-        :config="generalData.scriptingBlockedClasses"
-        :allowEditor="true"
-        type="textarea"
-        @changeConfig="(value)=>{const v = (value && !Array.isArray(value)) ? value.split(/\s*,\s*/g): (value||[]); generalData.scriptingBlockedClasses=v; saveConfig('general', 'scriptingBlockedClasses', v)}"
+            :title="lp._serversConfig.httpWhiteList"
+            :info="lp._serversConfig.httpWhiteListInfo"
+            :config="generalData.httpWhiteList"
+            :allowEditor="true"
+            type="textarea"
+            @changeConfig="(value)=>{const v = (value && !Array.isArray(value)) ? value.split(/\s*,\s*/g): (value||['*']); generalData.httpWhiteList=v; saveConfig('general', 'httpWhiteList', v)}"
     ></BaseItem>
 
     <BaseItem
@@ -143,6 +156,14 @@
         @changeConfig="(value)=>{generalData.accessControlAllowOrigin=value; saveConfig('general', 'accessControlAllowOrigin', value)}"
     ></BaseItem>
 
+    <BaseItem
+        :title="lp._serversConfig.contentSecurityPolicy"
+        :info="lp._serversConfig.contentSecurityPolicyInfo"
+        :config="generalData.contentSecurityPolicy"
+        :allowEditor="true"
+        @changeConfig="(value)=>{generalData.contentSecurityPolicy=value; saveConfig('general', 'contentSecurityPolicy', value)}"
+    ></BaseItem>
+    <div class="item_info" v-html="lp._serversConfig.contentSecurityPolicyInfo2"></div>
 
 <!--    <BaseInput v-model:value="generalData.scriptingBlockedClasses" @change="(v)=>{saveConfig('general', 'scriptingBlockedClasses', v)}" input-type="textarea"/>-->
 
@@ -196,6 +217,9 @@ getConfigData('general').then((data)=>{
   }
   if (!generalData.value.hasOwnProperty('statExclusions')){
     generalData.value.statExclusions = '*.js,*.gif,*.jpg,*.png,*.css,*.ico';
+  }
+  if (!generalData.value.hasOwnProperty('httpWhiteList')){
+    generalData.value.httpWhiteList = ['*'];
   }
 });
 getConfigData('person').then((data)=>{

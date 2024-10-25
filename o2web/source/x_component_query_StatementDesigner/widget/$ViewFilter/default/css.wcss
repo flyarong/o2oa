@@ -46,6 +46,22 @@
         "background": "url(../x_component_query_ViewDesigner/widget/$ViewFilter/default/icon/delete1.png) no-repeat center center",
         "cursor": "pointer"
     },
+    "itemOrderNode": {
+        "width": "12px",
+        "height": "20px",
+        "padding-top": "4px",
+        "padding-left": "8px",
+        "float": "right",
+        "cursor": "pointer"
+    },
+    "itemAddNode": {
+        "width": "12px",
+        "height": "20px",
+        "padding-top": "4px",
+        "padding-left": "8px",
+        "float": "right",
+        "cursor": "pointer"
+    },
     "itemContentNode": {
         "padding-left": "5px",
         "padding-right": "3px",
@@ -55,6 +71,56 @@
         "overflow": "hidden",
         "text-overflow": "ellipsis",
         "white-space": "nowrap"
-    }
+    },
+
+  "editTable": {
+
+  },
+  "editTableTitleWithoutWith": {
+    "font-weight": "bold",
+    "font-size": "12px",
+    "height": "24px",
+    "line-height": "24px",
+    "border-bottom": "1px dashed #CCC"
+  },
+  "editTableTitle": {
+    "min-width": "70px",
+    "max-width": "100px",
+    "width": "20%",
+    "font-weight": "bold",
+    "font-size": "12px",
+    "height": "24px",
+    "line-height": "24px",
+    "border-bottom": "1px dashed #CCC"
+  },
+  "editTableValue": {
+    "height": "24px",
+    "line-height": "24px",
+    "border-bottom": "1px dashed #CCC"
+  },
+  "editTableInput": {
+    "width": "98%",
+    "border-top": "1px solid #DDD",
+    "border-left": "1px solid #DDD",
+    "border-bottom": "1px solid #EEE",
+    "border-right": "1px solid #EEE"
+  },
+  "editTableInputNoWidth": {
+    "border-top": "1px solid #DDD",
+    "border-left": "1px solid #DDD",
+    "border-bottom": "1px solid #EEE",
+    "border-right": "1px solid #EEE"
+  },
+  "editTableTextarea": {
+    "width": "98%",
+    "height": "100px",
+    "border-top": "1px solid #DDD",
+    "border-left": "1px solid #DDD",
+    "border-bottom": "1px solid #EEE",
+    "border-right": "1px solid #EEE"
+  },
+  "editTableRadio": {
+    "display": "inline-block"
+  }
 
 }

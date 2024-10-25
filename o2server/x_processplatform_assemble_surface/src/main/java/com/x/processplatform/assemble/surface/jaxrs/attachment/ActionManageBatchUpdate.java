@@ -32,7 +32,7 @@ class ActionManageBatchUpdate extends BaseAction {
 					effectivePerson.getDistinguishedName());
 			ActionResult<Wo> result = new ActionResult<>();
 			Business business = new Business(emc);
-			if (BooleanUtils.isFalse(business.canManageApplication(effectivePerson, null))) {
+			if (BooleanUtils.isFalse(business.ifPersonCanManageApplicationOrProcess(effectivePerson, "",""))) {
 				throw new ExceptionAccessDenied(effectivePerson);
 			}
 			// 天谷印章扩展
@@ -54,7 +54,7 @@ class ActionManageBatchUpdate extends BaseAction {
 						StorageMapping mapping = ThisApplication.context().storageMappings().get(Attachment.class,
 								attachment.getStorage());
 						emc.beginTransaction(Attachment.class);
-						attachment.updateContent(mapping, bytes, fileName);
+						attachment.updateContent(mapping, bytes, fileName, Config.general().getStorageEncrypt());
 						if (BooleanUtils.isTrue(Config.query().getExtractImage())
 								&& ExtractTextTools.supportImage(attachment.getName())
 								&& ExtractTextTools.available(bytes)) {

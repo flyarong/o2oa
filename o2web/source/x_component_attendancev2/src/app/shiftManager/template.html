@@ -1,8 +1,8 @@
-<div class="manager-box">
+<div class="manager-box white-bg">
     <div class="index_page_header_container">
         <div class="index_page_header_title">{{$.lp.shiftTitle}}</div>
     </div>
-    <div style="padding: 20px;">
+    <div class="manager-box-content">
         <div style="margin: 10px 0;float: left;">
             <button class="mainColor_bg" @click="addShift">{{$.lp.addShift}}</button>
         </div>
@@ -10,14 +10,16 @@
             <thead>
                 <th>{{$.lp.shiftName}}</th>
                 <th>{{$.lp.checkInTime}}</th>
-                <th style="width: 10%;">{{$.lp.operate}}</th>
+                <th style="width: 150px;">{{$.lp.operate}}</th>
             </thead>
             <tr oo-each="$.shiftList" oo-item="shift">
                 <td>{{shift.value.shiftName}}</td>
                 <td>{{shift.value.properties.timeList[0].onDutyTime + ' - ' + shift.value.properties.timeList[shift.value.properties.timeList.length-1].offDutyTime}}</td>
                 <td>
+                    <div class="o2-icon-16" @click="this.clickEditShift(shift.value.id)" ><i class="o2icon-icon_bianji"></i></div>
                     <span class="operator_link"
                         @click="this.clickEditShift(shift.value.id)">{{$.lp.update}}</span>
+                    <div class="o2-icon-16 margin-left" @click="this.clickDeleteShift(shift.value.id, shift.value.shiftName)" ><i class="o2icon-icon_delete_grey"></i></div>
                     <span class="operator_link"
                         @click="this.clickDeleteShift(shift.value.id, shift.value.shiftName)">{{$.lp.delete}}</span>
                 </td>

@@ -43,7 +43,7 @@ MWF.xApplication.process.Xform.Actionbar = MWF.APPActionbar =  new Class(
             "moduleEvents": ["load", "queryLoad", "postLoad", "afterLoad"]
         },
         /**
-         * @summary 重新加载操作条.
+         * @summary 重新加载操作条。会触发afterLoad事件
          * @example
          * this.form.get("name").reload(); //显示操作条
          */
@@ -148,8 +148,17 @@ MWF.xApplication.process.Xform.Actionbar = MWF.APPActionbar =  new Class(
                         }
                     }
                 }
+
+                if (this.toolbarWidget.items["action_goBack"]){
+                    // 异步判断是否有可退回的活动
+                    if (this.form.businessData.task) o2.Actions.load('x_processplatform_assemble_surface').WorkAction.V2ListActivityGoBack(this.form.businessData.task.work, function(json){
+                        if (json.data.length){
+                            this.toolbarWidget.items["action_goBack"].show();
+                        }
+                    }.bind(this));
+                }
+
             }.bind(this));
-            // }
         },
 
         setCustomToolbars: function(tools, node){
@@ -228,11 +237,7 @@ MWF.xApplication.process.Xform.Actionbar = MWF.APPActionbar =  new Class(
                 var hideFlag = this.form.Macro.exec(tool.condition, this);
                 flag = flag && (!hideFlag);
             }
-            // if (tool.id == "action_processWork"){
-            //     if (!this.form.businessData.task){
-            //         flag = false;
-            //     }
-            // }
+
             if (tool.id == "action_downloadAll" || tool.id == "action_print"){
                 if (!this.form.businessData.work.startTime){
                     flag = false;
@@ -244,7 +249,6 @@ MWF.xApplication.process.Xform.Actionbar = MWF.APPActionbar =  new Class(
                 }
             }
 
-
             if (tool.id == "action_rollback") tool.read = true;
             if (readonly) if (!tool.read) flag = false;
             if (flag){
@@ -255,7 +259,8 @@ MWF.xApplication.process.Xform.Actionbar = MWF.APPActionbar =  new Class(
                     "MWFButtonImage": this.getImagePath(tool.img, tool.customImg),
                     "title": tool.title,
                     "MWFButtonAction": tool.action,
-                    "MWFButtonText": tool.text
+                    "MWFButtonText": tool.text,
+                    "MWFHide": (tool.id === "action_goBack") ? 'true' : ''
                 }).inject(node);
                 if( this.json.iconOverStyle ){
                     actionNode.set("MWFButtonImageOver" , this.getImageOverPath(tool.img, tool.customImg) );
@@ -311,6 +316,9 @@ MWF.xApplication.process.Xform.Actionbar = MWF.APPActionbar =  new Class(
         closeWork: function(){
             this.form.closeWork();
         },
+        flowWork: function(){
+            this.form.flowWork();
+        },
         processWork: function(){
             this.form.processWork();
         },
@@ -343,6 +351,9 @@ MWF.xApplication.process.Xform.Actionbar = MWF.APPActionbar =  new Class(
         },
         downloadAll: function(e){
             this.form.downloadAll(e);
+        },
+        monitor: function(e){
+            this.form.monitor(e);
         },
         pressWork: function(e){
             this.form.pressWork(e);
@@ -378,6 +389,13 @@ MWF.xApplication.process.Xform.Actionbar = MWF.APPActionbar =  new Class(
 
                 }.bind(this), function(){});
             }
+        },
+        goBack: function(e){
+            this.form.goBack(e);
+        },
+
+        terminate: function(e, ev){
+            this.form.terminateWork(e, ev);
         }
 
     });

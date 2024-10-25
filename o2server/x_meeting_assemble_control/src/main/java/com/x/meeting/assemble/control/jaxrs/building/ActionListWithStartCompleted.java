@@ -25,6 +25,10 @@ class ActionListWithStartCompleted extends BaseAction {
 			Business business = new Business(emc);
 			Date startTime = DateTools.parse(start, DateTools.format_yyyyMMdd + " " + DateTools.format_HHmm);
 			Date completedTime = DateTools.parse(completed, DateTools.format_yyyyMMdd + " " + DateTools.format_HHmm);
+
+			startTime = DateTools.addSeconds(startTime,1);
+			completedTime = DateTools.addSeconds(completedTime,-1);
+
 			List<String> ids = business.building().list();
 			List<Wo> wos = Wo.copier.copy(emc.list(Building.class, ids));
 			WrapTools.setRoom(business, wos);

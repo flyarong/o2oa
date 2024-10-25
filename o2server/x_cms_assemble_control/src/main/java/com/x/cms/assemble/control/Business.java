@@ -1,22 +1,28 @@
 package com.x.cms.assemble.control;
 
-import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import com.x.cms.assemble.control.factory.service.CenterServiceFactory;
-import com.x.base.core.project.config.StorageMapping;
-import com.x.cms.core.entity.CategoryInfo;
-import com.x.cms.core.entity.Document;
-import com.x.cms.core.entity.FileInfo;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import com.x.base.core.container.EntityManagerContainer;
+import com.x.base.core.project.Applications;
+import com.x.base.core.project.x_correlation_service_processing;
+import com.x.base.core.project.config.Config;
+import com.x.base.core.project.config.StorageMapping;
 import com.x.base.core.project.http.EffectivePerson;
+import com.x.base.core.project.logger.Logger;
+import com.x.base.core.project.logger.LoggerFactory;
 import com.x.base.core.project.organization.OrganizationDefinition;
+import com.x.base.core.project.organization.Person;
 import com.x.base.core.project.tools.ListTools;
 import com.x.cms.assemble.control.factory.AppDictFactory;
 import com.x.cms.assemble.control.factory.AppDictItemFactory;
@@ -45,7 +51,13 @@ import com.x.cms.assemble.control.factory.ViewFactory;
 import com.x.cms.assemble.control.factory.ViewFieldConfigFactory;
 import com.x.cms.assemble.control.factory.portal.PortalFactory;
 import com.x.cms.assemble.control.factory.process.ProcessFactory;
+import com.x.cms.assemble.control.factory.service.CenterServiceFactory;
 import com.x.cms.core.entity.AppInfo;
+import com.x.cms.core.entity.CategoryInfo;
+import com.x.cms.core.entity.Document;
+import com.x.cms.core.entity.FileInfo;
+import com.x.correlation.core.express.service.processing.jaxrs.correlation.ActionReadableTypeCmsWi;
+import com.x.correlation.core.express.service.processing.jaxrs.correlation.ActionReadableTypeProcessPlatformWo;
 import com.x.organization.core.express.Organization;
 
 /**
@@ -55,7 +67,10 @@ import com.x.organization.core.express.Organization;
  */
 public class Business {
 
-	public static final String[] FILENAME_SENSITIVES_KEY = new String[] { "/", ":", "*", "?", "<<", ">>", "|", "<", ">", "\\" };
+	private static final Logger LOGGER = LoggerFactory.getLogger(Business.class);
+
+	public static final String[] FILENAME_SENSITIVES_KEY = new String[] { "/", ":", "*", "?", "<<", ">>", "|", "<", ">",
+			"\\" };
 	public static final String[] FILENAME_SENSITIVES_EMPTY = new String[] { "", "", "", "", "", "", "", "", "", "" };
 
 	private EntityManagerContainer emc;
@@ -436,47 +451,65 @@ public class Business {
 	}
 
 	/**
-	 * 是否是文档的编辑者
-	 * 文档不存在判断是否是分类或应用的发布者
+	 * 是否是文档的编辑者 文档不存在判断是否是分类或应用的发布者
+	 *
 	 * @param person
 	 * @param appInfo
 	 * @return
 	 * @throws Exception
 	 */
-	public boolean isDocumentEditor(EffectivePerson person, AppInfo appInfo, CategoryInfo categoryInfo, Document document) throws Exception {
+	public boolean isDocumentEditor(EffectivePerson person, AppInfo appInfo, CategoryInfo categoryInfo,
+			Document document) throws Exception {
 		if (isManager(person)) {
 			return true;
 		}
 		List<String> unitNames = this.organization().unit().listWithPersonSupNested(person.getDistinguishedName());
 		List<String> groupNames = this.organization().group().listWithPerson(person.getDistinguishedName());
-		if(document!=null){
-			if( ListTools.isNotEmpty( document.getAuthorPersonList() )) {
-				if( document.getAuthorPersonList().contains( getShortTargetFlag(person.getDistinguishedName()) ) ) {
+		if (document != null) {
+			if (!this.ifPersonHasSufficientSecurityClearance(person.getDistinguishedName(),
+					document.getObjectSecurityClearance())) {
+				return false;
+			}
+			if (ListTools.isNotEmpty(document.getManagerList())) {
+				if (document.getManagerList().contains(getShortTargetFlag(person.getDistinguishedName()))) {
 					return true;
 				}
 			}
-			if( ListTools.isNotEmpty( document.getAuthorUnitList() )) {
-				if( ListTools.containsAny( getShortTargetFlag(unitNames), document.getAuthorUnitList())) {
+			if (ListTools.isNotEmpty(document.getAuthorPersonList())) {
+				if (document.getAuthorPersonList().contains(getShortTargetFlag(person.getDistinguishedName()))) {
 					return true;
 				}
 			}
-			if( ListTools.isNotEmpty( document.getAuthorGroupList() )) {
-				if( ListTools.containsAny( getShortTargetFlag(groupNames), document.getAuthorGroupList())) {
+			if (ListTools.isNotEmpty(document.getAuthorUnitList())) {
+				if (ListTools.containsAny(getShortTargetFlag(unitNames), document.getAuthorUnitList())) {
 					return true;
 				}
+			}
+			if (ListTools.isNotEmpty(document.getAuthorGroupList())) {
+				if (ListTools.containsAny(getShortTargetFlag(groupNames), document.getAuthorGroupList())) {
+					return true;
+				}
+			}
+			if (appInfo == null) {
+				appInfo = this.emc.find(document.getAppId(), AppInfo.class);
+			}
+			if (categoryInfo == null) {
+				categoryInfo = this.emc.find(document.getCategoryId(), CategoryInfo.class);
 			}
 		}
 		boolean publishFlag = document == null ? true : false;
+
 		if (categoryInfo != null) {
 			Set<String> catePersonList = new HashSet<>(categoryInfo.getManageablePersonList());
 			Set<String> cateUnitList = new HashSet<>(categoryInfo.getManageableUnitList());
 			Set<String> cateGroupList = new HashSet<>(categoryInfo.getManageableGroupList());
-			if(document == null){
+			if (document == null) {
 				catePersonList.addAll(categoryInfo.getPublishablePersonList());
 				cateUnitList.addAll(categoryInfo.getPublishableUnitList());
 				cateGroupList.addAll(categoryInfo.getPublishableGroupList());
-				if(!categoryInfo.getPublishablePersonList().isEmpty() || !categoryInfo.getPublishableUnitList().isEmpty()
-						|| !categoryInfo.getPublishableGroupList().isEmpty()){
+				if (!categoryInfo.getPublishablePersonList().isEmpty()
+						|| !categoryInfo.getPublishableUnitList().isEmpty()
+						|| !categoryInfo.getPublishableGroupList().isEmpty()) {
 					publishFlag = false;
 				}
 			}
@@ -494,12 +527,12 @@ public class Business {
 			Set<String> appPersonList = new HashSet<>(appInfo.getManageablePersonList());
 			Set<String> appUnitList = new HashSet<>(appInfo.getManageableUnitList());
 			Set<String> appGroupList = new HashSet<>(appInfo.getManageableGroupList());
-			if(document == null){
+			if (document == null) {
 				appPersonList.addAll(appInfo.getPublishablePersonList());
 				appUnitList.addAll(appInfo.getPublishableUnitList());
 				appGroupList.addAll(appInfo.getPublishableGroupList());
-				if(!appInfo.getPublishablePersonList().isEmpty() || !appInfo.getPublishableUnitList().isEmpty()
-						|| !appInfo.getPublishableGroupList().isEmpty()){
+				if (!appInfo.getPublishablePersonList().isEmpty() || !appInfo.getPublishableUnitList().isEmpty()
+						|| !appInfo.getPublishableGroupList().isEmpty()) {
 					publishFlag = false;
 				}
 			}
@@ -518,6 +551,7 @@ public class Business {
 
 	/**
 	 * 是否是文档的读者
+	 *
 	 * @param person
 	 * @return
 	 * @throws Exception
@@ -526,27 +560,68 @@ public class Business {
 		if (isManager(person)) {
 			return true;
 		}
+		if (!this.ifPersonHasSufficientSecurityClearance(person.getDistinguishedName(),
+				document.getObjectSecurityClearance())) {
+			return false;
+		}
 		String documentType = "数据";
-		if(documentType.equals(document.getDocumentType())){
+		if (documentType.equals(document.getDocumentType())) {
 			return true;
 		}
-		if(BooleanUtils.isTrue(document.getIsAllRead())){
+		if (BooleanUtils.isTrue(document.getIsAllRead())) {
 			return true;
 		}
 		String allPerson = "所有人";
-		if( document.getReadPersonList().contains(getShortTargetFlag(person.getDistinguishedName())) ||
-				document.getReadPersonList().contains(allPerson)) {
+		if (document.getReadPersonList().contains(getShortTargetFlag(person.getDistinguishedName()))
+				|| document.getReadPersonList().contains(allPerson)) {
 			return true;
 		}
 		Long count = this.reviewFactory().countByDocumentAndPerson(document.getId(), person.getDistinguishedName());
-		if(count > 0){
+		if (count > 0) {
 			return true;
 		}
 		count = this.reviewFactory().countByDocumentAndPerson(document.getId(), "*");
-		if(count > 0){
+		if (count > 0) {
 			return true;
 		}
-		return false;
+		return ifDocumentHasBeenCorrelation(person.getDistinguishedName(), document.getId());
+	}
+
+	/**
+	 * 用户是否有足够的密级标识等级.
+	 *
+	 * @param person
+	 * @param objectSecurityClearance
+	 * @return
+	 */
+	public boolean ifPersonHasSufficientSecurityClearance(String person, Integer objectSecurityClearance) {
+		try {
+			if(!Config.ternaryManagement().getSecurityClearanceEnable()){
+				return true;
+			}
+			Person p = this.organization().person().getObject(person);
+			Integer subjectSecurityClearance = p.getSubjectSecurityClearance();
+			if (null == subjectSecurityClearance) {
+				subjectSecurityClearance = Config.ternaryManagement().getDefaultSubjectSecurityClearance();
+			}
+			if ((null != subjectSecurityClearance) && (null != objectSecurityClearance)) {
+				return subjectSecurityClearance >= objectSecurityClearance;
+			}
+		} catch (Exception e) {
+			LOGGER.error(e);
+		}
+		return true;
+	}
+
+	public boolean ifDocumentHasBeenCorrelation(String person, String docId) throws Exception {
+		ActionReadableTypeCmsWi req = new ActionReadableTypeCmsWi();
+		req.setPerson(person);
+		req.setDoucment(docId);
+		ActionReadableTypeProcessPlatformWo resp = ThisApplication.context().applications()
+				.postQuery(x_correlation_service_processing.class,
+						Applications.joinQueryUri("correlation", "readable", "type", "cms"), req, docId)
+				.getData(ActionReadableTypeProcessPlatformWo.class);
+		return resp.getValue();
 	}
 
 	/**
@@ -619,15 +694,15 @@ public class Business {
 
 	public static String getShortTargetFlag(String distinguishedName) {
 		String target = distinguishedName;
-		if( StringUtils.isNotEmpty( distinguishedName ) ){
+		if (StringUtils.isNotEmpty(distinguishedName)) {
 			String[] array = distinguishedName.split("@");
 			StringBuffer sb = new StringBuffer();
-			if( array.length == 3 ){
+			if (array.length == 3) {
 				target = sb.append(array[1]).append("@").append(array[2]).toString();
-			}else if( array.length == 2 ){
-				//2段
+			} else if (array.length == 2) {
+				// 2段
 				target = sb.append(array[0]).append("@").append(array[1]).toString();
-			}else{
+			} else {
 				target = array[0];
 			}
 		}
@@ -636,8 +711,8 @@ public class Business {
 
 	public static List<String> getShortTargetFlag(List<String> nameList) {
 		List<String> targetList = new ArrayList<>();
-		if( ListTools.isNotEmpty( nameList ) ){
-			for(String distinguishedName : nameList) {
+		if (ListTools.isNotEmpty(nameList)) {
+			for (String distinguishedName : nameList) {
 				String target = distinguishedName;
 				String[] array = target.split("@");
 				StringBuffer sb = new StringBuffer();
@@ -677,23 +752,16 @@ public class Business {
 		}
 		try (ZipOutputStream zos = new ZipOutputStream(os)) {
 			for (Map.Entry<String, FileInfo> entry : filePathMap.entrySet()) {
-				zos.putNextEntry(new ZipEntry(StringUtils.replaceEach(entry.getKey(),
-						FILENAME_SENSITIVES_KEY,
-						FILENAME_SENSITIVES_EMPTY)));
+				zos.putNextEntry(new ZipEntry(
+						StringUtils.replaceEach(entry.getKey(), FILENAME_SENSITIVES_KEY, FILENAME_SENSITIVES_EMPTY)));
 				StorageMapping mapping = ThisApplication.context().storageMappings().get(FileInfo.class,
 						entry.getValue().getStorage());
-				try (ByteArrayOutputStream os1 = new ByteArrayOutputStream()) {
-					entry.getValue().readContent(mapping, os1);
-					byte[] bs = os1.toByteArray();
-					os1.close();
-					zos.write(bs);
-				}
+				entry.getValue().readContent(mapping, zos);
 			}
 
 			if (otherAttMap != null) {
 				for (Map.Entry<String, byte[]> entry : otherAttMap.entrySet()) {
-					zos.putNextEntry(new ZipEntry(StringUtils.replaceEach(entry.getKey(),
-							FILENAME_SENSITIVES_KEY,
+					zos.putNextEntry(new ZipEntry(StringUtils.replaceEach(entry.getKey(), FILENAME_SENSITIVES_KEY,
 							FILENAME_SENSITIVES_EMPTY)));
 					zos.write(entry.getValue());
 				}

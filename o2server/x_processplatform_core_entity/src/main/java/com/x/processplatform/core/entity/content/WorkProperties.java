@@ -7,15 +7,20 @@ import java.util.Map;
 
 import com.x.base.core.entity.JsonProperties;
 import com.x.base.core.project.annotation.FieldDescribe;
+import com.x.base.core.project.gson.GsonPropertyObject;
 import com.x.base.core.project.processplatform.ManualTaskIdentityMatrix;
+import com.x.processplatform.core.entity.element.ActivityType;
+import com.x.processplatform.core.entity.ticket.Tickets;
 
 public class WorkProperties extends JsonProperties {
 
 	private static final long serialVersionUID = -62236689373222398L;
 
+	@Deprecated(since = "8.2", forRemoval = true)
 	@FieldDescribe("强制待办处理人")
 	private List<String> manualForceTaskIdentityList = new ArrayList<>();
 
+	@Deprecated(since = "8.2", forRemoval = true)
 	@FieldDescribe("授权对象")
 	private Map<String, String> manualEmpowerMap = new LinkedHashMap<>();
 
@@ -40,8 +45,75 @@ public class WorkProperties extends JsonProperties {
 	@FieldDescribe("拆分值列表")
 	private List<String> splitValueList = new ArrayList<>();
 
+	@Deprecated(since = "8.2", forRemoval = true)
 	@FieldDescribe("待办身份矩阵")
 	private ManualTaskIdentityMatrix manualTaskIdentityMatrix = new ManualTaskIdentityMatrix();
+
+	@FieldDescribe("待办身份矩阵")
+	private GoBackStore goBackStore;
+
+	@FieldDescribe("goBack进行跳转退回时使用的.")
+	private String goBackActivityToken;
+
+	@FieldDescribe("拆分值存储对象.")
+	private Map<String, String> splitTokenValueMap = new LinkedHashMap<>();
+
+	@FieldDescribe("待办凭证.")
+	private Tickets tickets;
+
+	@FieldDescribe("强制路由.")
+	private Boolean forceRouteEnable;
+
+	@FieldDescribe("当前处理人身份合并文本,用','分割,此字段仅用于显示当前工作的处理人,不索引.")
+	private String manualTaskIdentityText;
+
+	public String getManualTaskIdentityText() {
+		return manualTaskIdentityText;
+	}
+
+	public void setManualTaskIdentityText(String manualTaskIdentityText) {
+		this.manualTaskIdentityText = manualTaskIdentityText;
+	}
+
+	public Boolean getForceRouteEnable() {
+		return forceRouteEnable;
+	}
+
+	public void setForceRouteEnable(Boolean forceRouteEnable) {
+		this.forceRouteEnable = forceRouteEnable;
+	}
+
+	public Tickets getTickets() {
+		return tickets;
+	}
+
+	public void setTickets(Tickets tickets) {
+		this.tickets = tickets;
+	}
+
+	public Map<String, String> getSplitTokenValueMap() {
+		return splitTokenValueMap;
+	}
+
+	public void setSplitTokenValueMap(Map<String, String> splitTokenValueMap) {
+		this.splitTokenValueMap = splitTokenValueMap;
+	}
+
+	public String getGoBackActivityToken() {
+		return goBackActivityToken;
+	}
+
+	public void setGoBackActivityToken(String goBackActivityToken) {
+		this.goBackActivityToken = goBackActivityToken;
+	}
+
+	public GoBackStore getGoBackStore() {
+		return goBackStore;
+	}
+
+	public void setGoBackStore(GoBackStore goBackStore) {
+		this.goBackStore = goBackStore;
+	}
 
 	public ManualTaskIdentityMatrix getManualTaskIdentityMatrix() {
 		return manualTaskIdentityMatrix;
@@ -75,7 +147,7 @@ public class WorkProperties extends JsonProperties {
 
 	public Map<String, Object> getServiceValue() {
 		if (this.serviceValue == null) {
-			this.serviceValue = new LinkedHashMap<String, Object>();
+			this.serviceValue = new LinkedHashMap<>();
 		}
 		return this.serviceValue;
 	}
@@ -133,6 +205,65 @@ public class WorkProperties extends JsonProperties {
 
 	public void setEmbedTargetJob(String embedTargetJob) {
 		this.embedTargetJob = embedTargetJob;
+	}
+
+	/**
+	 * work中存储的回退操作需要的数据
+	 * 
+	 * @author ray
+	 *
+	 */
+	public static class GoBackStore extends GsonPropertyObject {
+
+		private static final long serialVersionUID = 2334994291846390241L;
+
+		@Deprecated(since = "8.2", forRemoval = true)
+		private ManualTaskIdentityMatrix manualTaskIdentityMatrix = new ManualTaskIdentityMatrix();
+		private Tickets tickets;
+		private String activity;
+		private ActivityType activityType;
+		private String activityToken;
+
+		public ManualTaskIdentityMatrix getManualTaskIdentityMatrix() {
+			return manualTaskIdentityMatrix;
+		}
+
+		public void setManualTaskIdentityMatrix(ManualTaskIdentityMatrix manualTaskIdentityMatrix) {
+			this.manualTaskIdentityMatrix = manualTaskIdentityMatrix;
+		}
+
+		public String getActivityToken() {
+			return activityToken;
+		}
+
+		public void setActivityToken(String activityToken) {
+			this.activityToken = activityToken;
+		}
+
+		public Tickets getTickets() {
+			return tickets;
+		}
+
+		public void setTickets(Tickets tickets) {
+			this.tickets = tickets;
+		}
+
+		public String getActivity() {
+			return activity;
+		}
+
+		public void setActivity(String activity) {
+			this.activity = activity;
+		}
+
+		public ActivityType getActivityType() {
+			return activityType;
+		}
+
+		public void setActivityType(ActivityType activityType) {
+			this.activityType = activityType;
+		}
+
 	}
 
 }

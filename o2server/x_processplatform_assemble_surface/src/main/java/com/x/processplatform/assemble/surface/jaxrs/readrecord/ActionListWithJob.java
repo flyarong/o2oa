@@ -18,6 +18,8 @@ import com.x.base.core.project.http.EffectivePerson;
 import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
 import com.x.processplatform.assemble.surface.Business;
+import com.x.processplatform.assemble.surface.Control;
+import com.x.processplatform.assemble.surface.JobControlBuilder;
 import com.x.processplatform.assemble.surface.ThisApplication;
 import com.x.processplatform.core.entity.content.Read;
 import com.x.processplatform.core.entity.content.ReadCompleted;
@@ -72,7 +74,7 @@ class ActionListWithJob extends BaseAction {
 				LOGGER.error(e);
 			}
 			return wos;
-		}, ThisApplication.threadPool());
+		}, ThisApplication.forkJoinPool());
 	}
 
 	private CompletableFuture<Boolean> checkControlFuture(EffectivePerson effectivePerson, String flag) {
@@ -80,12 +82,13 @@ class ActionListWithJob extends BaseAction {
 			Boolean value = false;
 			try (EntityManagerContainer emc = EntityManagerContainerFactory.instance().create()) {
 				Business business = new Business(emc);
-				value = business.readableWithJob(effectivePerson, flag);
+				Control control = new JobControlBuilder(effectivePerson, business, flag).enableAllowVisit().build();
+				value = control.getAllowVisit();
 			} catch (Exception e) {
 				LOGGER.error(e);
 			}
 			return value;
-		}, ThisApplication.threadPool());
+		}, ThisApplication.forkJoinPool());
 	}
 
 	@Schema(name = "com.x.processplatform.assemble.surface.jaxrs.readrecord.ActionListWithJob$Wo")

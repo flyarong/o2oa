@@ -43,7 +43,7 @@ MWF.xApplication.Selector.Identity = new Class({
     },
     _loadSelectItems: function(addToNext){
         var afterLoadSelectItemFun = this.afterLoadSelectItem.bind(this);
-        if( this.options.resultType === "person" ){
+        if( this.options.resultType === "person" && this.options.title === MWF.xApplication.Selector.LP.selectIdentity ){
             if( this.titleTextNode ){
                 this.titleTextNode.set("text", MWF.xApplication.Selector.LP.selectPerson );
             }else{
@@ -374,7 +374,7 @@ MWF.xApplication.Selector.Identity = new Class({
         var list = [];
         identityList.each( function (d) {
             if( typeOf( d ) === "object"){
-                if( !d.unitLevelName || !d.distinguishedName )list.push( d.distinguishedName || d.id || d.unique )
+                if( !d.unitLevelName || !d.distinguishedName )list.push( d.distinguishedName || d.unique || d.id  )
             }else{
                 list.push( d )
             }
@@ -1004,7 +1004,6 @@ MWF.xApplication.Selector.Identity.ItemCategory = new Class({
         }
     },
     clickItem: function( callback, notActive ){
-        debugger;
         if (this._hasChild() && !this.loading){
             var firstLoaded = !this.loaded;
             this.loading = true;
@@ -1909,7 +1908,7 @@ MWF.xApplication.Selector.Identity.Include = new Class({
         var keyString = typeOf( key )==="string" ? key.toLowerCase() : key.key.toLowerCase();
 
         if ( (this.includeUnit && this.includeUnit.length) || (this.includeGroup && this.includeGroup.length) ){
-            key = this.getUnitFilterKey( key, this.includeUnit, this.includeGroup );
+            key = this.getUnitFilterKey( keyString, this.includeUnit, this.includeGroup );
 
             this.orgAction.listIdentityByKey(function(json){
                 if (callback) callback(json.data);

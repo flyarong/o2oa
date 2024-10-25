@@ -29,6 +29,12 @@ MWF.xApplication.query.StatementDesigner.LP = Object.merge( MWF.xApplication.que
     "nativeSql": "原生SQL",
     "nativeSqlScript": "原生SQL脚本",
 
+    "queryParameter": "查询参数",
+    "filterList": "过滤条件",
+    "pageNo": "页码",
+    "perPage": "每页",
+    "size": "条",
+
     "statementCategory": "访问对象类型",
     "scriptTitle": "通过脚本创建JPQL",
     "sqlScriptTitle": "通过脚本创建SQL",
@@ -73,6 +79,9 @@ MWF.xApplication.query.StatementDesigner.LP = Object.merge( MWF.xApplication.que
     "workCompletedInstance": "已完成流程实例(WorkCompleted)",
     "reviewInstance": "可阅读(Review)",
     "documentInstance": "内容管理文档(Document)",
+    "cmsReviewInstance": "内容管理可阅读(com.x.cms.core.entity.Review)",
+    "documentViewRecord": "内容管理阅读记录(DocumentViewRecord)",
+    "documentCommentInfo": "内容管理评论记录(DocumentCommentInfo)",
 
     "taskInstanceSql":"待办(PP_C_TASK)",
     "taskCompletedInstanceSql": "已办(PP_C_TASKCOMPLETED)",
@@ -82,6 +91,11 @@ MWF.xApplication.query.StatementDesigner.LP = Object.merge( MWF.xApplication.que
     "workCompletedInstanceSql":"已完成流程实例(PP_C_WORKCOMPLETED)",
     "reviewInstanceSql":"可阅读(PP_C_REVIEW)",
     "documentInstanceSql":"内容管理文档(CMS_DOCUMENT)",
+    "cmsReviewInstanceSql":"内容管理可阅读(CMS_REVIEW)",
+    "documentViewRecordSql":"内容管理阅读记录(CMS_DOCUMENT_VIEWRECORD)",
+    "documentCommentInfoSql":"内容管理评论记录(CMS_DOCUMENT_COMMENTINFO)",
+
+    "autoAddColumns": "根据数据表生成列",
 
     "propertyTemplate": {
         // "statementFormat": "如何创建语句：",
@@ -125,7 +139,34 @@ MWF.xApplication.query.StatementDesigner.LP = Object.merge( MWF.xApplication.que
         "exportEnable": "允许导出",
         "isTime": "时间类型",
         "isNumber": "数字类型",
-        "viewEnable": "启用视图"
+        "viewEnable": "启用视图",
+        "forceClearCustomViewStyle": "切换时清除自定义样式",
 
-    }
+        "total": "合计",
+        "notNeeded": "不需要",
+        "totalValue": "数值",
+        "totalCount": "数量",
+
+        "headText": "表头文本",
+        "headStyle": "表头样式",
+        "columnTitleStyle": "列标题样式",
+        "columnContentStyle": "列内容样式"
+    },
+    "formToolbar":{
+        "save": "保存",
+        "autoSave": "自动保存",
+        "preview": "预览",
+        "help": "帮助",
+        "add": "新建",
+        "gotoApp": "打开所在应用"
+    },
+
+    "sorkKeyNote": "-排序-",
+    "createTime": "创建时间",
+    "updateTime": "更新时间",
+    "asc": "正序",
+    "desc": "倒序",
+    "searchPlacholder": "输入名称/别名/id搜索",
+    "searchAndSort": "排序和搜索"
+
 });

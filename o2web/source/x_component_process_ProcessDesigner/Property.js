@@ -61,6 +61,8 @@ MWF.xApplication.process.ProcessDesigner.Property = new Class({
                     this.loadConditionInput();
                     this.loadFormSelect();
                     this.loadSerial();
+                    this.loadArrayList();
+                    this.loadDataTraceFieldSelect();
                     this.loadSericalActivitySelect();
                     this.loadApplicationSelector();
                     this.loadProcessSelector();
@@ -69,6 +71,8 @@ MWF.xApplication.process.ProcessDesigner.Property = new Class({
                     this.loadProjection();
                     this.loadMaplist();
                     this.loadQueryTablePublisher();
+                    this.loadGobackActivityConfig();
+                    this.loadActivityParticipant();
 
                     this.hideAdvanced();
                 }.bind(this));
@@ -158,7 +162,13 @@ MWF.xApplication.process.ProcessDesigner.Property = new Class({
                         input.addEvent("keydown", function(e){
                             e.stopPropagation();
                         });
-
+                        input.addEvent("change", function(e){
+                            property.setCheckboxValue(jsondata, this, id);
+                        });
+                        input.addEvent("blur", function(e){
+                            property.setCheckboxValue(jsondata, this, id);
+                        });
+                        property.setCheckboxValue(jsondata, input, id);
 						break;
 					default:
 						input.addEvent("change", function(e){
@@ -215,20 +225,76 @@ MWF.xApplication.process.ProcessDesigner.Property = new Class({
         }
         this.data[name] = value;
     },
+    setCheckboxValue: function(name, input, id){
+        var nodes = this.propertyContent.querySelectorAll('input[name="'+id+name+'"]');
+        var value = [];
+        nodes.forEach(function(node){
+            if (node.checked){
+                value.push(node.value);
+            }
+        });
+        var names = name.split(".");
+        var o = this.data;
+
+        while (names.length>1){
+            var k = names.shift();
+            if (!o.hasOwnProperty(k)){
+                o[k] = {};
+            }
+            o=o[k];
+        }
+        var key = names.shift();
+        o[key] = value;
+    },
 	setRadioValue: function(name, input){
 		if (input.checked){
-            var oldValue = this.data[name];
+            // var oldValue = this.data[name];
 			var value = input.value;
 			if (value=="false") value = false;
 			if (value=="true") value = true;
-			this.data[name] = value;
+
+            if (input.dataset.valueType && input.dataset.valueType==='number'){
+                value = parseFloat(value);
+            }
+
+            var names = name.split(".");
+            var oldValue = null;
+            var o = this.data;
+
+            while (names.length>1){
+                var k = names.shift();
+                if (!o.hasOwnProperty(k)){
+                    o[k] = {};
+                }
+                o=o[k];
+            }
+            var key = names.shift();
+            oldValue = o[key];
+            o[key] = value;
+
+			// this.data[name] = value;
 
             if (this.route) this.route._setEditProperty(name, input, oldValue);
 		}
 	},
 	setValue: function(name, value){
-        var oldValue = this.data[name];
-		this.data[name] = value;
+        // var oldValue = this.data[name];
+		// this.data[name] = value;
+        var names = name.split(".");
+        var oldValue = null;
+        var o = this.data;
+
+        while (names.length>1){
+            var k = names.shift();
+            if (!o.hasOwnProperty(k)){
+                o[k] = {};
+            }
+            o=o[k];
+        }
+        var key = names.shift();
+        oldValue = o[key];
+        o[key] = value;
+
 		if (name=="name"){
 			if (!value) this.data[name] = MWF.APPPD.LP.unnamed;
 		//	this.activity.redraw();
@@ -253,7 +319,6 @@ MWF.xApplication.process.ProcessDesigner.Property = new Class({
         MWF.xDesktop.requireApp("process.ProcessDesigner", "widget.ScriptText", function(){
             var _self = this;
             scriptNodes.each(function(node){
-                debugger;
                 var api = node.dataset["o2Api"];
                 var editorType = node.dataset["editorType"];
                 var loadImmediately = node.dataset["loadImmediately"];
@@ -432,37 +497,284 @@ MWF.xApplication.process.ProcessDesigner.Property = new Class({
             }.bind(this));
         }.bind(this));
     },
-    loadMaplist: function(){
-        var maplists = this.propertyContent.getElements(".MWFMaplist");
-        maplists.each(function(node){
-            var title = node.get("title");
-            var name = node.get("name");
-            var lName = name.toLowerCase();
-            var collapse = node.get("collapse");
-            var mapObj = this.data[name] || {};
-            //if (!mapObj) mapObj = {};
-            MWF.require("MWF.widget.Maplist", function(){
-                node.empty();
-                var maplist = new MWF.widget.Maplist(node, {
-                    "title": title,
-                    "collapse": (collapse) ? true : false,
-                    "onChange": function(){
-                        //this.data[name] = maplist.toJson();
-                        //
-                        //var oldData = this.data[name];
-                        this.setValue(name, maplist.toJson());
-                        // this.changeStyle(name, oldData);
-                        // this.changeData(name);
-                    }.bind(this),
-                    "isProperty": (lName.contains("properties") || lName.contains("property") || lName.contains("attribute"))
+    loadDataTraceFieldSelect: function(){
+        var buttonList = this.propertyContent.getElements(".MWFDataTraceFieldSelect");
+        var lp = this.process.designer.lp.propertyTemplate;
+        buttonList.each(function(node){
+            node.addEventListener("click", function(){
+                var arrayListNode = node.getNext();
+                var arrayList = arrayListNode.arrayList;
+                var selectedFields = arrayList.toArray();
+
+                var content = new Element('div.o2_vue', {
+                    "styles": this.process.css.selectDataTraceFieldArea
                 });
-                maplist.load(mapObj);
-                //this.maplists[name] = maplist;
+                const formArea = new Element('div', {"styles": this.process.css.selectDataTraceArea}).inject(content);
+                new Element('div', {"styles": this.process.css.selectDataTraceAreaTitle, text: lp.selectForm}).inject(formArea);
+                const formContent = new Element('div', {"styles": this.process.css.selectDataTraceAreaContent}).inject(formArea);
+
+                const fieldArea = new Element('div', {"styles": this.process.css.selectDataTraceArea}).inject(content);
+                new Element('div', {"styles": this.process.css.selectDataTraceAreaTitle, text: lp.selectField}).inject(fieldArea);
+                const fieldContent = new Element('div', {"styles": this.process.css.selectDataTraceAreaContent}).inject(fieldArea);
+
+                const selectedArea = new Element('div', {"styles": this.process.css.selectDataTraceArea}).inject(content);
+                new Element('div', {"styles": this.process.css.selectDataTraceAreaTitle, text: lp.selectedField}).inject(selectedArea);
+                const selectedContent = new Element('div', {"styles": this.process.css.selectDataTraceAreaContent}).inject(selectedArea);
+                if (!selectedContent.selectedFields) selectedContent.selectedFields = {};
+
+                selectedFields.forEach(function(name){
+                    this.createSelectedItem(name, selectedContent);
+                }.bind(this));
+
+                content.style.boxSizing = 'border-box!important';
+                var _self = this;
+                o2.Actions.load("x_processplatform_assemble_designer").FormAction.listWithApplication(this.process.process.application, function(json){
+                    json.data.forEach(function(form){
+                        var item = new Element("div", {
+                            "text": form.name,
+                            "styles": _self.process.css.selectFormItemNode
+                        }).inject(formContent);
+                        item.store('formId', form.id);
+                        item.addEvents({
+                            "mouseover": function(e){e.target.addClass('lightColor_bg');},
+                            "mouseout": function(e){e.target.removeClass('lightColor_bg');},
+                            "click": function(e){ _self.selectedForm(e.target, fieldContent, selectedContent); }
+                        });
+                    });
+                });
+                o2.DL.open({
+                    title: lp.dataTraceFieldNamesSelect,
+                    width: 700,
+                    height: 500,
+                    content: content,
+                    buttonList: [
+                        {
+                            text: "确定",
+                            action: function(){
+                                _self.selectFieldsOk(selectedContent, arrayList);
+                                this.close();
+                            }
+                        },
+                        {
+                            text: "关闭",
+                            type: "cancel",
+                            action: function(){
+                                this.close();
+                            }
+                        }
+                    ]
+                });
             }.bind(this));
+
         }.bind(this));
     },
+    selectFieldsOk: function(selectedContent, arrayList){
+        var fields = Object.keys(selectedContent.selectedFields);
+        arrayList.clear();
+        arrayList.loadContent(fields);
+        arrayList.fireEvent("change");
+    },
+    selectedForm: function(node, fieldContent, selectedContent){
+        if (fieldContent.formNode){
+            fieldContent.formNode.removeClass('mainColor_bg');
+        }
+        node.addClass('mainColor_bg');
+        node.removeClass('lightColor_bg');
+        fieldContent.formNode = node;
+
+        var _self = this;
+        var id = node.retrieve("formId");
+        o2.Actions.load("x_processplatform_assemble_designer").FormAction.get(id, function(form){
+            var fields = this.getFormFields(form.data.data);
+            var mobileFields = this.getFormFields(form.data.mobileData);
+            fields.forEach(function(name){
+                _self.createFieldItem(name, fieldContent, selectedContent);
+            });
+            mobileFields.forEach(function(name){
+                if (fields.indexOf(name)===-1){
+                    _self.createFieldItem(name, fieldContent, selectedContent);
+                }
+            });
+        }.bind(this));
+    },
+    createFieldItem: function(name, fieldContent, selectedContent){
+        var item = new Element("label", {
+            "html": "<input type='checkbox' value='"+name+"'><div>"+name+"</div>",
+            "styles": this.process.css.selectFieldItemNode
+        }).inject(fieldContent);
+
+        if (selectedContent.selectedFields[name]){
+            item.getElement('input').checked = true;
+        }
+
+        var _self = this;
+        item.addEvents({
+            "mouseover": function(e){if (!item.firstElementChild.checked) item.addClass('lightColor_bg');},
+            "mouseout": function(e){if (!item.firstElementChild.checked) item.removeClass('lightColor_bg');}
+        });
+        item.firstElementChild.addEventListener('click', function(e){ e.stopPropagation(); _self.clickField(e.target, selectedContent); });
+    },
+    clickField: function(input, selectedContent){
+        var checked = input.checked;
+        var name = input.value;
+        var node = input.parentElement;
+        if (checked){
+            node.addClass('mainColor_bg');
+            node.removeClass('lightColor_bg');
+
+            this.createSelectedItem(name, selectedContent);
+        }else{
+            node.removeClass('mainColor_bg');
+            var item = selectedContent.selectedFields[name];
+            item.destroy();
+            selectedContent.selectedFields[name] = null;
+        }
+    },
+    createSelectedItem: function(name, node){
+        var flag = !node.selectedFields[name];
+        if (flag){
+            var item = new Element("div", {
+                "html": name,
+                "styles": this.process.css.selectFormItemNode
+            }).inject(node);
+            node.selectedFields[name] = item;
+        }
+    },
+    getFormFields: function(data){
+        if (data){
+            var fieldTypeList = ["textfield", "textarea", "select", "radio", "personfield",
+                "orgfield", "org", "number", "currency", "eltime", "elswitch", "elslider", "elselect", "elrate",
+                "elradio", "elnumber", "elinput", "eldatetime", "eldate", "elcolorpicker", "elcheckbox",
+                "elcascader", "elautocomplete", "combox", "checkbox", "calendar", "address"];
+
+            var formData = JSON.decode(MWF.decodeJsonString(data));
+            var json = formData.json;
+            return Object.keys(json.moduleList).filter(function(k){
+                var m = json.moduleList[k]
+                return (fieldTypeList.indexOf(m.type.toLowerCase())!==-1 || fieldTypeList.indexOf(m.moduleName)!==-1);
+            })
+            //     .map(function(k){
+            //     return {
+            //         name: k,
+            //         type: json.moduleList[k].type,
+            //     }
+            // });
+        }
+        return [];
+    },
+
+    saveGobackConfig: function(check, select, defineConfigList){
+        var activityId = check.value;
+        var config = defineConfigList.find(function(c){
+            return c.activity === activityId;
+        });
+
+        if (check.checked){
+            var way = select.options[select.selectedIndex].value;
+            if (config){
+                config.way = way;
+            }else{
+                defineConfigList.push({
+                    activity: activityId,
+                    way: way
+                });
+            }
+        }else {
+            if (config) {
+                defineConfigList.erase(config);
+            }
+        }
+    },
+    loadGobackActivityConfig: function(){
+        var nodes = this.propertyContent.getElements(".gobackActivityConfig");
+        // this.manuals
+        nodes.each(function(node){
+            var keys = Object.keys(this.process.manuals);
+            if (keys.length){
+                var html = '<table cellspacing="0" cellpadding="5px" style="width: 100%; border: 1px solid #cccccc; border-collapse: collapse"><tr>' +
+                    // '<th class="grayColor_bg" style="width: 20px; max-width: 20px; border: 1px solid #cccccc;"></th>' +
+                    '<th class="grayColor_bg" style="text-align:left; border: 1px solid #cccccc;">活动</th>' +
+                    '<th class="grayColor_bg" style="text-align:left; border: 1px solid #cccccc;">退回后处理方式</th>' +
+                    '</tr></table>';
+                node.insertAdjacentHTML('beforeend', html);
+                var table = node.getElement('table');
+
+                if (!this.data.goBackConfig) this.data.goBackConfig = {};
+                if (!this.data.goBackConfig.defineConfigList) this.data.goBackConfig.defineConfigList = [];
+                var defineConfigList = this.data.goBackConfig.defineConfigList;
+
+                keys.forEach(function(key){
+                    var activity = this.process.manuals[key];
+                    if (activity.data.id !== this.data.id){
+                        var config = defineConfigList.find(function(c){
+                            return c.activity === activity.data.id;
+                        });
+                        var tr = table.insertRow();
+                        var td = tr.insertCell();
+                        td.setStyles({
+                            "border": "1px solid #cccccc"
+                        });
+
+                        var label = new Element('label').inject(td);
+                        var check = new Element('input',{
+                            type: 'checkbox',
+                            value: activity.data.id,
+                            checked: !!config
+                        }).inject(label);
+                        label.appendChild(document.createTextNode(activity.data.name));
+                        check.addEvent('click', function(e){
+                            var select = e.target.getParent('tr').getElement('select');
+                            this.saveGobackConfig(e.target, select, defineConfigList);
+                        }.bind(this));
+
+                        td = tr.insertCell();
+                        td.setStyles({
+                            "border": "1px solid #cccccc"
+                        });
+                        var select = new Element('select', {
+                            html: '<option '+(!config || config.way==='default' ? 'selected' : '')+' value="default" select>'+o2.APPPD.LP.propertyTemplate.backWayDefault+'</option>' +
+                                '<option '+(config && config.way==='step' ? 'selected' : '')+' value="step" select>'+o2.APPPD.LP.propertyTemplate.backWayStep+'</option>' +
+                                '<option '+(config && config.way==='jump' ? 'selected' : '')+' value="jump">'+o2.APPPD.LP.propertyTemplate.backWayJump+'</option>' +
+                                '<option '+(config && config.way==='custom' ? 'selected' : '')+' value="custom">'+o2.APPPD.LP.propertyTemplate.backWayCustom+'</option>'
+                        }).inject(td);
+                        select.addEvent('click', function(e){
+                            var check = e.target.getParent('tr').getElement('input');
+                            this.saveGobackConfig(check, e.target, defineConfigList);
+                        }.bind(this));
+
+                    }
+                }.bind(this));
+            }
+
+
+            // var title = node.get("title");
+            // var name = node.get("name");
+            // var lName = name.toLowerCase();
+            // var collapse = node.get("collapse");
+            // var mapObj = this.data[name] || {};
+            // //if (!mapObj) mapObj = {};
+            // MWF.require("MWF.widget.Maplist", function(){
+            //     node.empty();
+            //     var maplist = new MWF.widget.Maplist(node, {
+            //         "title": title,
+            //         "collapse": (collapse) ? true : false,
+            //         "onChange": function(){
+            //             //this.data[name] = maplist.toJson();
+            //             //
+            //             //var oldData = this.data[name];
+            //             this.setValue(name, maplist.toJson());
+            //             // this.changeStyle(name, oldData);
+            //             // this.changeData(name);
+            //         }.bind(this),
+            //         "isProperty": (lName.contains("properties") || lName.contains("property") || lName.contains("attribute"))
+            //     });
+            //     maplist.load(mapObj);
+            //     //this.maplists[name] = maplist;
+            // }.bind(this));
+        }.bind(this));
+    },
+
     loadPersonInput: function(){
-	    debugger;
         var personIdentityNodes = this.propertyContent.getElements(".MWFPersonIdentity");
         var personNodes = this.propertyContent.getElements(".MWFPersonPerson");
         var personUnitNodes = this.propertyContent.getElements(".MWFPersonUnit");
@@ -625,7 +937,6 @@ MWF.xApplication.process.ProcessDesigner.Property = new Class({
         this.data[node.get("name")] = JSON.encode(values);
     },
     savePersonItem: function(node, ids, dataType, resultKey){
-        debugger;
         var count = node.get("count") || 0;
         var values = [];
         ids.each(function(id){
@@ -688,6 +999,24 @@ MWF.xApplication.process.ProcessDesigner.Property = new Class({
                             this.setFormSelectOptions(node, select);
                         }.bind(this), true);
                     }.bind(this));
+
+                    var openNode = new Element("div", {"styles": this.process.css.propertyOpenFormNode}).inject(node);
+                    openNode.addEvent("click", function(e){
+                        var name = node.get("name");
+                        var formId = this.data[name];
+                        if( formId && formId !== "none" ){
+                            o2.Actions.load("x_processplatform_assemble_designer").FormAction.get(formId, function () {
+                                var options = {
+                                    "style": layout.desktop.formDesignerStyle || "default",
+                                    "appId": "process.FormDesigner"+formId,
+                                    "id": formId
+                                };
+                                layout.openApplication(null, "process.FormDesigner", options);
+                            }.bind(this), function () {
+                                return true;
+                            })
+                        }
+                    }.bind(this));
                 }.bind(this));
             }.bind(this));
         }
@@ -715,6 +1044,53 @@ MWF.xApplication.process.ProcessDesigner.Property = new Class({
             if (callback) callback();
         }
     },
+
+    loadArrayList: function(){
+        var arrays = this.propertyContent.getElements(".MWFArraylist");
+        arrays.each(function(node){
+            var title = node.get("title");
+            var name = node.get("name");
+            var arr = this.data[name];
+            if (!arr) arr = [];
+            MWF.require("MWF.widget.Arraylist", function(){
+                var arraylist = new MWF.widget.Arraylist(node, {
+                    "title": title,
+                    "onChange": function(){
+                        var oldValue = this.data[name];
+                        this.data[name] = arraylist.toArray();
+                    }.bind(this)
+                });
+                arraylist.load(arr);
+                node.arrayList = arraylist;
+            }.bind(this));
+            node.addEvent("keydown", function(e){e.stopPropagation();});
+        }.bind(this));
+    },
+
+    loadMaplist: function(){
+        var maplists = this.propertyContent.getElements(".MWFMaplist");
+        maplists.each(function(node){
+            var title = node.get("title");
+            var name = node.get("name");
+            var lName = name.toLowerCase();
+            var collapse = node.get("collapse");
+            var mapObj = this.data[name] || {};
+            //if (!mapObj) mapObj = {};
+            MWF.require("MWF.widget.Maplist", function(){
+                node.empty();
+                var maplist = new MWF.widget.Maplist(node, {
+                    "title": title,
+                    "collapse": (collapse) ? true : false,
+                    "onChange": function(){
+                        this.setValue(name, maplist.toJson());
+                    }.bind(this),
+                    "isProperty": (lName.contains("properties") || lName.contains("property") || lName.contains("attribute"))
+                });
+                maplist.load(mapObj);
+            }.bind(this));
+        }.bind(this));
+    },
+
 
     loadSerial: function(){
         var serialNodes = this.propertyContent.getElements(".MWFSerial");
@@ -1141,5 +1517,60 @@ MWF.xApplication.process.ProcessDesigner.Property = new Class({
                 }.bind(this));
             }.bind(this));
         }
+    },
+    loadActivityParticipant: function(){
+        var nodes = this.propertyContent.getElements(".MWFActivityParticipant");
+        if(nodes.length){
+            var id = this.process.process.id;
+            if (this.activity) id = this.activity.data.id;
+            if (this.route) id = this.route.data.id;
+            var property = this;
+            if (!this.data.taskParticipant) this.data.taskParticipant = {type: "", data:""}
+            // var ids = (this.data.taskParticipant && this.data.taskParticipant.data) ? JSON.parse(this.data.taskParticipant.data) : [];
+            var ids = this.data.taskParticipant.data || [];
+
+            nodes.each(function(node){
+                var jsondata = "taskParticipant.data";
+                // var vdata = property.data.taskParticipant.data;
+                // var acts = (vdata) ? JSON.parse(vdata) : [];
+                var acts = property.data.taskParticipant.data || [];
+
+                Object.keys(this.process.manuals).forEach(function(k){
+                    var a = this.process.manuals[k];
+                    var label = new Element('label', {
+                        html: "<input name='"+id+jsondata+"' type='checkbox' value='"+a.data.id+"'>"+a.data.name
+                    });
+                    const input = label.firstChild;
+
+                    if (acts.indexOf(a.data.id)!==-1) input.checked = true;
+
+                    input.addEvent("keydown", function(e){
+                        e.stopPropagation();
+                    });
+                    input.addEvent("change", function(e){
+                        var v = property.getCheckboxValue(id+jsondata);
+                        // property.data.taskParticipant.data = JSON.stringify(v);
+                        property.data.taskParticipant.data = v;
+                    });
+                    input.addEvent("blur", function(e){
+                        var v = property.getCheckboxValue(id+jsondata);
+                        // property.data.taskParticipant.data = JSON.stringify(v);
+                        property.data.taskParticipant.data = v;
+                    });
+
+                    label.inject(node);
+                }.bind(this));
+            }.bind(this));
+        }
+    },
+    getCheckboxValue: function (name){
+        var nodes = this.propertyContent.querySelectorAll('input[name="'+name+'"]');
+        var value = [];
+        nodes.forEach(function(node){
+            if (node.checked){
+                value.push(node.value);
+            }
+        });
+        return value
     }
 });

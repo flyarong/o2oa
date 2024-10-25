@@ -1,35 +1,71 @@
 import { component as content } from "@o2oa/oovm";
 import { lp, o2 } from "@o2oa/component";
-import { attendanceWorkPlaceV2Action, getPublicData } from '../../utils/actions';
-import { lpFormat } from '../../utils/common';
-import style from "./style.scope.css";
+import {
+  attendanceWorkPlaceV2Action,
+  getPublicData,
+} from "../../utils/actions";
+import { lpFormat, isEmpty } from "../../utils/common";
 import template from "./temp.html";
 
 export default content({
-  style,
   template,
   autoUpdate: true,
   components: {},
   bind() {
     return {
       lp,
-     workAddressList: []
+      workAddressList: [],
+      // 地图配置
+      mapConfig: {
+        mapType: "baidu", //  amap baidu
+        baiduAccountKey: "",
+        aMapAccountKey: "",
+      },
     };
   },
   afterRender() {
+    this.listenEventBus();
+    this.loadMapConfig();
     this.loadWorkAddressData();
   },
+  async loadMapConfig() {
+    const config = await getPublicData("attendanceMapConfig");
+    if (config) {
+      this.bind.mapConfig = config;
+    }
+  },
   async openBdAKConfig() {
-    const bdKey = (await getPublicData("baiduAccountKey")) || "";
-    const content = (await import('./bdAkConfig/index.js')).default;
-    this.configBdAKVm = await content.generate(".form", {bind: {"baiduAccountKey": bdKey}} , this);
+    this.$parent.openBDMapConfigForm({
+      bind: { mapConfig: this.bind.mapConfig },
+    });
   },
   async clickAdd() {
-     // 添加
-     const content = (await import(`./addAddress/index.js`)).default;
-     this.addAddressVm = await content.generate(".form", {}, this);
+    debugger;
+    if (
+      this.bind.mapConfig.mapType === "baidu" &&
+      isEmpty(this.bind.mapConfig.baiduAccountKey)
+    ) {
+      o2.api.page.notice(lp.workAddressMapKeyConfigEmpty, "error");
+      return;
+    }
+    if (
+      this.bind.mapConfig.mapType === "amap" &&
+      isEmpty(this.bind.mapConfig.aMapAccountKey)
+    ) {
+      o2.api.page.notice(lp.workAddressMapKeyConfigEmpty, "error");
+      return;
+    }
+    this.$parent.openAddressForm({
+      bind: { form: { positionType: this.bind.mapConfig.mapType } },
+    });
   },
+  // 查看位置
+  clickOpenView(address) {
+    this.$parent.openAddressForm({ bind: { form: address } });
+  },
+  // 删除工作场所
   clickDeleteItem(id, name) {
+    debugger;
     var _self = this;
     const c = lpFormat(lp, "workAddressForm.confirmDelete", { name: name });
     o2.api.page.confirm(
@@ -66,5 +102,12 @@ export default content({
     if (this.configBdAKVm) {
       this.configBdAKVm.destroy();
     }
-  }
+  },
+  listenEventBus() {
+    this.$topParent.listenEventBus("address", (data) => {
+      console.log("接收到了address消息", data);
+      this.loadMapConfig();
+      this.loadWorkAddressData();
+    });
+  },
 });

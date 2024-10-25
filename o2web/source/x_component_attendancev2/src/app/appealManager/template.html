@@ -1,8 +1,8 @@
-<div class="manager-box">
+<div class="manager-box white-bg">
     <div class="index_page_header_container">
         <div class="index_page_header_title">{{$.lp.appealManagerTitle}}</div>
     </div>
-    <div style="padding: 20px;">
+    <div class="manager-box-content">
         <div style="margin: 10px 0;float: left;">
             <!-- <button class="mainColor_bg" @click="addGroup">{{$.lp.groupAdd}}</button> -->
         </div>
@@ -14,7 +14,7 @@
                 <th>{{$.lp.appeal.recordResult}}</th>
                 <th>{{$.lp.appeal.status}}</th>
                 
-                <th style="width: 10%;">{{$.lp.operate}}</th>
+                <th style="width: 150px;">{{$.lp.operate}}</th>
             </thead>
             <tr oo-each="$.appealList" oo-item="g">
                 <td>{{g.value.recordDateString}}</td>
@@ -24,10 +24,10 @@
                 <td>{{  $m.formatAppealStatus(g.value) }}</td>
                  
                 <td>
-                    <span class="operator_link" oo-if="g.value.status === 0"
+                    <span class="operator_link_underline" oo-if="g.value.status === 0"
                         @click="this.startProcess(g.value)">{{$.lp.appeal.startProcess}}</span>
-                    <span class="operator_link" oo-if="g.value.jobId"
-                        @click="this.openJob(g.value.jobId)">{{$.lp.appeal.openJob}}</span>
+                    <span class="operator_link_underline" oo-if="g.value.jobId"
+                        @click="this.openJob(g.value.jobId, g.value.id)">{{$.lp.appeal.openJob}}</span>
                     
                 </td>
             </tr>

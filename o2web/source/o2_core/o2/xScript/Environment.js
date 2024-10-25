@@ -231,7 +231,7 @@ MWF.xScript.Environment = function(ev){
          * @static
          * @return {(Work|WorkCompleted)} 流程实例对象；如果流程已结束，返回已结束的流程实例对象。
          * @o2ActionOut x_processplatform_assemble_surface.WorkAction.manageGet|example=WorkParsed|extension=Work|ignoreNoDescr=true|ignoreProps=[properties,manualTaskIdentityMatrix]|Work对象:
-         * @o2ActionOut x_processplatform_assemble_surface.WorkCompletedAction.get|example=WorkCompletedParsed|extension=Work||ignoreProps=[properties]|WorkCompleted对象:
+         * @o2ActionOut x_processplatform_assemble_surface.WorkCompletedAction.get|example=WorkCompletedParsed|extension=Work|ignoreProps=[properties,data,taskCompletedList,readCompletedList,reviewList,recordList,workLogList,storeForm,mobileStoreForm]|WorkCompleted对象:
          * @o2syntax
          * var work = this.workContext.getWork();
          */
@@ -309,6 +309,7 @@ MWF.xScript.Environment = function(ev){
          * });
          */
         "getTaskList": function(callback, error){
+            if( ev.work.completedTime )return [];
             return _getWorkContextList("listTaskByWork", ev.work.id, callback, error);
             // var cb = (callback && o2.typeOf(callback)==="function") ? callback : null;
             // var ecb = (error && o2.typeOf(error)==="function") ? error : null;
@@ -378,7 +379,7 @@ MWF.xScript.Environment = function(ev){
          * });
          */
         "getTaskCompletedList": function(callback, error){
-            return _getWorkContextList("listTaskCompletedByWork", ev.work.id, callback, error);
+            return _getWorkContextList("listTaskCompletedByWorkOrWorkCompleted", ev.work.id, callback, error);
             // var cb = (callback && o2.typeOf(callback)==="function") ? callback : null;
             // var ecb = (error && o2.typeOf(error)==="function") ? error : null;
             // var list;
@@ -446,7 +447,7 @@ MWF.xScript.Environment = function(ev){
          * });
          */
         "getReadList": function(callback, error){
-            return _getWorkContextList("listReadByWork", ev.work.id, callback, error);
+            return _getWorkContextList("listReadByWorkOrWorkCompleted", ev.work.id, callback, error);
             // var cb = (callback && o2.typeOf(callback)==="function") ? callback : null;
             // var ecb = (error && o2.typeOf(error)==="function") ? error : null;
             // var list;
@@ -514,7 +515,7 @@ MWF.xScript.Environment = function(ev){
          * });
          */
         "getReadCompletedList": function(callback, error){
-            return _getWorkContextList("listReadCompletedByWork", ev.work.id, callback, error);
+            return _getWorkContextList("listReadCompletedByWorkOrWorkCompleted", ev.work.id, callback, error);
             // var cb = (callback && o2.typeOf(callback)==="function") ? callback : null;
             // var ecb = (error && o2.typeOf(error)==="function") ? error : null;
             // var list;
@@ -641,17 +642,22 @@ MWF.xScript.Environment = function(ev){
          * @static
          * @return {WorkControl} 流程实例权限对象.
          * <pre><code class='language-js'>{
-         *        "allowVisit": true,             //是否允许访问
-         *        "allowProcessing": true,        //是否允许流转
+         *        "allowVisit": true,             //是否允许访问工作
+         *        "allowFlow": true,              //是否允许继续流转（允许提交或重置处理人或加签）
+         *        "allowProcessing": true,        //是否允许提交
          *        "allowReadProcessing": false,   //是否有待阅
          *        "allowSave": true,              //是否允许保存业务数据
          *        "allowReset": false,            //是否允许重置处理人
-         *        "allowRetract": false,          //是否允许撤回
          *        "allowReroute": false,          //是否允许调度
          *        "allowDelete": true,             //是否允许删除流程实例
-         *        "allowRollback": false,         //是否允许流程回溯
-         *        "allowAddSplit": false,         //是否允许增加分支
-         *        "allowPress": false,             //是否允许催办
+         *        "allowAddSplit": false,         //是否允许添加拆分分支
+         *        "allowRetract": false,          //是否允许撤回
+         *        "allowRollback": false,         //是否允许回溯流程
+         *        "allowPress": false,             //是否允许发送办理提醒
+         *        "allowGoBack": false,         //是否允许回退
+         *        "allowAddTask": false,          //是否允许加签
+         *        "allowPause": false,         //是否允许待办挂起
+         *        "allowResume": false,             //是否允许待办从挂起状态恢复
          * }</code></pre>
          * @o2syntax
          * var control = this.workContext.getControl();
@@ -662,7 +668,7 @@ MWF.xScript.Environment = function(ev){
          * @method getWorkLogList
          * @static
          * @return {WorkLog[]} 流程记录对象.
-         * @o2ActionOut x_processplatform_assemble_surface.WorkLogAction.listWithJob|example=WorkLog|ignoreProps=[properties]
+         * @o2ActionOut x_processplatform_assemble_surface.WorkLogAction.listWithJob|example=WorkLog|ignoreProps=[properties,goBackFromActivityType]
          * @o2syntax
          * var workLogList = this.workContext.getWorkLogList();
          */
@@ -685,9 +691,8 @@ MWF.xScript.Environment = function(ev){
          * 如果传入true，则发起异步请求获取附件列表，返回Promise对象；如果传入false, 则发起同步请求获取附件列表；
          * 如果不传入参数，则直接返回本地缓存中的attachmentList对象。
          * @param {Function} [error] 获取附件对象数组出错时的回调。
-         * @return {(Review[])} 当前流程实例的所有附件对象数组，异步请求时返回请求的Promise对象.
          * @return {WorkAttachmentData[]} 附件数据.
-         * @o2ActionOut x_processplatform_assemble_surface.AttachmentAction.getWithWorkOrWorkCompleted|example=Attachment
+         * @o2ActionOut x_processplatform_assemble_surface.AttachmentAction.getWithWorkOrWorkCompleted|example=Attachment|ignoreProps=[properties]
          * @o2syntax
          * //从本地缓存获取附件列表
          * var attachmentList = this.workContext.getAttachmentList();
@@ -1037,7 +1042,7 @@ MWF.xScript.Environment = function(ev){
                 return v;
             };
 
-            var promise = orgActions.listRoleWithPerson(data, cb, null, !!async);
+            var promise = orgActions.personHasRole(data, cb, null, !!async);
             return (!!async) ? promise : v;
 
             // var v = false;
@@ -1933,10 +1938,12 @@ MWF.xScript.Environment = function(ev){
                 return this._execute(obj, callback, async, obj.format);
             }else{
                 if( this.needCheckFormat(obj) ){
-                    var p = MWF.Actions.load("x_query_assemble_surface").StatementAction.getFormat(obj.name, null, null, async);
-                    Promise.resolve(p).then(function (json) {
-                        return this._execute(obj, callback, async, json.data.format);
-                    }.bind(this));
+                    var result;
+                    var p = MWF.Actions.load("x_query_assemble_surface").StatementAction.getFormat(obj.name, function(json){
+                        result = this._execute(obj, callback, async, json.data.format);
+                        return result;
+                    }.bind(this), null, async);
+                    return result || p;
                 }else{
                     return this._execute(obj, callback, async, "");
                 }
@@ -1977,6 +1984,8 @@ MWF.xScript.Environment = function(ev){
             if( !parameter )parameter = {};
             var filterList = [];
             ( filter || [] ).each( function (d) {
+                if( !d.logic )d.logic = "and";
+
                 //var parameterName = d.path.replace(/\./g, "_");
                 var pName = d.path.replace(/\./g, "_");
 
@@ -2016,7 +2025,7 @@ MWF.xScript.Environment = function(ev){
             }.bind(this));
             return filterList;
         },
-            parseParameter : function( obj, format ){
+        parseParameter : function( obj, format ){
                 if( typeOf(obj) !== "object" )return {};
                 var parameter = {};
                 //传入的参数
@@ -2623,15 +2632,8 @@ MWF.xScript.Environment = function(ev){
          */
         "node": function(){return _form.node;},
 
-        /**
-         * 获取表单是否可编辑。只读。
-         * @member readonly
-         * @static
-         * @return {Boolean} 是否只读.
-         * @o2syntax
-         * var readonly = this.form.readonly;
-         */
-        "readonly": _form.options.readonly,
+
+        // "readonly": _form.options.readonly,
 
         /**
          * 获取表单元素对象。<br/>
@@ -2748,7 +2750,7 @@ MWF.xScript.Environment = function(ev){
         "resumeTask": function(){_form.resumeTask();},
 
         /**本校验不包括校验意见，校验路由；通常用在弹出提交界面时候的校验
-         * @summary 根据表单中所有组件的校验设置和“流转校验”脚本进行校验。
+         * @summary 根据表单中所有组件的校验设置和“流转校验”脚本进行校验。<b>（仅流程表单中可用）</b>
          * @method verify
          * @static
          * @o2syntax
@@ -2761,6 +2763,22 @@ MWF.xScript.Environment = function(ev){
          */
         "verify": function(){
             return !(!_form.formCustomValidation("", "") || !_form.formValidation("", ""));
+        },
+
+        /**
+         * @summary 根据表单中所有组件的校验设置和表单的“发布校验”脚本进行校验。<b>（仅内容管理表单中可用）</b>
+         * @method verifyPublish
+         * @static
+         * @o2syntax
+         * this.form.verifyPublish()
+         *  @example
+         *  if( !this.form.verifyPublish() ){
+         *      return false;
+         *  }
+         *  @return {Boolean} 是否通过校验
+         */
+        "verifyPublish": function(isSave){
+            return !(!_form.formValidation(isSave ? "" : "publish") || !_form[isSave ? 'formSaveValidation' : 'formPublishValidation']());
         },
 
 
@@ -2805,7 +2823,6 @@ MWF.xScript.Environment = function(ev){
 
         /**对当前文档的待办重新设定处理人。<b>（仅流程表单中可用）</b><br/>
          * 可以通过this.workContext.getControl().allowReset来判断当前用户是否有权限重置处理人。<br/>
-         * this.form.reset()会触发 beforeReset、afterReset事件，因此在上述事件中不允许使用本方法。
          * @method reset
          * @static
          * @param {Object} [option] - 进行重置处理人的相关参数，如果不带此参数，弹出重置处理人对话框<br/>
@@ -2819,12 +2836,12 @@ MWF.xScript.Environment = function(ev){
         }
          </code></pre>
          * @example
-         //不带参数，弹出重置处理人对话框
+         //不带参数，弹出重置处理人对话框，用户确定后会触发 beforeReset、afterReset事件，因此在这两个事件中不允许使用本方法。
          this.form.reset();
          * @example
-         //带参数，直接调用后台服务重置
+         //带参数，直接调用后台服务重置,不会触发 beforeReset、afterReset事件
          this.form.reset({
-            "names": ["张三(综合部)"],
+            "names": ["张三@zhangsan@I"],
             "opinion": "授权处理",
             "success": function(json){
                 this.form.notice("reset success", "success");
@@ -2841,14 +2858,13 @@ MWF.xScript.Environment = function(ev){
             if (!option){
                 if (_form.businessData.control["allowReset"]) _form.resetWork();
             }else{
-                _form.resetWorkToPeson(option.names, option.opinion, option.keep, option.success, option.failure);
+                _form.resetWorkToPeson(option.names, option.opinion, option.routeName || "", option.success, option.failure);
             }
         },
 
         /**撤回文档操作，上一个处理人收回已经流转下去的文件。<b>（仅流程表单中可用）</b><br/>
          * 这个操作只允许上一个处理人在流转文件之后，下一个处理人未处理的时候执行。<br/>
          * 可以通过this.workContext.getControl().allowRetract来判断当前用户是否有权限撤回。<br/>
-         * this.form.retract()会触发 beforeRetract、afterRetract事件，因此在上述事件中不允许使用本方法。
          * @method retract
          * @static
          * @param {Object} [option] - 进行撤回的相关参数，如果不提供option参数，则弹出撤回对话框。<br/>
@@ -2860,10 +2876,10 @@ MWF.xScript.Environment = function(ev){
         }
          </code></pre>
          * @example
-         //不带参数，则弹出撤回对话框
+         //不带参数，则弹出撤回对话框，用户确定后会触发 beforeRetract、afterRetract事件，因此在这两个事件中不允许使用本方法。
          this.form.retract();
          * @example
-         //带参数，直接调用后台服务撤回
+         //带参数，直接调用后台服务撤回，不会出发beforeRetract、afterRetract事件
          this.form.retract({
             "success": function(json){
                 this.form.notice("retract success", "success");
@@ -2899,10 +2915,10 @@ MWF.xScript.Environment = function(ev){
         }
          </code></pre>
          * @example
-         //不带参数，则弹出添加分支对话框
+         //不带参数，则弹出添加分支对话框，用户确定后会触发beforeAddSplit、afterAddSplit事件
          this.form.addSplit();
          * @example
-         //带参数，直接添加分支
+         //带参数，直接调用后天服务添加分支，不会触发beforeAddSplit、afterAddSplit事件
          this.form.addSplit({
             "value" : ["开发部@kfb@U"],
             "trimExist" : true,
@@ -2947,10 +2963,10 @@ MWF.xScript.Environment = function(ev){
         }
          </code></pre>
          * @example
-         //不带参数，则弹出删除提示对话框
+         //不带参数，则弹出删除提示对话框，用户确定后触发beforeDelete和afterDelete事件
          this.form.deleteWork();
          * @example
-         //带参数，直接调用服务删除
+         //带参数，直接调用服务删除，不触发beforeDelete和afterDelete事件
          this.form.deleteWork({
             "success": function(json){
                 this.form.notice("deleteWork success", "success");
@@ -2988,10 +3004,10 @@ MWF.xScript.Environment = function(ev){
         }
          </code></pre>
          * @example
-         //不带参数，弹出发送待阅对话框
+         //不带参数，弹出发送待阅对话框，确定后触发beforeSendRead，afterSendRead事件
          this.form.sendRead();
          * @example
-         //带参数，直接调用后台服务发送待阅
+         //带参数，直接调用后台服务发送待阅，触发beforeSendRead，afterSendRead事件
          this.form.sendRead({
             "identityList": ["张三@zhangsan@I"],
             "notify": false,
@@ -3032,10 +3048,10 @@ MWF.xScript.Environment = function(ev){
         }
          </code></pre>
          * @example
-         //不带参数，弹出添加阅读人对话框
+         //不带参数，弹出添加阅读人对话框，触发beforeAddReview和afterAddReview事件。
          this.form.addReview();
          * @example
-         //带参数，直接调用后台服务发送待阅
+         //带参数，直接调用后台服务发送待阅，触发beforeAddReview和afterAddReview事件。
          this.form.addReview({
             "personList": ["张三@zhangsan@P"],
             "success": function(json){
@@ -3093,25 +3109,11 @@ MWF.xScript.Environment = function(ev){
          * 格式如下：
          * <pre><code class="language-js">
          * {
-         *   "optionList" : [    //增加待办人的操作的列表
-         *       {
-         *           "identityList;": [],    //要增加待办组的身份列表，这些身份中只需要一个人处理即可。
-         *           "position": "after"     //增加待办的位置，可以选用以下值：
-         *                                   //after: 在当前待办（由identity参数指定）之后；
-         *                                   //before: 在当前待办（由identity参数指定）之前；
-         *                                   //top: 将要添加的待办人加入到所有待办列表最前面；
-         *                                   //bottom: 将要添加的待办人加入到所有待办列表的最后；
-         *                                   //extend: 在当前待办（由identity参数指定）组中，添加待办人；
-         *                                   //after、before、top、bottom四个参数值在并行处理活动时，没有本质区别，所有待办都会同时产生。
-         *                                   //而在串行活动或单人活动就会影响到待办产生的顺序。
-         *                                   //extend参数值，会在当前待办（由identity参数指定）组中添加一个待办人，在同一组中的待办人，只需要一人处理，就会标志整个待办组已经处理。
-         *                                   //当传入identity参数时，此处参数值都会会生效，默认为after；如果没有传入identity，只有top和bottom生效
-         *       }
-         *   ],
-         *   "opinion" : "", //增加待办意见.
+         *   "mode" : "single", //加签模式:single,queue,parallel
+         *   "before" : true, //是否是前加签,false后加签.
+         *   "distinguishedNameList": [], //加签人的身份数组。
          *   "routeName" : "", //增加待办在流程记录中显示的路由.
-         *   "identity": "", //当前待办的用户身份，如果没有传入此参数，会查找当前用户对于此文档的待办，如果有，则并传入待办的身份。
-         *   "remove" : false, //是否删除当前用户的待办.默认false
+         *   "opinion" : "", //加签意见
          *   "success": function(){}, //执行成功后的回调方法
          *   "failure": function(){} //执行失败后的回调方法
          * }
@@ -3122,14 +3124,11 @@ MWF.xScript.Environment = function(ev){
          * @example
          * //带参数，根据参数执行添加待办操作
          * this.form.addTask({
-         *   "optionList" : [
-         *       {
-         *           "identityList": ["张三@XXXX@I", "李四@XXXX@I"],
-         *           "position": "after"
-         *       }
-         *   ],
-         *   "opinion" : "请张三、李四审阅",
+         *   "mode" : "single",
+         *   "before": false,
+         *   "distinguishedNameList": ["张三@XXXX@I", "李四@XXXX@I"],
          *   "routeName" : "添加审阅人",
+         *   "opinion" : "请张三、李四审阅",
          *   "success": function(json){
          *       this.form.notice("addTask success", "success");
          *   }.bind(this),
@@ -3150,11 +3149,16 @@ MWF.xScript.Environment = function(ev){
                         if (callback) callback();
                     }
                 })(function(){
-                    if (!option.identity){
-                        option.identity = (_form.businessData.task) && _form.businessData.task.identityDn;
-                    }
-                    var workId = _form.businessData.work.id;
-                    o2.Actions.load("x_processplatform_assemble_surface").WorkAction.V2AddManualTaskIdentityMatrix(workId, option, option.success, option.failure);
+                    // if (!option.identity){
+                    //     option.identity = (_form.businessData.task) && _form.businessData.task.identityDn;
+                    // }
+                    // var workId = _form.businessData.work.id;
+                    // o2.Actions.load("x_processplatform_assemble_surface").WorkAction.V2AddManualTaskIdentityMatrix(workId, option, option.success, option.failure);
+
+                    // var taskId = _form.businessData.task.id;
+                    // o2.Actions.load("x_processplatform_assemble_surface").TaskAction.v3Add(taskId, option, option.success, option.failure);
+
+                    _form.doAddTaskToPeople(option.distinguishedNameList, option.opinion, option.mode, option.before, option.routeName || "", option.success, option.failure)
                 });
             }else{
                 if (_form.businessData.control["allowAddTask"]) _form.addTask();
@@ -3167,18 +3171,28 @@ MWF.xScript.Environment = function(ev){
          * @static
          * @param {String} type - 要显示的信息类型。可选值：success 成功，info :信息，error :错误， wran : 警告
          * @param {String} title - 确认框标题栏显示文本。
-         * @param {String} text - 确认框的内容显示文本。
+         * @param {String|Object} text - 确认框的内容显示文本。值为html的时候见下面的样例“使用html传入内容”。
          * @param {Number} width - 确认框的宽度。
          * @param {String} height - 确认框的高度。
          * @param {Function} ok - 点击“确定”按钮后的回调函数。
          * @param {Function} cancel - 点击“取消”按钮后的回调函数。
          * @example
-         this.form.confirm("wran", "删除确认", "您确定要删除吗？", 300, 100,function(){
-            //执行删除代码
-            this.close();
-        }, function(){
-            this.close();
-        });
+         *this.form.confirm("wran", "删除确认", "您确定要删除吗？", 300, 100,function(){
+         *   //执行删除代码
+         *   this.close();
+         *}, function(){
+         *   this.close();
+         *});
+         * @example
+         * //使用html传入内容, v8.1开始支持
+         *this.form.confirm("wran", "删除确认", {
+         *     html: "您确定要删除吗！<br/>"
+         *}, 300, 100,function(){
+         *   //执行删除代码
+         *   this.close();
+         *}, function(){
+         *   this.close();
+         *});
          */
         "confirm": function(type, title, text, width, height, ok, cancel, callback, mask, style){
             if ((arguments.length<=1) || o2.typeOf(arguments[1])==="string"){
@@ -3208,11 +3222,16 @@ MWF.xScript.Environment = function(ev){
          * @static
          * @param {String} type - 要显示的信息类型。可选值：success 成功，info :信息，error :错误， wran : 警告
          * @param {String} title - 信息框标题栏显示文本。
-         * @param {String} text - 信息框的内容显示文本。
+         * @param {String|Object} text - 信息框的内容显示文本。值为html的时候见下面的样例“使用html传入内容”。
          * @param {Number} width - 信息框宽度。
          * @param {String} height - 信息框的高度。
          * @example
-         this.form.alert("wran", "必填提醒", "请填写标题！", 300, 100);
+         * this.form.alert("wran", "必填提醒", "请填写标题！", 300, 100);
+         * @example
+         * //使用html传入内容
+         * this.form.alert("wran", "必填提醒", {
+         *     html: "请填写标题！<br/>"
+         * }, 300, 100);
          */
         "alert": function(type, title, text, width, height){
             _form.alert(type, title, text, width, height);
@@ -3410,13 +3429,135 @@ MWF.xScript.Environment = function(ev){
             return _form.dialog( options );
         },
 
+        /**弹出人员组织选择界面，支持身份、个人、组织、群组的单个选择或复合选择。该方法参数适用于 new MWF.O2Selector()。
+         * @method selectOrg
+         * @static
+         * @return {Object} 人员组织选择器对象。
+         * @param {Element} container - 人员选择界面的所在容器，默认为当前应用的容器。
+         * @param {Object} options - 人员组织选择选项。<br/>
+         * <pre><code class="language-js">{
+         *  "type": "", //选择类型，和types二选一，可选值为 identity(身份), person(个人), unit(组织), group(群组),
+         *  "types": [], //复合选择，和type二选一，如 ["identity", "person", "unit", "group"]
+         *  "count": 0, //选择数量，0表示不限制
+         *  "title": "", //选择界面的title
+         *  "values": [], //已选择的值
+         *
+         *  "groups": [], //选择的群组范围，选择群组时有效。
+         *
+         *  "units": [], //选择的组织范围，选择身份和组织时有效
+         *  "resultType" : "", //可以设置成"person"(个人)，那么结果返回个人。选择身份时有效。用在选择人员，但是需要按照组织层级展现的场景。
+         *  "dutys": [], //选择的职务范围，选择身份时有效。
+         *  "categoryType": "", //可使用unit或duty。如果指定了选择的职务范围（dutys不为空），按unit(组织)还是按duty(职务)来展现分类，默认为按unit。该参数在选择身份时有效。
+         *
+         *  "noUnit" : false, //在选择身份的时候，是否只使用include选项。
+         *  "include" : [], //增加的可选项。选择身份的时候，没有传units表示选中全员，include不生效，可以使用onUnit选项表示只使用include选项。
+         *  "exclude" : [], //排除的可选项
+         *
+         *  "expandSubEnable" : true, //是否允许展开下一层，选择身份和组织时有效
+         *  "selectAllEnable" : true,  //分类是否允许全选下一层，选择身份和组织时有效
+         *
+         *  "level1Indent" : 10, //第一级的缩进
+         *  "indent" : 10, //后续的缩进
+         *  "zIndex": 1000, //选择界面的zIndex,
+         *
+         *  "onComplete" : function( selectedItemList ){
+         *      //点击确定时执行
+         *      //selectedItemList为选中的item对象，下面的selectedDataList为选中的数据
+         *      var selectedDataList = selectedItemList.map( function(item){
+         *          return item.data;
+         *      })
+         *  },
+         *  "onCancel" : function(selector) {
+         *      //点击取消时的事件, selector 为选择器, this为选择器
+         *  },
+         *  "onQueryLoad" : function(selector) {
+         *      //加载选择器前事件, selector 为选择器, this为选择器
+         *  },
+         *  "onLoad" : function(selector) {
+         *      //加载选择器后事件, selector 为选择器, this为选择器
+         *  },
+         *  "onCancel" : function(selector) {
+         *      //点击取消时的事件, selector 为选择器, this为选择器
+         *  },
+         *  "onQueryLoadCategory" : function(category) {
+         *      //加载分类前事件, category 为 分类对象, this为选择器
+         *  },
+         *  "onPostLoadCategory" : function(category) {
+         *      //加载分类后事件, category 为 分类对象, this为选择器
+         *  },
+         *  "onSelectCategory" : function(category){
+         *      //选择分类, category 为 分类对象, this为选择器
+         *  },
+         *  "onUnselectCategory": function(category){
+         *      //取消选择分类, category 为 分类对象, this为选择器
+         *  },
+         *  "onQueryLoadItem" : function(item){
+         *      //加载项目前事件, item 为 项目对象, this为选择器
+         *  },
+         *  "onPostLoadItem" : function(item){
+         *      //加载项目后事件, item 为 项目对象, this为选择器
+         *  },
+         *  "onSelectItem" : function(item){
+         *      //选择项目事件, item 为 项目对象, this为选择器
+         *  },
+         *  "onUnselectItem" : function(item){
+         *      //取消选择项目事件, item 为 项目对象, this为选择器
+         *  },
+         *  "onExpand" : function( obj ){
+         *      //展开分类， obj 为分类/项目, this为选择器
+         *  },
+         *  "onCollapse" : function(obj){
+         *       //折叠分类，obj 为分类/项目, this为选择器
+         *   }
+         *}</code></pre>
+         * @example
+         * //选择身份
+         * var selector = this.form.selectOrg(null, {
+         *   type: "identity",
+         *   onComplete : function( selectedItemList ){
+         *      //点击确定时执行
+         *      //selectedItemList为选中的item对象，下面的selectedDataList为选中的数据
+         *      var selectedDataList = selectedItemList.map( function(item){
+         *          return item.data;
+         *      })
+         *  }
+         *});
+         * @example
+         * //在限定组织内选择身份
+         * var selector = this.form.selectOrg(null, {
+         *   type: "identity",
+         *   units: ["兰德纵横@landzone@U"],
+         *   onComplete : function( selectedItemList ){
+         *  }
+         *});
+         * @example
+         * //在限定职务时选择身份
+         * var selector = this.form.selectOrg(null, {
+         *   type: "identity",
+         *   dutys: ["部门正职"],
+         *   onComplete : function( selectedItemList ){
+         *  }
+         *});
+         * @example
+         * //同时选择组织、群组、身份、个人
+         * var selector = this.form.selectOrg(null, {
+         *   types: ["unit", "group", "identity", "person"],
+         *   onComplete : function( selectedItemList ){
+         *  }
+         *});
+         */
+        "selectOrg": function ( container, options,  delayLoad) {
+            if( !container )container = _form.app.content;
+            return new MWF.O2Selector(container, options, delayLoad);
+        },
+
         /**给表单添加事件。
          * @method addEvent
          * @static
          * @param {String} type - 事件名称，参考本API Classer->FormComponents->Form的事件
          * @param {Function} event - 事件方法。
          * @example
-         this.form.addEvent("load", function(){
+         this.form.addEvent("afterLoad", function(){
             this.form.notice("表单载入完成", "success");
         }.bind(this));
          */
@@ -3497,12 +3638,14 @@ MWF.xScript.Environment = function(ev){
          * @param {String} id - 流程的jobId，如果流程拆分后，有多个流程实例（workId会有多个），但jobId是唯一的。
          * @param {Boolean} [choice] - 如果有多个流程实例，是否弹出界面选择。如果传入false,则直接打开第一个工作。
          * @param {Object} [options] - 打开工作时传入的选项。
-         * @param {Function} [callback] - 打开工作时的回调方法，该方法可以获取打开的工作的对象（桌面模式）或窗口句柄（浏览器页签模式）。
+         * @param {Function} [callback] - 打开工作成功或失败的回调方法，如果打开成功，该方法可以获取打开的工作的对象（桌面模式）或窗口句柄（浏览器页签模式）；如果打开失败，此方法第一个参数是一个Error，其cause属性可获取通过jobId查询到的work数据。
          * @example
          this.form.openJob(jobId, true);
          * @example
          this.form.openJob(jobId, true, {}, function(handel){
-            //handel为打开的工作的对象（桌面模式）或窗口句柄（浏览器页签模式）
+            //通过Error.prototype.isPrototypeOf(handel)来判断handel是否是一个错误。
+            //如果打开成功，handel为打开的工作的对象（桌面模式）或窗口句柄（浏览器页签模式）
+            //如果打开错误，handel为为一个Error对象，其cause属性可获取通过jobId查询到的work数据
          });
          */
         "openJob": function(id, choice, options, callback){
@@ -3518,7 +3661,7 @@ MWF.xScript.Environment = function(ev){
                     if( o2.typeOf(queryLoad) === "function" )queryLoad.call(this);
                     callback(this);
                 }
-            };
+            }
 
             runCallback = function ( handel ) {
                 if( o2.typeOf(callback) === "function" ) {
@@ -3527,7 +3670,11 @@ MWF.xScript.Environment = function(ev){
                     } else if (options && options.appId) {
                         if (layout.desktop && layout.desktop.apps && layout.desktop.apps[options.appId]) {
                             callback(layout.desktop.apps[options.appId], true);
+                        }else{
+                            callback(handel, false);
                         }
+                    }else{
+                        callback(handel, false);
                     }
                 }
             };
@@ -3625,7 +3772,15 @@ MWF.xScript.Environment = function(ev){
                             return handel;
                         }
                     }
+                }else{
+                    runCallback(new Error("Can't open this Job", {
+                        cause: workData
+                    }));
                 }
+            }else{
+                runCallback(new Error("Can't open this Job", {
+                    cause: workData
+                }));
             }
             // var op = options || {};
             // op.workId = id;
@@ -3646,12 +3801,18 @@ MWF.xScript.Environment = function(ev){
          *   "forceFormId": "xxxxxx", //不管编辑还是阅读都用此表单id打开，优先使用。6.0版本之前使用 printFormId。
          *   "readFormId": "xxxxxx", //强制的阅读表单id，优先于表单的readFormId。6.0版本之前使用 formId。
          *   "editFormId": "xxxxxx", //强制的编辑表单id，优先于表单的formId。6.0版本之前使用 formEditId。
-         *    "saveOnClose" : true, //关闭的时候是否自动保存
+         *    "saveOnClose" : true, //关闭草稿的时候是否自动保存
          *    "onPostPublish" : function( documentData ){ //发布前执行方法，但数据已经准备好，该事件在桌面模式打开有效
          *       //documentData 为文档数据
          *    },
          *    "onAfterPublish" : function( form, documentData ){ //发布后执行的方法，该事件在桌面模式打开有效
          *       //form为内容管理Form对象，documentData 为文档数据
+         *    },
+         *    "onAfterSave": function( form, documentData ){ //保存后执行的方法，该事件在桌面模式打开有效
+         *       //form为内容管理Form对象，documentData 为文档数据
+         *    },
+         *    "onBeforeClose": function(){ //关闭前执行的方法，该事件在桌面模式打开有效
+         *
          *    },
          *    "onPostDelete" : function(){ //删除文档后执行的方法，该事件在桌面模式打开有效
          *    }
@@ -3662,8 +3823,28 @@ MWF.xScript.Environment = function(ev){
         "openDocument": function(id, title, options){
             var op = options || {};
             op.documentId = id;
-            op.docTitle = title;
+            op.docTitle = title || "";
             op.appId = (op.appId) || ("cms.Document"+id);
+            if( op.onPostPublish ){
+                op.postPublish = op.onPostPublish;
+                delete op.onPostPublish;
+            }
+            if( op.onAfterPublish ){
+                op.afterPublish = op.onAfterPublish;
+                delete op.onAfterPublish;
+            }
+            if( op.onAfterSave ){
+                op.afterSave = op.onAfterSave;
+                delete op.onAfterSave;
+            }
+            if( op.onBeforeClose ){
+                op.beforeClose = op.onBeforeClose;
+                delete op.onBeforeClose;
+            }
+            if( op.onPostDelete ){
+                op.postDelete = op.onPostDelete;
+                delete op.onPostDelete;
+            }
             return layout.desktop.openApplication(this.event, "cms.Document", op);
         },
 
@@ -3874,6 +4055,7 @@ MWF.xScript.Environment = function(ev){
          * @param {Boolean} [target]  - 为true时，在当前页面打开启动的流程实例；否则打开新窗口。默认false。（当前表单或页面在浏览器单独打开的时候该参数有效。）
          * @param {Boolean} [latest]  - 为true时，如果当前用户已经创建了此流程的实例，并且没有流转过，直接调用此实例为新流程实例；否则创建一个新实例。默认false。
          * @param {Function} [afterCreated]  - 流程创建后的回调，可以获取到创建的流程Work对象（桌面模式）或者Window对象(浏览器模式)。
+         * @param {Boolean} [skipDraftCheck]  - 是否跳过新建检查（默认根据流程的新建检查配置），设置true则不进行新建检查。
          * @example
          //启动一个发文管理实例
          this.form.startProcess("公文管理", "发文管理");
@@ -3889,7 +4071,7 @@ MWF.xScript.Environment = function(ev){
               }
         });
          */
-        "startProcess": function(app, process, data, identity, callback, target, latest, afterCreated){
+        "startProcess": function(app, process, data, identity, callback, target, latest, afterCreated, skipDraftCheck){
             if (arguments.length>2){
                 for (var i=2; i<arguments.length; i++){
                     if (typeOf(arguments[i])=="boolean"){
@@ -3931,53 +4113,68 @@ MWF.xScript.Environment = function(ev){
                     }, false);
 
                     if (!cmpt.processStarter) cmpt.processStarter = new o2.xApplication.process.TaskCenter.Starter(obj);
-                    cmpt.processStarter.load();
+                    cmpt.processStarter.load({
+                        "appFlag": app
+                    });
                 }, true, true);
                 return "";
             }
+            MWF.xDesktop.requireApp("process.TaskCenter", "ProcessStarter", null, false);
             var action = MWF.Actions.get("x_processplatform_assemble_surface").getProcessByName(process, app, function(json){
                 if (json.data){
-                    MWF.xDesktop.requireApp("process.TaskCenter", "ProcessStarter", function(){
-                        var starter = new MWF.xApplication.process.TaskCenter.ProcessStarter(json.data, _form.app, {
-                            "workData": data,
-                            "identity": identity,
-                            "latest": latest,
-                            "onStarted": function(data, title, processName){
-                                var application;
-                                if (data.work){
-                                    var work = data.work;
-                                    var options = {"draft": work, "appId": "process.Work"+(new o2.widget.UUID).toString(), "desktopReload": false};
+                    var starter = new MWF.xApplication.process.TaskCenter.ProcessStarter(json.data, _form.app, {
+                        "workData": data,
+                        "identity": identity,
+                        "latest": latest,
+                        "skipDraftCheck": skipDraftCheck,
+                        "onStarted": function(data, title, processName){
+                            var application;
+                            if (data.work){
+                                var work = data.work;
+                                var options = {
+                                    "draft": work,
+                                    "draftData":data.data||{},
+                                    "appId": "process.Work"+(new o2.widget.UUID).toString(),
+                                    "desktopReload": false
+                                };
+                                if( !layout.inBrowser && afterCreated )options.onPostLoadForm = afterCreated;
+                                application = layout.desktop.openApplication(null, "process.Work", options);
+                            }else{
+                                var currentTask = [];
+                                data.each(function(work){
+                                    if (work.currentTaskIndex != -1) currentTask.push(work.taskList[work.currentTaskIndex].work);
+                                }.bind(this));
+
+                                if (currentTask.length==1){
+                                    var options = {"workId": currentTask[0], "appId": currentTask[0]};
                                     if( !layout.inBrowser && afterCreated )options.onPostLoadForm = afterCreated;
                                     application = layout.desktop.openApplication(null, "process.Work", options);
-                                }else{
-                                    var currentTask = [];
-                                    data.each(function(work){
-                                        if (work.currentTaskIndex != -1) currentTask.push(work.taskList[work.currentTaskIndex].work);
-                                    }.bind(this));
+                                }else{}
+                            }
 
-                                    if (currentTask.length==1){
-                                        var options = {"workId": currentTask[0], "appId": currentTask[0]};
-                                        if( !layout.inBrowser && afterCreated )options.onPostLoadForm = afterCreated;
-                                        application = layout.desktop.openApplication(null, "process.Work", options);
-                                    }else{}
-                                }
+                            if (callback) callback(data);
 
-                                if (callback) callback(data);
-
-                                if(layout.inBrowser && afterCreated){
-                                    afterCreated(application)
-                                }
-                            }.bind(this)
-                        });
-                        starter.load();
-                    }.bind(this));
+                            if(layout.inBrowser && afterCreated){
+                                afterCreated(application)
+                            }
+                        }.bind(this)
+                    });
+                    starter.load();
                 }
             });
         }
     };
 
+    /**
+     * 获取表单是否可编辑。只读。
+     * @member readonly
+     * @static
+     * @return {Boolean} 是否只读.
+     * @o2syntax
+     * var readonly = this.form.readonly;
+     */
     Object.defineProperty(this.form, "readonly", {
-        get: function(){ return  _form.options.readonly; }
+        get: function(){ return  !!_form.options.readonly; }
     });
 
     /**

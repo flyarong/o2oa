@@ -31,8 +31,10 @@ import com.x.base.core.project.gson.XGsonBuilder;
 import com.x.processplatform.core.entity.PersistenceProperties;
 import com.x.processplatform.core.entity.element.Activity;
 import com.x.processplatform.core.entity.element.ActivityType;
+import com.x.processplatform.core.entity.ticket.Tickets;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+
 @Schema(name = "WorkLog", description = "流程平台工作日志.")
 @Entity
 @ContainerEntity(dumpSize = 200, type = ContainerEntity.Type.content, reference = ContainerEntity.Reference.strong)
@@ -69,8 +71,14 @@ public class WorkLog extends SliceJpaObject {
 
 	@PostLoad
 	public void postLoad() {
-		this.splitValueList = this.getProperties().getSplitValueList();
-		this.splitTokenList = this.getProperties().getSplitTokenList();
+		if (null != this.properties) {
+			this.splitValueList = this.properties.getSplitValueList();
+			this.splitTokenList = this.properties.getSplitTokenList();
+			this.goBackFromActivityType = this.properties.getGoBackFromActivityType();
+			this.goBackFromActivity = this.properties.getGoBackFromActivity();
+			this.goBackFromActivityToken = this.properties.getGoBackFromActivityToken();
+			this.tickets = this.properties.getTickets();
+		}
 	}
 
 	public static WorkLog createFromWork(Work work, Activity activity, String token, Date date) throws Exception {
@@ -109,20 +117,25 @@ public class WorkLog extends SliceJpaObject {
 		copy.copyTo(this, JpaObject.id_FIELDNAME);
 	}
 
+	public static final String SPLITVALUELIST_FIELDNAME = "splitValueList";
 	@Transient
 	@FieldDescribe("拆分值列表.")
 	@Schema(description = "拆分值列表.")
 	private List<String> splitValueList;
 
 	public List<String> getSplitValueList() {
+		if ((null == this.splitValueList) && (null != this.properties)) {
+			this.splitValueList = this.properties.getSplitValueList();
+		}
 		return this.splitValueList;
 	}
 
 	public void setSplitValueList(List<String> splitValueList) {
-		this.splitValueList = splitValueList;
 		this.getProperties().setSplitValueList(splitValueList);
+		this.splitValueList = splitValueList;
 	}
 
+	public static final String SPLITTOKENLIST_FIELDNAME = "splitTokenList";
 	@Transient
 	@FieldDescribe("拆分标识列表.")
 	@Schema(description = "拆分标识列表.")
@@ -135,6 +148,74 @@ public class WorkLog extends SliceJpaObject {
 	public void setSplitTokenList(List<String> splitTokenList) {
 		this.splitTokenList = splitTokenList;
 		this.getProperties().setSplitTokenList(splitTokenList);
+	}
+
+	public static final String GOBACKFROMACTIVITYTYPE_FIELDNAME = "goBackFromActivityType";
+	@Transient
+	@FieldDescribe("退回发起活动环节类型.")
+	private ActivityType goBackFromActivityType;
+
+	public ActivityType getGoBackFromActivityType() {
+		if ((null == this.goBackFromActivityType) && (null != this.properties)) {
+			this.goBackFromActivityType = this.properties.getGoBackFromActivityType();
+		}
+		return goBackFromActivityType;
+	}
+
+	public void setGoBackFromActivityType(ActivityType goBackFromActivityType) {
+		this.getProperties().setGoBackFromActivityType(goBackFromActivityType);
+		this.goBackFromActivityType = goBackFromActivityType;
+	}
+
+	public static final String GOBACKFROMACTIVITY_FIELDNAME = "goBackFromActivity";
+	@Transient
+	@FieldDescribe("退回发起活动环节标识.")
+	private String goBackFromActivity;
+
+	public String getGoBackFromActivity() {
+		if ((null == this.goBackFromActivity) && (null != this.properties)) {
+			this.goBackFromActivity = this.properties.getGoBackFromActivity();
+		}
+		return goBackFromActivity;
+	}
+
+	public void setGoBackFromActivity(String goBackFromActivity) {
+		this.getProperties().setGoBackFromActivity(goBackFromActivity);
+		this.goBackFromActivity = goBackFromActivity;
+	}
+
+	public static final String GOBACKFROMACTIVITYTOKEN_FIELDNAME = "goBackFromActivityToken";
+	@Transient
+	@FieldDescribe("退回发起活动环节令牌.")
+	private String goBackFromActivityToken;
+
+	public String getGoBackFromActivityToken() {
+		if ((null == this.goBackFromActivityToken) && (null != this.properties)) {
+			this.goBackFromActivityToken = this.properties.getGoBackFromActivityToken();
+		}
+		return goBackFromActivityToken;
+	}
+
+	public void setGoBackFromActivityToken(String goBackFromActivityToken) {
+		this.getProperties().setGoBackFromActivityToken(goBackFromActivityToken);
+		this.goBackFromActivityToken = goBackFromActivityToken;
+	}
+
+	public static final String TICKETS_FIELDNAME = "tickets";
+	@Transient
+	@FieldDescribe("退回发起活动环节令牌.")
+	private Tickets tickets;
+
+	public Tickets getTickets() {
+		if ((null == this.tickets) && (null != this.properties)) {
+			this.tickets = this.properties.getTickets();
+		}
+		return tickets;
+	}
+
+	public void setTickets(Tickets tickets) {
+		this.getProperties().setTickets(tickets);
+		this.tickets = tickets;
 	}
 
 	public WorkLogProperties getProperties() {
@@ -197,17 +278,15 @@ public class WorkLog extends SliceJpaObject {
 	private ActivityType fromActivityType;
 
 	public static final String FROMACTIVITYNAME_FIELDNAME = "fromActivityName";
-	@FieldDescribe("开始活动名称")
+	@FieldDescribe("开始活动名称.")
 	@Column(length = AbstractPersistenceProperties.processPlatform_name_length, name = ColumnNamePrefix
 			+ FROMACTIVITYNAME_FIELDNAME)
-	@Index(name = TABLE + IndexNameMiddle + FROMACTIVITYNAME_FIELDNAME)
 	@CheckPersist(allowEmpty = true)
 	private String fromActivityName;
 
 	public static final String FROMACTIVITYALIAS_FIELDNAME = "fromActivityAlias";
-	@FieldDescribe("开始活动别名")
+	@FieldDescribe("开始活动别名.")
 	@Column(length = length_255B, name = ColumnNamePrefix + FROMACTIVITYALIAS_FIELDNAME)
-	@Index(name = TABLE + IndexNameMiddle + FROMACTIVITYALIAS_FIELDNAME)
 	@CheckPersist(allowEmpty = true)
 	private String fromActivityAlias;
 
@@ -256,14 +335,12 @@ public class WorkLog extends SliceJpaObject {
 	@FieldDescribe("结束活动名称.")
 	@Column(length = AbstractPersistenceProperties.processPlatform_name_length, name = ColumnNamePrefix
 			+ ARRIVEDACTIVITYNAME_FIELDNAME)
-	@Index(name = TABLE + IndexNameMiddle + ARRIVEDACTIVITYNAME_FIELDNAME)
 	@CheckPersist(allowEmpty = true)
 	private String arrivedActivityName;
 
 	public static final String ARRIVEDACTIVITYALIAS_FIELDNAME = "arrivedActivityAlias";
-	@FieldDescribe("结束活动名称.")
+	@FieldDescribe("结束活动别名.")
 	@Column(length = length_255B, name = ColumnNamePrefix + ARRIVEDACTIVITYALIAS_FIELDNAME)
-	@Index(name = TABLE + IndexNameMiddle + ARRIVEDACTIVITYALIAS_FIELDNAME)
 	@CheckPersist(allowEmpty = true)
 	private String arrivedActivityAlias;
 
@@ -386,6 +463,13 @@ public class WorkLog extends SliceJpaObject {
 	@CheckPersist(allowEmpty = true)
 	private String splitWork;
 
+	public static final String TYPE_FIELDNAME = "type";
+	@FieldDescribe("类型,与ProcessingAttributes的type对应.")
+	@Column(length = JpaObject.length_64B, name = ColumnNamePrefix + TYPE_FIELDNAME)
+	@Index(name = TABLE + TYPE_FIELDNAME + SPLITWORK_FIELDNAME)
+	@CheckPersist(allowEmpty = true)
+	private String type;
+
 	public static final String PROPERTIES_FIELDNAME = "properties";
 	@FieldDescribe("属性对象存储字段.")
 	@Persistent(fetch = FetchType.EAGER)
@@ -393,6 +477,14 @@ public class WorkLog extends SliceJpaObject {
 	@Column(length = JpaObject.length_10M, name = ColumnNamePrefix + PROPERTIES_FIELDNAME)
 	@CheckPersist(allowEmpty = true)
 	private WorkLogProperties properties;
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
 
 	public String getJob() {
 		return job;

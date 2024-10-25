@@ -1,5 +1,6 @@
 package com.x.processplatform.assemble.surface.jaxrs.data;
 
+import com.x.processplatform.core.express.service.processing.jaxrs.data.DataWi;
 import org.apache.commons.lang3.BooleanUtils;
 
 import com.google.gson.JsonElement;
@@ -47,7 +48,7 @@ class ActionUpdateWithWorkCompleted extends BaseAction {
 			// 允许创建者在完成后再次修改内容,与前台的可修改不一致,所以单独判断,为的是不影响前台显示.
 			Application application = business.application().pick(workCompleted.getApplication());
 			Process process = business.process().pick(workCompleted.getProcess());
-			if (BooleanUtils.isFalse(business.canManageApplicationOrProcess(effectivePerson, application, process))
+			if (BooleanUtils.isFalse(business.ifPersonCanManageApplicationOrProcess(effectivePerson, application, process))
 					&& BooleanUtils.isFalse(effectivePerson.isPerson(workCompleted.getCreatorPerson()))) {
 				throw new ExceptionWorkCompletedAccessDenied(effectivePerson.getDistinguishedName(),
 						workCompleted.getTitle(), workCompleted.getId());
@@ -56,9 +57,10 @@ class ActionUpdateWithWorkCompleted extends BaseAction {
 				throw new ExceptionModifyDataMerged(workCompleted.getId());
 			}
 		}
+		DataWi dataWi = new DataWi(effectivePerson.getDistinguishedName(), jsonElement);
 		Wo wo = ThisApplication.context().applications()
 				.putQuery(x_processplatform_service_processing.class,
-						Applications.joinQueryUri("data", "workcompleted", workCompleted.getId()), jsonElement,
+						Applications.joinQueryUri("data", "workcompleted", workCompleted.getId()), dataWi,
 						workCompleted.getJob())
 				.getData(Wo.class);
 		result.setData(wo);

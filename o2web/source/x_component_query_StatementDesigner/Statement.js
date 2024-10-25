@@ -198,6 +198,7 @@ MWF.xApplication.query.StatementDesigner.Statement = new Class({
                 default:
                     if(this.jpqlEditor)this.jpqlEditor.resize();
             }
+            this.loadEditor();
         }.bind(this))
 
         this.tabCountNode = Element("div");
@@ -223,6 +224,7 @@ MWF.xApplication.query.StatementDesigner.Statement = new Class({
                 default:
                     if( this.jpqlCountEditor )this.jpqlCountEditor.resize();
             }
+            this.loadEditor();
         }.bind(this))
 
         // this.tabSqlNode = Element("div");
@@ -275,7 +277,8 @@ MWF.xApplication.query.StatementDesigner.Statement = new Class({
 
         this.viewPage.addEvent("postShow", function () {
             if (this.view) {
-                this.view.setContentHeight();
+                //this.view.setContentHeight();
+                this.view.setViewWidth();
                 this.view.selected();
             }
         }.bind(this));
@@ -769,18 +772,20 @@ MWF.xApplication.query.StatementDesigner.Statement = new Class({
         }
     },
     _loadSqlCountEditor : function(){
-        o2.require("o2.widget.JavascriptEditor", function () {
-            this.sqlCountEditor = new o2.widget.JavascriptEditor(this.sqlCountEditorNode, {
-                "title": "SQL",
-                "option": {"mode": "sql"}
-            });
-            this.sqlCountEditor.load(function () {
-                this.sqlCountEditor.editor.setValue(this.json.sqlCount);
-                this.sqlCountEditor.addEditorEvent("change", function () {
-                    this.data.sqlCount = this.sqlCountEditor.getValue();
+        if (!this.sqlCountEditor) {
+            o2.require("o2.widget.JavascriptEditor", function () {
+                this.sqlCountEditor = new o2.widget.JavascriptEditor(this.sqlCountEditorNode, {
+                    "title": "SQL",
+                    "option": {"mode": "sql"}
+                });
+                this.sqlCountEditor.load(function () {
+                    this.sqlCountEditor.editor.setValue(this.json.sqlCount);
+                    this.sqlCountEditor.addEditorEvent("change", function () {
+                        this.data.sqlCount = this.sqlCountEditor.getValue();
+                    }.bind(this));
                 }.bind(this));
-            }.bind(this));
-        }.bind(this), false);
+            }.bind(this), false);
+        }
     },
 
     loadJpqlScriptEditor: function () {
@@ -795,6 +800,9 @@ MWF.xApplication.query.StatementDesigner.Statement = new Class({
                     "type": "service",
                     "onChange": function () {
                         this.json.scriptText = this.jpqlScriptEditor.toJson().code;
+                    }.bind(this),
+                    "onSave": function () {
+                        this.designer.saveStatement();
                     }.bind(this)
                 });
                 this.jpqlScriptEditor.load({"code": this.json.scriptText})
@@ -807,10 +815,15 @@ MWF.xApplication.query.StatementDesigner.Statement = new Class({
             o2.require("o2.widget.ScriptArea", function () {
                 this.jpqlCountScriptEditor = new o2.widget.ScriptArea(this.jpqlCountScriptArea, {
                     "isbind": false,
+                    "api": "../api/server.service.module_parameters.html#server.service.module_parameters",
                     "maxObj": this.designer.designNode,
                     "title": this.designer.lp.scriptTitle,
+                    "type": "service",
                     "onChange": function () {
                         this.json.countScriptText = this.jpqlCountScriptEditor.toJson().code;
+                    }.bind(this),
+                    "onSave": function () {
+                        this.designer.saveStatement();
                     }.bind(this)
                 });
                 this.jpqlCountScriptEditor.load({"code": this.json.countScriptText})
@@ -830,6 +843,9 @@ MWF.xApplication.query.StatementDesigner.Statement = new Class({
                     "type": "service",
                     "onChange": function () {
                         this.json.sqlScriptText = this.sqlScriptEditor.toJson().code;
+                    }.bind(this),
+                    "onSave": function () {
+                        this.designer.saveStatement();
                     }.bind(this)
                 });
                 this.sqlScriptEditor.load({"code": this.json.sqlScriptText})
@@ -841,10 +857,15 @@ MWF.xApplication.query.StatementDesigner.Statement = new Class({
             o2.require("o2.widget.ScriptArea", function () {
                 this.sqlCountScriptEditor = new o2.widget.ScriptArea(this.sqlCountScriptArea, {
                     "isbind": false,
+                    "api": "../api/server.service.module_parameters.html#server.service.module_parameters",
                     "maxObj": this.designer.designNode,
                     "title": this.designer.lp.sqlScriptTitle,
+                    "type": "service",
                     "onChange": function () {
                         this.json.sqlCountScriptText = this.sqlCountScriptEditor.toJson().code;
+                    }.bind(this),
+                    "onSave": function () {
+                        this.designer.saveStatement();
                     }.bind(this)
                 });
                 this.sqlCountScriptEditor.load({"code": this.json.sqlCountScriptText})
@@ -890,8 +911,12 @@ MWF.xApplication.query.StatementDesigner.Statement = new Class({
         }.bind(this));
     },
     addFilterSample: function(){
-        var filterList = this.filterListEditor.editor.getValue();
-        filterList = JSON.parse( filterList );
+        var filterList = this.filterListEditor.editor.getValue() || [];
+        try{
+            filterList = JSON.parse( filterList );
+        }catch (e) {
+            filterList = [];
+        }
         filterList.push({
             "path": ["sql", "sqlScript"].contains(this.json.format) ? "xtitle" : "o.title",
             "comparison":"like",
@@ -900,8 +925,12 @@ MWF.xApplication.query.StatementDesigner.Statement = new Class({
         });
         this.filterListEditor.editor.setValue( JSON.stringify(filterList, null, 4) );
 
-        var parameter = this.jsonEditor.editor.getValue();
-        parameter = JSON.parse( parameter );
+        var parameter = this.jsonEditor.editor.getValue() || {};
+        try{
+            parameter = JSON.parse( parameter );
+        }catch (e) {
+            parameter = {};
+        }
         parameter[ ["sql", "sqlScript"].contains(this.json.format) ? "xtitle" : "o_title" ] = "%关于%";
         this.jsonEditor.editor.setValue( JSON.stringify(parameter, null, 4) );
 
@@ -948,6 +977,12 @@ MWF.xApplication.query.StatementDesigner.Statement = new Class({
                 return "PP_C_REVIEW";
             case "com.x.cms.core.entity.Document":
                 return "CMS_DOCUMENT";
+            case "com.x.cms.core.entity.Review":
+                return "CMS_REVIEW";
+            case "com.x.cms.core.entity.DocumentViewRecord":
+                return "CMS_DOCUMENT_VIEWRECORD";
+            case "com.x.cms.core.entity.DocumentCommentInfo":
+                return "CMS_DOCUMENT_COMMENTINFO";
         }
     },
     setDynamicTableName: function(){
@@ -961,6 +996,73 @@ MWF.xApplication.query.StatementDesigner.Statement = new Class({
             this.dynamicTableContent.set("text", "");
         }
     },
+    loadEditor: function(){
+        switch (this.json.format) {
+            case "sql":
+                this.jpqlOfficalTable.hide();
+                this.sqlOfficalTable.show();
+
+                this.jpqlArea.hide();
+                this.jpqlScriptArea.hide();
+                this.sqlArea.show();
+                this.sqlScriptArea.hide();
+                this.loadSqlEditor();
+
+                this.jpqlCountArea.hide();
+                this.jpqlCountScriptArea.hide();
+                this.sqlCountArea.show();
+                this.sqlCountScriptArea.hide();
+                this.loadSqlCountEditor();
+                break;
+            case "sqlScript":
+                this.jpqlOfficalTable.hide();
+                this.sqlOfficalTable.show();
+
+                this.jpqlArea.hide();
+                this.jpqlScriptArea.hide();
+                this.sqlArea.hide();
+                this.sqlScriptArea.show();
+                this.loadSqlScriptEditor();
+
+                this.jpqlCountArea.hide();
+                this.jpqlCountScriptArea.hide();
+                this.sqlCountArea.hide();
+                this.sqlCountScriptArea.show();
+                this.loadSqlCountScriptEditor();
+                break;
+            case "script":
+                this.jpqlOfficalTable.show();
+                this.sqlOfficalTable.hide();
+
+                this.jpqlArea.hide();
+                this.jpqlScriptArea.show();
+                this.sqlArea.hide();
+                this.sqlScriptArea.hide();
+                this.loadJpqlScriptEditor();
+
+                this.jpqlCountArea.hide();
+                this.jpqlCountScriptArea.show();
+                this.sqlCountArea.hide();
+                this.sqlCountScriptArea.hide();
+                this.loadJpqlCountScriptEditor();
+                break;
+            default:
+                this.jpqlOfficalTable.show();
+                this.sqlOfficalTable.hide();
+
+                this.jpqlArea.show();
+                this.jpqlScriptArea.hide();
+                this.sqlArea.hide();
+                this.sqlScriptArea.hide();
+                this.loadJpqlEditor();
+
+                this.jpqlCountArea.show();
+                this.jpqlCountScriptArea.hide();
+                this.sqlCountArea.hide();
+                this.sqlCountScriptArea.hide();
+                this.loadJpqlCountEditor();
+        }
+    },
     setEvent: function () {
         this.designerArea.addEvent("click", function (e) {
             this.selected();
@@ -970,72 +1072,8 @@ MWF.xApplication.query.StatementDesigner.Statement = new Class({
             debugger;
             if (e.target.checked) {
                 var v = e.target.get("value");
-                switch (v) {
-                    case "sql":
-                        this.jpqlOfficalTable.hide();
-                        this.sqlOfficalTable.show();
-
-                        this.jpqlArea.hide();
-                        this.jpqlScriptArea.hide();
-                        this.sqlArea.show();
-                        this.sqlScriptArea.hide();
-                        this.loadSqlEditor();
-
-                        this.jpqlCountArea.hide();
-                        this.jpqlCountScriptArea.hide();
-                        this.sqlCountArea.show();
-                        this.sqlCountScriptArea.hide();
-                        this.loadSqlCountEditor();
-                        break;
-                    case "sqlScript":
-                        this.jpqlOfficalTable.hide();
-                        this.sqlOfficalTable.show();
-
-                        this.jpqlArea.hide();
-                        this.jpqlScriptArea.hide();
-                        this.sqlArea.hide();
-                        this.sqlScriptArea.show();
-                        this.loadSqlScriptEditor();
-
-                        this.jpqlCountArea.hide();
-                        this.jpqlCountScriptArea.hide();
-                        this.sqlCountArea.hide();
-                        this.sqlCountScriptArea.show();
-                        this.loadSqlCountScriptEditor();
-                        break;
-                    case "script":
-                        this.jpqlOfficalTable.show();
-                        this.sqlOfficalTable.hide();
-
-                        this.jpqlArea.hide();
-                        this.jpqlScriptArea.show();
-                        this.sqlArea.hide();
-                        this.sqlScriptArea.hide();
-                        this.loadJpqlScriptEditor();
-
-                        this.jpqlCountArea.hide();
-                        this.jpqlCountScriptArea.show();
-                        this.sqlCountArea.hide();
-                        this.sqlCountScriptArea.hide();
-                        this.loadJpqlCountScriptEditor();
-                        break;
-                    default:
-                        this.jpqlOfficalTable.show();
-                        this.sqlOfficalTable.hide();
-
-                        this.jpqlArea.show();
-                        this.jpqlScriptArea.hide();
-                        this.sqlArea.hide();
-                        this.sqlScriptArea.hide();
-                        this.loadJpqlEditor();
-
-                        this.jpqlCountArea.show();
-                        this.jpqlCountScriptArea.hide();
-                        this.sqlCountArea.hide();
-                        this.sqlCountScriptArea.hide();
-                        this.loadJpqlCountEditor();
-                }
                 this.json.format = v;
+                this.loadEditor();
                 this.setDynamicTableName();
             }
             this.loadFieldSelect();
@@ -1137,6 +1175,7 @@ MWF.xApplication.query.StatementDesigner.Statement = new Class({
                     // }
                     break;
             }
+            this.loadEditor();
         }.bind(this));
 
         this.fieldSelect.addEvent("change", function (ev) {
@@ -1686,6 +1725,49 @@ MWF.xApplication.query.StatementDesigner.View = new Class({
             }, false);
         }
     },
+    loadViewNodes: function(){
+        this.viewAreaNode = new Element("div#viewAreaNode", {"styles": this.css.viewAreaNode}).inject(this.areaNode);
+        this.viewTitleNode = new Element("div#viewTitleNode", {"styles": this.css.viewTitleNode}).inject(this.viewAreaNode);
+
+        this.refreshNode = new Element("div", {"styles": this.css.refreshNode}).inject(this.viewTitleNode);
+        this.addColumnNode = new Element("div", {"styles": this.css.addColumnNode}).inject(this.viewTitleNode);
+
+        this.viewTitleContentNode = new Element("div", {"styles": this.css.viewTitleContentNode}).inject(this.viewTitleNode);
+
+        this.autoAddColumnsNode = new Element("div.autoAddColumnsNode", {
+            styles: this.css.autoAddColumnsNode,
+            title: this.designer.lp.autoAddColumns
+        }).inject(this.viewTitleContentNode);
+        if( this.json.data.selectList && this.json.data.selectList.length ){
+            this.autoAddColumnsNode.hide();
+        }
+
+
+        this.viewTitleTableNode = new Element("table", {
+            "styles": this.css.viewTitleTableNode,
+            "border": "0px",
+            "cellPadding": "0",
+            "cellSpacing": "0"
+        }).inject(this.viewTitleContentNode);
+        this.viewTitleTrNode = new Element("tr", {"styles": this.css.viewTitleTrNode}).inject(this.viewTitleTableNode);
+
+
+        this.viewContentScrollNode = new Element("div", {"styles": this.css.viewContentScrollNode}).inject(this.viewAreaNode);
+        this.viewContentNode = new Element("div", {"styles": this.css.viewContentNode}).inject(this.viewContentScrollNode);
+        MWF.require("MWF.widget.ScrollBar", function(){
+            new MWF.widget.ScrollBar(this.viewContentScrollNode, {"style": "view", "distance": 100, "indent": false});
+        }.bind(this));
+
+        this.contentLeftNode = new Element("div", {"styles": this.css.contentLeftNode}).inject(this.viewContentNode);
+        this.contentRightNode = new Element("div", {"styles": this.css.contentRightNode}).inject(this.viewContentNode);
+        this.viewContentBodyNode = new Element("div", {"styles": this.css.viewContentBodyNode}).inject(this.viewContentNode);
+        this.viewContentTableNode = new Element("table", {
+            "styles": this.css.viewContentTableNode,
+            "border": "0px",
+            "cellPadding": "0",
+            "cellSpacing": "0"
+        }).inject(this.viewContentBodyNode);
+    },
     setEvent: function () {
         this.areaNode.addEvents({
             "click": function (e) {
@@ -1707,6 +1789,50 @@ MWF.xApplication.query.StatementDesigner.View = new Class({
             this.addColumn();
             e.stopPropagation();
         }.bind(this));
+        this.autoAddColumnsNode.addEvent("click", function (e) {
+            this.autoAddColumns();
+            e.stopPropagation();
+        }.bind(this));
+    },
+    autoAddColumns: function(){
+        MWF.require("MWF.widget.UUID", null, false);
+        var d = this.statement.data;
+        var className = d.entityCategory === "dynamic" ? d.table : d.entityClassName;
+        if( !className )return;
+        var pre = ["sql", "sqlScript"].contains(d.format) ? "x" : "";
+
+        var p;
+        if( d.entityCategory === "dynamic" ){
+            p = o2.Actions.load("x_query_assemble_designer").TableAction.get(d.table, function(json){
+                if (json){
+                    var dataJson = JSON.decode(json.data.data);
+                    return dataJson.fieldList || [];
+                }
+            }.bind(this));
+        }else{
+            p = o2.Actions.load("x_query_assemble_designer").QueryAction.getEntityProperties(
+                className,
+                d.entityCategory,
+                function(json){
+                    return json.data||[];
+                }.bind(this)
+            );
+        }
+        Promise.resolve(p).then(function (data){
+            this.json.data.selectList = data.map( function ( field ) {
+                return {
+                    "id": (new MWF.widget.UUID).id,
+                    "column": field.name,
+                    "path": pre ? (pre + field.name) : field.name,
+                    "displayName": field.description || field.name,
+                    "orderType": "original"
+                }
+            }.bind(this));
+
+            this.json.data.selectList.each(function (d) {
+                this.items.push(new MWF.xApplication.query.StatementDesigner.View.Column(d, this));
+            }.bind(this));
+        }.bind(this))
     },
     selected: function () {
         if (this.statement.currentSelectedModule) {
@@ -2078,6 +2204,7 @@ MWF.xApplication.query.StatementDesigner.View = new Class({
             if (styles.contentTr) this.removeStyles(styles.contentTr, "contentTr");
             if (styles.contentSelectedTr) this.removeStyles(styles.contentSelectedTr, "contentSelectedTr");
             if (styles.contentTd) this.removeStyles(styles.contentTd, "contentTd");
+            if (styles.zebraContentTd) this.removeStyles(styles.zebraContentTd, "zebraContentTd");
             // if (styles.contentGroupTd) this.removeStyles(styles.contentGroupTd, "contentGroupTd");
             // if (styles.groupCollapseNode) this.removeStyles(styles.groupCollapseNode, "groupCollapseNode");
             // if (styles.groupExpandNode) this.removeStyles(styles.groupExpandNode, "groupExpandNode");
@@ -2097,6 +2224,7 @@ MWF.xApplication.query.StatementDesigner.View = new Class({
         if (styles.contentTr) this.copyStyles(styles.contentTr, "contentTr");
         if (styles.contentSelectedTr) this.copyStyles(styles.contentSelectedTr, "contentSelectedTr");
         if (styles.contentTd) this.copyStyles(styles.contentTd, "contentTd");
+        if (styles.zebraContentTd) this.copyStyles(styles.zebraContentTd, "zebraContentTd");
         // if (styles.contentGroupTd) this.copyStyles(styles.contentGroupTd, "contentGroupTd");
         // if (styles.groupCollapseNode) this.copyStyles(styles.groupCollapseNode, "groupCollapseNode");
         // if (styles.groupExpandNode) this.copyStyles(styles.groupExpandNode, "groupExpandNode");
@@ -2107,19 +2235,31 @@ MWF.xApplication.query.StatementDesigner.View = new Class({
         if (styles.tableProperties) this.copyStyles(styles.tableProperties, "tableProperties");
     },
     removeStyles: function (from, to) {
-        if (this.json.data.viewStyles[to]) {
-            Object.each(from, function (style, key) {
-                if (this.json.data.viewStyles[to][key] && this.json.data.viewStyles[to][key] == style) {
-                    delete this.json.data.viewStyles[to][key];
-                }
-            }.bind(this));
+        if( this.isForceClearCustomStyle() ){
+            this.json.data.viewStyles[to] = {};
+        }else{
+            if (this.json.data.viewStyles[to]) {
+                Object.each(from, function (style, key) {
+                    if (this.json.data.viewStyles[to][key] && this.json.data.viewStyles[to][key] == style) {
+                        delete this.json.data.viewStyles[to][key];
+                    }
+                }.bind(this));
+            }
         }
+
     },
     copyStyles: function (from, to) {
-        if (!this.json.data.viewStyles[to]) this.json.data.viewStyles[to] = {};
-        Object.each(from, function (style, key) {
-            if (!this.json.data.viewStyles[to][key]) this.json.data.viewStyles[to][key] = style;
-        }.bind(this));
+        if( this.isForceClearCustomStyle() ){
+            this.json.data.viewStyles[to] = {};
+            Object.each(from, function (style, key) {
+                this.json.data.viewStyles[to][key] = style;
+            }.bind(this));
+        }else{
+            if (!this.json.data.viewStyles[to]) this.json.data.viewStyles[to] = {};
+            Object.each(from, function (style, key) {
+                if (!this.json.data.viewStyles[to][key]) this.json.data.viewStyles[to][key] = style;
+            }.bind(this));
+        }
     }
     // preview: function(){
     //     if( this.isNewView ){
@@ -2223,6 +2363,7 @@ MWF.xApplication.query.StatementDesigner.View.Column = new Class({
         this.css = this.view.css;
         this.content = this.view.viewTitleTrNode;
         this.domListNode = this.view.domListNode;
+        this.view.autoAddColumnsNode.hide();
         this.load();
     },
     refreshColumnPathData: function () {
@@ -2301,6 +2442,11 @@ MWF.xApplication.query.StatementDesigner.View.Column = new Class({
         this.isSelected = false;
         this._hideActions();
         this.hideProperty();
+    },
+    _destroy: function (){
+        if( !this.view.json.data.selectList  || !this.view.json.data.selectList.length ){
+            this.view.autoAddColumnsNode.show();
+        }
     },
     addColumn: function(e, data){
         MWF.require("MWF.widget.UUID", function(){

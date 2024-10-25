@@ -34,7 +34,8 @@ MWF.xApplication.process.ProcessDesigner.LP = {
 		"saveRouteOrgNoName" : "标识和标题不能为空",
 		"saveRouteOrgNumberId" : "标识不能为纯数字",
 		"saveRouteOrgDoubleDotId" : "标识不能包含连续两个点号",
-		"processCopyError": "活动粘贴失败，请重新复制后重试"
+		"processCopyError": "活动粘贴失败，请重新复制后重试",
+		"routeNameConfilct": "一个活动不能有两个同名路由！"
 	},
 	"menu": {
 		"newRoute": "新建路由",
@@ -246,7 +247,7 @@ MWF.xApplication.process.ProcessDesigner.LP = {
 		"instanceMode": "实例模式",
 		"draftMode": "草稿模式",
 		"instanceModeInfo": "(新建流程时直接创建流程实例，给拟稿人生成待办)",
-		"draftModeInfo": "(新建流程时不创建流程实例，不生成待办，产生一个草稿文档，直到流转时才创建流程实例)",
+		"draftModeInfo": "(新建流程时不创建流程实例，不生成待办，产生一个草稿文档，直到流转时才创建流程实例。在草稿模式中不能上传附件。)",
 
 		"checkDraft": "新建检查",
 		"checkDraftInfo": "(选择“是”：未保存过的流程实例不会保留)",
@@ -256,6 +257,8 @@ MWF.xApplication.process.ProcessDesigner.LP = {
 		"starGroup": "启动群组",
 		"manager": "管理者",
 		"maintenanceIdentity": "维护人",
+		"managerScript": "管理者脚本",
+
 
 		"number": "编号",
 		"numberActivity": "编号活动",
@@ -290,8 +293,33 @@ MWF.xApplication.process.ProcessDesigner.LP = {
 		"mappingTableEnabled": "流转结束后将数据存储到数据表",
 		"queryTable": "数据表",
 
+		"data": "数据",
+		"dataTrace": "业务数据跟踪",
+		"dataTraceInfo": "启用业务数据跟踪可以记录指定业务字段的每次变化情况，可以在表单设计中设置查看业务数据的历史变化记录",
+		"dataTraceInfo2": "",
+		"dataTraceFields": "跟踪字段",
+		"dataTraceDisabled": "无",
+		"dataTraceCustom": "自定义",
+		"dataTraceAll": "所有",
+		"dataTraceDisabledInfo": "不跟踪任何业务数据字段",
+		"dataTraceCustomInfo": "在下面的设置中定义要跟踪的业务字段",
+		"dataTraceAllInfo": "跟踪所有业务数据字段（不包括数据表格、数据模板和长文本（Lob）类型的数据）",
+		"dataTraceFieldNames": "字段名称",
+		"dataTraceFieldNamesSelect": "选择表单字段",
+		"selectForm": "表单",
+		"selectField": "数据字段",
+		"selectedField": "已选字段",
+
+
+
 		"allowReroute": "是否允许调度",
 		"allowRerouteTo": "允许调度到此活动",
+
+		"mergeLayerThreshold": "合并层数",
+		"mergeLayerThreshold0": "合并尽量多的层数",
+		"mergeLayerThreshold1": "合并单层",
+		"mergeLayerThresholdn": "合并{n}层",
+
 
 		"reader": "待阅人",
 		"readerId": "身份",
@@ -300,6 +328,16 @@ MWF.xApplication.process.ProcessDesigner.LP = {
 		"reviewer": "阅读人",
 		"reviewerId": "身份",
 		"unit": "组织",
+
+		"participant": "流程角色",
+		"participant_creator": "启动者",
+		"participant_activity": "活动参与者",
+		"participant_maintenance": "维护者",
+		"participant_none": "无",
+
+		"participant_creator_info": "将流程实例的启动者，作为当前活动的处理人",
+		"participant_maintenance_info": "将流程的维护者，作为当前活动的处理人",
+		"participant_activity_info": "将流程实例已经流转过的活动的处理人，作为当前活动的处理人，请在下面选择活动",
 
 		"splitScript": "拆分依据脚本",
 		"embed": "调用",
@@ -320,15 +358,21 @@ MWF.xApplication.process.ProcessDesigner.LP = {
 		"getOldData": "获取原流程的业务数据",
 		"setNewData": "设置新流程的业务数据",
 
+		"cmsCreator": "发布者",
+		"cmsCreatorId": "发布者标识",
+		"specifyCmsCreator": "指定一个发布者",
+		"useScript": "使用脚本",
+		"cmsCreatorScript": "发布者脚本",
+
 		"waitUntilCompletedTitle": "流程等待",
 		"waitUntilCompleted": "如果选择“是”，主流程将在被调用流程流转过程中保持等待，直到等待被调用流程流转结束",
 		"completedEventsInfo": "启用了流程等待，子流程结束后会触发主流程继续流转，下面的三个事件会被执行",
 		"completedEndEvent": "子流程成功后",
-		"completedEnd": "子流程成功",
+		"completedEnd": "子流程成功后",
 		"completedCancelEvent": "子流程取消后",
-		"completedCancel": "子流程取消",
+		"completedCancel": "子流程取消后",
 		"completedEvent": "子流程完成后",
-		"completed": "子流程完成",
+		"completed": "子流程完成后",
 		"completedEndEventInfo": "当子流程流转到结束活动，此事件会被执行",
 		"completedCancelEventInfo": "当子流程流转到取消活动，此事件会被执行",
 		"completedEventInfo": "当子流程流转到结束或取消活动，此事件会被执行",
@@ -403,6 +447,7 @@ MWF.xApplication.process.ProcessDesigner.LP = {
 		"setTimeoutAfterWorkHours": "设置几个工作小时后超时",
 		"activityPower": "权限",
 		"allowDelete": "允许删除文件",
+		"allowTerminate": "允许终止文件",
 		"allowReset": "是否允许重置",
 		"resetCount": "重置加签人数",
 		"resetRange": "重置加签范围",
@@ -416,6 +461,27 @@ MWF.xApplication.process.ProcessDesigner.LP = {
 		"allowPress": "允许发起办理提醒",
 		"allowPause": "允许挂起",
         "allowAddTask": "允许加签",
+
+		"backConfig": "退回配置",
+		"allowBack": "允许退回",
+		"multiTaskEnable": "多人并行时是否允许退回",
+		"multiTaskEnableInfo": "多人并行处理时执行退回会取消其他未处理人的待办，直接退回到指定活动",
+		"backType": "退回方式",
+		"backPrev": "逐级退回",
+		"backAny": "任意活动退回",
+		"backDefine": "选择退回活动",
+		"backPrevInfo": "逐级退回：用户选择“退回”，则将当前工作退回到上一个处理活动",
+		"backAnyInfo": "任意活动退回：用户选择“退回”时，可选择任意一个已经处理过的活动",
+		"backDefineInfo": "选择退回活动：定义允许退回的活动，用于可以退回到已允许的活动",
+		"backWay": "退回后处理",
+		"backWayDefault": "默认",
+		"backWayStep": "按流程配置正常流转",
+		"backWayJump": "直接回到退回人",
+		"backWayCustom": "由退回人决定",
+
+		"backActivitySelectTitle": "选择允许退回的活动",
+		"backActivitySelectInfo": "您可以选择当前活动允许退回的活动节点，只有已经流转过的被允许活动，才能退回。您还可以为每个允许退回活动单独设置退回后的处理方式。",
+
 
 		"beforeBegin": "流程启动前",
 		"eventInfo1": "启动流程生成work实例",
@@ -444,12 +510,17 @@ MWF.xApplication.process.ProcessDesigner.LP = {
 		"manualAfterTask": "待办处理后",
 		"eventInfo10": "判断是否满足条件进入下一个活动",
 
+		"eventInfo11": "执行所有流程流转任务，直到在某个活动停留或结束",
+		"afterProcess": "活动流转完成",
+
 		"updataTime": "更新时间",
 		"num": "顺序号",
 		"defaultOpinion": "默认意见",
 		"opinionRequired": "意见必填",
 		"routeType": "路由类型",
 		"defaultRoute": "默认路由",
+		"sole": "默认选中",
+		"defaultRouteSelected": "默认选中路由",
 		"backRoute": "回退路由",
 		"appendTask": "转交（仅指向同活动时生效）",
 		"appendTaskInfo": "转交活动不触发活动事件",
@@ -501,6 +572,8 @@ MWF.xApplication.process.ProcessDesigner.LP = {
 		"dutyRange": "职务范围",
 		"all": "所有",
 		"all2": "全部",
+		"groupRange": "群组范围",
+		"specifyGroup": "指定群组",
 		"specifyDuty": "指定职务",
 		"category": "分类",
 		"byUnit": "按组织",

@@ -12,17 +12,17 @@ o2.xApplication.process.Xform.$ElModule = MWF.APP$ElModule =  new Class(
     options: {
         /**
          * 组件加载前触发。queryLoad执行的时候，当前组件没有在form里注册，通过this.form.get("fieldId")不能获取到当前组件，需要用this.target获取。
-         * @event MWF.xApplication.process.Xform.$Module#queryLoad
+         * @event MWF.xApplication.process.Xform.$ElModule#queryLoad
          * @see {@link https://www.yuque.com/o2oa/ixsnyt/hm5uft#i0zTS|组件事件说明}
          */
         /**
          * 组件加载时触发.
-         * @event MWF.xApplication.process.Xform.$Module#load
+         * @event MWF.xApplication.process.Xform.$ElModule#load
          * @see {@link https://www.yuque.com/o2oa/ixsnyt/hm5uft#i0zTS|组件事件说明}
          */
         /**
          * 组件加载后触发.
-         * @event MWF.xApplication.process.Xform.$Module#postLoad
+         * @event MWF.xApplication.process.Xform.$ElModule#postLoad
          * @see {@link https://www.yuque.com/o2oa/ixsnyt/hm5uft#i0zTS|组件事件说明}
          */
         "moduleEvents": ["load", "queryLoad", "postLoad"],
@@ -42,10 +42,28 @@ o2.xApplication.process.Xform.$ElModule = MWF.APP$ElModule =  new Class(
      */
     load: function(){
         this._loadModuleEvents();
+
+        this.form.app.addEvent('queryClose', function(){
+            if (this.vm) this.vm.$destroy();
+        }.bind(this));
+
         if (this.fireEvent("queryLoad")){
             this._queryLoaded();
             this._loadUserInterface();
         }
+    },
+    reload: function(){
+        if (!this.vm) return;
+
+        var node = this.vm.$el;
+        this.vm.$destroy();
+        node.empty();
+
+        this.vm = null;
+
+        this.vueApp = null;
+
+        this._loadUserInterface();
     },
     _checkVmodel: function(text){
         if (text){
@@ -82,14 +100,15 @@ o2.xApplication.process.Xform.$ElModule = MWF.APP$ElModule =  new Class(
     },
 
     _loadVue: function(callback){
-        var flag = (o2.session.isDebugger || !this.form.app.inBrowser);
+        var flag = (o2.session.isDebugger && this.form.app.inBrowser);
         var vue = flag ? "vue_develop" : "vue";
-        var vueName = flag ? "Vue" : "Cn";
-        if (!window.Vue || window.Vue.name!==vueName){
-            o2.loadAll({"css": "../o2_lib/vue/element/index.css", "js": [vue, "elementui"]}, { "sequence": true }, callback);
-        }else{
-            if (callback) callback();
-        }
+        //var vueName = flag ? "Vue" : "Cn";
+        // if (!window.Vue || window.Vue.name!==vueName){
+        //     o2.loadAll({"css": "../o2_lib/vue/element/index.css", "js": [vue, "elementui"]}, { "sequence": true }, callback);
+        // }else{
+        //     if (callback) callback();
+        // }
+        o2.loadAll({"css": "../o2_lib/vue/element/index.css", "js": [vue, "elementui"]}, { "sequence": true }, callback);
     },
     _mountVueApp: function(){
         if (!this.vueApp) this.vueApp = this._createVueExtend();
@@ -143,11 +162,18 @@ o2.xApplication.process.Xform.$ElModule = MWF.APP$ElModule =  new Class(
     },
     _createEventFunction: function(methods, k){
         methods["$loadElEvent_"+k.camelCase()] = function(){
-            this.validationMode();
-            if (k==="change") this._setBusinessData(this.getInputData());
+            var flag = true;
+            if (k==="change"){
+                if (this.validationMode){
+                    this.validationMode();
+                    this._setBusinessData(this.getInputData());
+                    if( !this.validation() ) flag = false;
+                }
+            }
             if (this.json.events && this.json.events[k] && this.json.events[k].code){
                 this.form.Macro.fire(this.json.events[k].code, this, arguments);
             }
+            if( flag )this.fireEvent(k, arguments);
         }.bind(this);
     },
     _createVueMethods: function(){

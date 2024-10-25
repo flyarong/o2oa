@@ -9,14 +9,17 @@ MWF.xApplication.query.QueryManager.TableExplorer = new Class({
             "search": MWF.xApplication.query.QueryManager.LP.table.search,
             "searchText": MWF.xApplication.query.QueryManager.LP.table.searchText,
             "noElement": MWF.xApplication.query.QueryManager.LP.table.noStatNoticeText
-        }
+        },
+        "categoryEnable": true,
+        "itemStyle": "card",
+        "name": 'query.TableExplorer'
     },
     initialize: function(node, actions, options){
         this.setOptions(options);
         this.setTooltip();
 
         this.path = "../x_component_query_QueryManager/$Explorer/";
-        this.cssPath = "../x_component_query_QueryManager/$Explorer/"+this.options.style+"/css.wcss";
+        this.cssPath = "../x_component_process_ProcessManager/$Explorer/"+this.options.style+"/css.wcss";
 
         this._loadCss();
 
@@ -94,6 +97,30 @@ MWF.xApplication.query.QueryManager.TableExplorer = new Class({
             }
         }else{
             this.reload();
+        }
+    },
+    showDeleteAction: function(){
+        if (!this.deleteItemsAction){
+            this.deleteItemsAction = new Element("div", {
+                "styles": this.css.deleteItemsAction,
+                "text": this.app.lp.deleteItems
+            }).inject(this.node);
+            this.deleteItemsAction.fade("in");
+            this.deleteItemsAction.position({
+                relativeTo: this.elementContentListNode,
+                position: 'centerTop',
+                edge: 'centerTop',
+                "offset": {"y": this.elementContentNode.getScroll().y}
+            });
+            this.deleteItemsAction.addEvent("click", function(){
+                var _self = this;
+                this.app.confirm("warn", this.deleteItemsAction, MWF.APPPM.LP.deleteElementTitle, MWF.xApplication.query.QueryManager.LP.deleteElementTable, 300, 120, function(){
+                    _self.deleteItems();
+                    this.close();
+                }, function(){
+                    this.close();
+                });
+            }.bind(this));
         }
     },
     saveItemAs: function(data, success, failure, cancel){
@@ -245,7 +272,7 @@ MWF.xApplication.query.QueryManager.TableExplorer.Table= new Class({
         var iconUrl = this.explorer.path+""+this.explorer.options.style+"/processIcon/"+this.icon;
 
         var itemIconNode = new Element("div", {
-            "styles": this.css.itemIconNode
+            "styles": this.explorer.options.itemStyle === 'line' ? this.css.itemIconNode_line : this.css.itemIconNode
         }).inject(this.node);
         itemIconNode.setStyle("background", "url("+iconUrl+") center center no-repeat");
 

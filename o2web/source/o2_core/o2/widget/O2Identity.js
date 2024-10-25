@@ -10,7 +10,9 @@ o2.widget.O2Identity = new Class({
         "canRemove": false,
         "lazy": false,
         "disableInfor" : false,
-        "styles": ""
+        "removeByClick": false,
+        "styles": "",
+        "delay": false
 	},
 	initialize: function(data, container, options){
 
@@ -28,7 +30,7 @@ o2.widget.O2Identity = new Class({
         this.action = new o2.xDesktop.Actions.RestActions("", "x_organization_assemble_control", "x_component_Org");
         // this.explorer = explorer;
         // this.removeAction = removeAction;
-        this.load();
+        if(!this.options.delay)this.load();
 
         //o2.widget.O2Identity.iditems.push(this);
 	},
@@ -60,6 +62,13 @@ o2.widget.O2Identity = new Class({
             this.node.setStyles( this.options.styles );
         }
         this.setText();
+
+        if( this.options.removeByClick ){
+            this.node.addEvent("click", function(e){
+                this.fireEvent("remove", [this, e]);
+                e.stopPropagation();
+            }.bind(this));
+        }
 
         if (this.options.canRemove){
             this.removeNode = new Element("div", {"styles": this.style.identityRemoveNode}).inject(this.node);
@@ -327,7 +336,26 @@ o2.widget.O2Duty = new Class({
         // }
     },
     createInforNode: function(){
-        return false;
+        if( this.options.showUnit && this.data.woUnit && this.data.woUnit.levelName ){
+            this.inforNode = new Element("div", {
+                "styles": this.style.identityInforNode
+            });
+            var nameNode = new Element("div", {
+                "text": this.data.displayName || this.data.name
+            }).inject(this.inforNode);
+
+            var nameTextNode = new Element("div", {
+                "text": this.data.woUnit.levelName
+            }).inject(this.inforNode);
+            this.tooltip = new mBox.Tooltip({
+                content: this.inforNode,
+                setStyles: {content: {padding: 15, lineHeight: 20}},
+                attach: this.node,
+                transition: 'flyin'
+            });
+        }else{
+            return false;
+        }
         // this.inforNode = new Element("div", {
         //     "styles": this.style.identityInforNode
         // });
@@ -343,7 +371,12 @@ o2.widget.O2Duty = new Class({
         // });
     },
     setText: function(){
-        this.node.set("text", this.data.displayName || this.data.name);
+        if( this.options.showUnit && this.data.woUnit ){
+            var unit = this.data.woUnit.name ? ("("+this.data.woUnit.name+")") : "";
+            this.node.set("text", (this.data.displayName || this.data.name)+unit);
+        }else{
+            this.node.set("text", this.data.displayName || this.data.name);
+        }
     }
 });
 o2.widget.O2Group = new Class({
@@ -391,8 +424,10 @@ o2.widget.O2CMSApplication = new Class({
     Extends: o2.widget.O2Group,
     getPersonData: function(){
         if (!this.data.name){
-            o2.Actions.get("x_cms_assemble_control").getApplication((this.data.id || this.data.name), function(json){
+            o2.Actions.get("x_cms_assemble_control").getApplication(this.data.id || this.data.name, function(json){
                 this.data = json.data;
+                if(!this.data.name)this.data.name = this.data.appName;
+                if(!this.data.alias)this.data.alias = this.data.appAlias;
             }.bind(this), null, false);
             // this.action = new o2.xDesktop.Actions.RestActions("", "x_cms_assemble_control", "");
             // this.action.actions = {"getApplication": {"uri": "/jaxrs/application/{id}"}};
@@ -533,8 +568,11 @@ o2.widget.O2QueryView = new Class({
         if (!this.data.query && this.data.id){
             var data = null;
             o2.Actions.get("x_query_assemble_surface").getViewById(this.data.id, function(json){
-                data = json.data
-            }, null, false);
+                data = json.data;
+            }, function(){
+                data = {};
+                return true;
+            }, false);
             this.data = data;
             return data;
         }else{
@@ -567,8 +605,11 @@ o2.widget.O2QueryStatement = new Class({
         if (!this.data.query && this.data.id){
             var data = null;
             o2.Actions.load("x_query_assemble_designer").StatementAction.get(this.data.id, function(json){
-                data = json.data
-            }, null, false);
+                data = json.data;
+            }, function () {
+                data = {};
+                return true;
+            }, false);
             this.data = data;
             return data;
         }else{
@@ -772,32 +813,57 @@ o2.widget.O2Script = new Class({
             transition: 'flyin'
         });
     },
-    open : function (e) {
-        if( this.data.id && this.data.appId && this.data.appType){
-            var appName;
-            if( this.data.appType === "cms" ){
-                appName = "cms.ScriptDesigner";
-            }else if( this.data.appType === "portal" ){
-                appName = "portal.ScriptDesigner";
-            }else if( this.data.appType === "process" ) {
-                appName = "process.ScriptDesigner";
-            }else if( this.data.appType === "service" ) {
-                appName = "service.ScriptDesigner";
-            }
-            var appId = appName + this.data.id;
-            if (layout.desktop.apps[appId]){
-                layout.desktop.apps[appId].setCurrent();
-            }else {
-                var options = {
-                    "id": this.data.id,
-                    "appId": appId,
-                    "application":{
-                        "name": this.data.appName || this.data.applicationName || "",
-                        "id": this.data.appId
+    open: function(e){
+        if( this.data.id && this.data.appId && this.data.appType) {
+            this._open();
+        }else{
+            var app = this.data.appId || this.data.application || this.data.appName || this.data.applicationName;
+            var name = this.data.id || this.data.name;
+            if( this.data.appType === "service" )app = "service";
+            if( name && app && this.data.appType ){
+                var p, type = this.data.appType;
+                if( type === "process" ){
+                    p = o2.Actions.load("x_processplatform_assemble_surface").ScriptAction.getImported(this.data.name, app);
+                }else if( type === "portal" ){
+                    p = o2.Actions.load("x_portal_assemble_surface").ScriptAction.getImported(app, this.data.name);
+                }else if( type === "cms" ){
+                    p = o2.Actions.load("x_cms_assemble_control").ScriptAction.load(this.data.name, app);
+                }else if( type === "service" ){
+                    p = o2.Actions.load("x_program_center").ScriptAction.getImported(this.data.name);
+                }
+                p.then(function (json) {
+                    if( json.data.importedList && json.data.importedList.length ){
+                        this.data.id = json.data.importedList[0];
+                        this._open(e);
                     }
-                };
-                layout.desktop.openApplication(e, appName, options);
+                }.bind(this))
             }
+        }
+    },
+    _open : function (e) {
+        var appName;
+        if( this.data.appType === "cms" ){
+            appName = "cms.ScriptDesigner";
+        }else if( this.data.appType === "portal" ){
+            appName = "portal.ScriptDesigner";
+        }else if( this.data.appType === "process" ) {
+            appName = "process.ScriptDesigner";
+        }else if( this.data.appType === "service" ) {
+            appName = "service.ScriptDesigner";
+        }
+        var appId = appName + this.data.id;
+        if (layout.desktop.apps[appId]){
+            layout.desktop.apps[appId].setCurrent();
+        }else {
+            var options = {
+                "id": this.data.id,
+                "appId": appId,
+                "application":{
+                    "name": this.data.appName || this.data.applicationName || "",
+                    "id": this.data.appId
+                }
+            };
+            layout.desktop.openApplication(e, appName, options);
         }
     }
 });
@@ -860,22 +926,30 @@ o2.widget.O2Dictionary = new Class({
     open : function (e) {
         if( this.data.id && this.data.appId && this.data.appType){
             var appName;
-            if( this.data.appType === "cms" ){
-                appName = "cms.DictionaryDesigner";
-            }else if( this.data.appType === "process" ) {
-                appName = "process.DictionaryDesigner";
+            switch (this.data.appType) {
+                case "cms":
+                    appName = "cms.DictionaryDesigner"; break;
+                case "process":
+                    appName = "process.DictionaryDesigner"; break;
+                case "portal":
+                    appName = "portal.DictionaryDesigner"; break;
+                default:
+                    appName = "service.DictionaryDesigner"; break;
             }
             var appId = appName + this.data.id;
             if (layout.desktop.apps[appId]){
                 layout.desktop.apps[appId].setCurrent();
             }else {
                 var options = {
-                    "id": this.data.id,
-                    "appId": appId,
-                    "application":{
+                    "id": this.data.id
+                };
+                if( this.data.appType !== "service" ){
+                    options.appId = appId;
+                    options.application = {
                         "id": this.data.appId,
                         "name": this.data.appName || this.data.applicationName || ""
-                    }};
+                    };
+                }
                 layout.desktop.openApplication(e, appName, options);
             }
         }

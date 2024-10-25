@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.apache.tika.Tika;
@@ -29,7 +30,9 @@ import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
 import com.x.base.core.project.tools.DocumentTools;
 import com.x.processplatform.assemble.surface.Business;
+import com.x.processplatform.assemble.surface.Control;
 import com.x.processplatform.assemble.surface.ThisApplication;
+import com.x.processplatform.assemble.surface.WorkControlBuilder;
 import com.x.processplatform.core.entity.content.Attachment;
 import com.x.processplatform.core.entity.content.Work;
 import com.x.processplatform.core.express.assemble.surface.jaxrs.attachment.ActionDocToWordWi;
@@ -63,7 +66,8 @@ class ActionDocToWord extends BaseAction {
 			if (null == work) {
 				throw new ExceptionEntityNotExist(workId, Work.class);
 			}
-			if (!business.readableWithWorkOrWorkCompleted(effectivePerson, work.getId())) {
+			Control control = new WorkControlBuilder(effectivePerson, business, work).enableAllowVisit().build();
+			if (BooleanUtils.isNotTrue(control.getAllowVisit())) {
 				throw new ExceptionAccessDenied(effectivePerson);
 			}
 		}
@@ -91,7 +95,7 @@ class ActionDocToWord extends BaseAction {
 				StorageMapping mapping = ThisApplication.context().storageMappings().get(Attachment.class,
 						attachment.getStorage());
 				emc.beginTransaction(Attachment.class);
-				attachment.updateContent(mapping, bytes, wi.getFileName());
+				attachment.updateContent(mapping, bytes, wi.getFileName(), Config.general().getStorageEncrypt());
 				attachment.setType((new Tika()).detect(bytes, wi.getFileName()));
 				attachment.setLastUpdatePerson(person);
 				attachment.setLastUpdateTime(new Date());
@@ -114,7 +118,7 @@ class ActionDocToWord extends BaseAction {
 				attachment.setActivityName(work.getActivityName());
 				attachment.setActivityToken(work.getActivityToken());
 				attachment.setActivityType(work.getActivityType());
-				attachment.saveContent(mapping, bytes, wi.getFileName());
+				attachment.saveContent(mapping, bytes, wi.getFileName(), Config.general().getStorageEncrypt());
 				attachment.setType((new Tika()).detect(bytes, wi.getFileName()));
 				emc.persist(attachment, CheckPersistType.all);
 				emc.commit();

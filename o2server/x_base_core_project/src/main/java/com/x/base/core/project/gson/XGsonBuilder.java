@@ -1,28 +1,20 @@
 package com.x.base.core.project.gson;
 
+import com.google.gson.*;
+import com.x.base.core.project.tools.DateTools;
+import org.apache.commons.lang3.StringUtils;
+
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.lang3.StringUtils;
-
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonPrimitive;
-import com.x.base.core.project.tools.DateTools;
-
-import jdk.nashorn.api.scripting.ScriptObjectMirror;
-
 public class XGsonBuilder {
 
 	private static Gson INSTANCE;
 	private static Gson COMPACTINSTANCE;
+	private static final String PATH_DOT = ".";
 
 	public static Gson instance() {
 		if (null == INSTANCE) {
@@ -36,8 +28,8 @@ public class XGsonBuilder {
 					gson.registerTypeAdapter(Long.class, new LongDeserializer());
 					gson.registerTypeAdapter(Date.class, new DateDeserializer());
 					gson.registerTypeAdapter(Date.class, new DateSerializer());
-					gson.registerTypeAdapter(ScriptObjectMirror.class, new ScriptObjectMirrorSerializer());
-					INSTANCE = gson.setPrettyPrinting().create();
+					gson.registerTypeAdapter(LocalDateTime.class, new LocalDateTimeTypeAdapter());
+					INSTANCE = gson.setPrettyPrinting().serializeSpecialFloatingPointValues().create();
 				}
 			}
 		}
@@ -56,6 +48,7 @@ public class XGsonBuilder {
 					gson.registerTypeAdapter(Long.class, new LongDeserializer());
 					gson.registerTypeAdapter(Date.class, new DateDeserializer());
 					gson.registerTypeAdapter(Date.class, new DateSerializer());
+					gson.registerTypeAdapter(LocalDateTime.class, new LocalDateTimeTypeAdapter());
 					COMPACTINSTANCE = gson.create();
 				}
 			}
@@ -97,6 +90,18 @@ public class XGsonBuilder {
 				JsonPrimitive jsonPrimitive = element.getAsJsonPrimitive();
 				if (jsonPrimitive.isBoolean())
 					return jsonPrimitive.getAsBoolean();
+			}
+		}
+		return null;
+	}
+
+	public static Integer extractInteger(JsonElement jsonElement, String name) {
+		if ((null != jsonElement) && jsonElement.isJsonObject() && StringUtils.isNotEmpty(name)) {
+			JsonElement element = extract(jsonElement, name);
+			if (null != element && element.isJsonPrimitive()) {
+				JsonPrimitive jsonPrimitive = element.getAsJsonPrimitive();
+				if (jsonPrimitive.isNumber())
+					return jsonPrimitive.getAsInt();
 			}
 		}
 		return null;
@@ -218,6 +223,113 @@ public class XGsonBuilder {
 			}
 		}
 		return to;
+	}
+
+	public static JsonElement replace(JsonElement from, JsonElement to, String path) throws Exception{
+		if (from == null) {
+			throw new Exception("from jsonElement can't be null.");
+		}
+		if (to == null) {
+			throw new Exception("to jsonElement can't be null.");
+		}
+		if (!to.isJsonObject()) {
+			throw new Exception("to jsonElement must be a jsonObject.");
+		}
+		if(StringUtils.isBlank(path)){
+			if(from.isJsonObject()){
+				return from;
+			}else{
+				return null;
+			}
+		}else{
+			JsonElement result = to.deepCopy();
+			if(path.indexOf(PATH_DOT) > -1){
+				String key = StringUtils.substringAfterLast(path,PATH_DOT);
+				path = StringUtils.substringBeforeLast(path,PATH_DOT);
+				JsonElement pathJson = extract(result, path);
+				if(pathJson != null && pathJson.isJsonObject()){
+					JsonObject jsonObject = pathJson.getAsJsonObject();
+					jsonObject.add(key, from);
+				}else{
+					return null;
+				}
+			}else{
+				JsonObject jsonObject = result.getAsJsonObject();
+				jsonObject.add(path, from);
+			}
+			return result;
+		}
+	}
+
+	/**
+	 * 合并from到to的指定path下，path可以多层，多层以.隔开
+	 * @param from 可以是JsonObject对象或JsonArray对象
+	 * @param to 必须是JsonObject对象
+	 * @param path
+	 * @return 返回新的json对象
+	 * @throws Exception
+	 */
+	public static JsonElement cover(JsonElement from, JsonElement to, String path) throws Exception{
+		if (from == null) {
+			throw new Exception("from jsonElement can't be null.");
+		}
+		if (to == null) {
+			throw new Exception("to jsonElement can't be null.");
+		}
+		if (!to.isJsonObject()) {
+			throw new Exception("to jsonElement must be a jsonObject.");
+		}
+		JsonObject result = to.deepCopy().getAsJsonObject();
+		if(StringUtils.isBlank(path)){
+			if(from.isJsonObject()){
+				JsonObject fromJson = from.getAsJsonObject();
+				for (String key : fromJson.keySet()) {
+					result.add(key, fromJson.get(key));
+				}
+			}else{
+				return null;
+			}
+		}else{
+			JsonElement pathElement = extract(result, path);
+			String key = path;
+			if(pathElement == null){
+				if(path.indexOf(PATH_DOT) > -1){
+					key = StringUtils.substringAfterLast(path,PATH_DOT);
+					path = StringUtils.substringBeforeLast(path,PATH_DOT);
+					JsonElement jsonElement = extract(result, path);
+					if(jsonElement!=null && jsonElement.isJsonObject()){
+						jsonElement.getAsJsonObject().add(key, from);
+					}
+				}else{
+					result.add(key, from);
+				}
+			}else {
+				if (from.isJsonObject() && pathElement.isJsonObject()) {
+					JsonObject fromJson = from.getAsJsonObject();
+					JsonObject pathJson = pathElement.getAsJsonObject();
+					for (String subKey : fromJson.keySet()) {
+						pathJson.add(subKey, fromJson.get(subKey));
+					}
+				} else if (from.isJsonArray() && pathElement.isJsonArray()) {
+					JsonArray jsonArray = pathElement.getAsJsonArray();
+					for (JsonElement jsonFrom : from.getAsJsonArray()) {
+						boolean flag = false;
+						for (JsonElement jsonTo : jsonArray) {
+							if (jsonFrom.toString().equalsIgnoreCase(jsonTo.toString())) {
+								flag = true;
+								break;
+							}
+						}
+						if (!flag) {
+							jsonArray.add(jsonFrom);
+						}
+					}
+				} else {
+					return null;
+				}
+			}
+		}
+		return result;
 	}
 
 }

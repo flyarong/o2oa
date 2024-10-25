@@ -42,7 +42,9 @@ public class Person extends ConfigObject {
 	public static final Integer DEFAULT_FAILUREINTERVAL = 10;
 	public static final Integer DEFAULT_FAILURECOUNT = 5;
 	public static final Integer DEFAULT_TOKENEXPIREDMINUTES = 60 * 24 * 15;
-	public static final Boolean DEFAULT_TOKENCOOKIEHTTPONLY = false;
+	public static final Boolean DEFAULT_TOKENCOOKIEHTTPONLY = true;
+	public static final Boolean DEFAULT_TOKENCOOKIESECURE = false;
+	public static final Boolean DEFAULT_FIRSTLOGINMODIFYPWD = false;
 
 	public static final String DEFAULT_PASSWORDREGEX = "((?=.*\\d)(?=.*\\D)|(?=.*[a-zA-Z])(?=.*[^a-zA-Z]))^.{6,}$";
 	public static final String DEFAULT_PASSWORDREGEXHINT = "6位以上,包含数字和字母.";
@@ -59,6 +61,8 @@ public class Person extends ConfigObject {
 		this.codeLogin = DEFAULT_CODELOGIN;
 		this.bindLogin = DEFAULT_BINDLOGIN;
 		this.faceLogin = DEFAULT_FACELOGIN;
+		this.twoFactorLogin = false;
+		this.firstLoginModifyPwd = DEFAULT_FIRSTLOGINMODIFYPWD;
 		this.password = DEFAULT_PASSWORD;
 		this.passwordPeriod = DEFAULT_PASSWORDPERIOD;
 		this.register = REGISTER_TYPE_DISABLE;
@@ -67,6 +71,7 @@ public class Person extends ConfigObject {
 		this.passwordRegexHint = DEFAULT_PASSWORDREGEXHINT;
 		this.personUnitOrderByAsc = DEFAULT_PERSONUNITORDERBYASC;
 		this.tokenCookieHttpOnly = DEFAULT_TOKENCOOKIEHTTPONLY;
+		this.tokenCookieSecure = DEFAULT_TOKENCOOKIESECURE;
 		this.language = DEFAULT_LANGUAGE;
 		this.tokenName = DEFAULT_TOKENNAME;
 		this.enableSafeLogout = DEFAULT_ENABLESAFELOGOUT;
@@ -90,6 +95,12 @@ public class Person extends ConfigObject {
 
 	@FieldDescribe("是否启用刷脸登录,默认值:false.")
 	private Boolean faceLogin;
+
+	@FieldDescribe("是否启用双因素认证登录,默认值:false.")
+	private Boolean twoFactorLogin;
+
+	@FieldDescribe("是否启用首次登陆修改密码,默认值:false")
+	private Boolean firstLoginModifyPwd;
 
 	@FieldDescribe("注册初始密码,使用()调用脚本生成初始密码,默认为:" + DEFAULT_PASSWORD)
 	private String password;
@@ -118,11 +129,17 @@ public class Person extends ConfigObject {
 	@FieldDescribe("尝试登录次数")
 	private Integer failureCount;
 
-	@FieldDescribe("token时长,分钟")
+	@FieldDescribe("PC或h5端平台认证token时长,分钟")
 	private Integer tokenExpiredMinutes;
+
+	@FieldDescribe("app端平台认证token时长,分钟")
+	private Integer appTokenExpiredMinutes;
 
 	@FieldDescribe("保存token的cookie是否启用httpOnly")
 	private Boolean tokenCookieHttpOnly;
+
+	@FieldDescribe("保存token的cookie是否启用secure，表示仅在https协议才会传输此cookie")
+	private Boolean tokenCookieSecure;
 
 	@FieldDescribe("使用识别用户的token名称,可自定义,默认为:" + DEFAULT_TOKENNAME + ".")
 	private String tokenName;
@@ -136,7 +153,7 @@ public class Person extends ConfigObject {
 	@FieldDescribe("是否启用安全注销.")
 	private Boolean enableSafeLogout;
 
-	@FieldDescribe("加密方式,支持国密sm4")
+	@FieldDescribe("加密方式,支持国密:SM4,AES")
 	private String encryptType;
 
 	public String getEncryptType() {
@@ -166,53 +183,6 @@ public class Person extends ConfigObject {
 		}
 	}
 
-//	public static class LoginPage extends ConfigObject {
-//
-//		private static final long serialVersionUID = -1960810257119355612L;
-//
-//		public static LoginPage defaultInstance() {
-//			return new LoginPage();
-//		}
-//
-//		public LoginPage() {
-//			this.enable = false;
-//			this.portal = "";
-//			this.page = "";
-//		}
-//
-//		@FieldDescribe("是否启用定制登录页面.")
-//		private Boolean enable;
-//		@FieldDescribe("指定登录页面所属的portal,可以用id,name,alias.")
-//		private String portal;
-//		@FieldDescribe("指定的登录页面,可以使用name,alias,id")
-//		private String page;
-//
-//		public Boolean getEnable() {
-//			return enable;
-//		}
-//
-//		public void setEnable(Boolean enable) {
-//			this.enable = enable;
-//		}
-//
-//		public String getPortal() {
-//			return portal;
-//		}
-//
-//		public void setPortal(String portal) {
-//			this.portal = portal;
-//		}
-//
-//		public String getPage() {
-//			return page;
-//		}
-//
-//		public void setPage(String page) {
-//			this.page = page;
-//		}
-//
-//	}
-
 	public String getTokenName() {
 		return StringUtils.isBlank(this.tokenName) ? DEFAULT_TOKENNAME : this.tokenName;
 	}
@@ -224,10 +194,6 @@ public class Person extends ConfigObject {
 	public Integer getFailureCount() {
 		return (NumberTools.nullOrLessThan(this.failureCount, 0) ? DEFAULT_FAILURECOUNT : this.failureCount);
 	}
-
-//	public LoginPage getLoginPage() {
-//		return (null == loginPage) ? LoginPage.defaultInstance() : this.loginPage;
-//	}
 
 	public String getPassword() {
 		return StringUtils.isEmpty(this.password) ? DEFAULT_PASSWORD : this.password;
@@ -275,13 +241,6 @@ public class Person extends ConfigObject {
 		return StringUtils.isEmpty(this.mobileRegex) ? StringTools.MOBILE_REGEX.toString() : this.mobileRegex;
 	}
 
-//	public String getCaptchaFont() {
-//		return StringUtils.isBlank(this.captchaFont) ? DEFAULT_CAPTCHAFONT : this.captchaFont;
-//	}
-
-	/*
-	 * 判断是否符合手机号码格式
-	 */
 	public boolean isMobile(String mobile) {
 		if (StringUtils.isEmpty(mobile)) {
 			return false;
@@ -327,10 +286,6 @@ public class Person extends ConfigObject {
 	public void setMobileRegex(String mobileRegex) {
 		this.mobileRegex = mobileRegex;
 	}
-
-//	public void setLoginPage(LoginPage loginPage) {
-//		this.loginPage = loginPage;
-//	}
 
 	public void setCaptchaLogin(Boolean captchaLogin) {
 		this.captchaLogin = captchaLogin;
@@ -380,58 +335,40 @@ public class Person extends ConfigObject {
 		this.tokenName = tokenName;
 	}
 
-//	public void setCaptchaFont(String captchaFont) {
-//		this.captchaFont = captchaFont;
-//	}
-
 	public void setEnableSafeLogout(Boolean enableSafeLogout) {
 		this.enableSafeLogout = enableSafeLogout;
 	}
 
-//	public static class Maintainer extends ConfigObject {
-//
-//		private static final long serialVersionUID = 9067834464099067485L;
-//
-//		public static final Boolean DEFAULT_ENABLE = false;
-//		public static final String DEFAULT_NAME = "";
-//		public static final String DEFAULT_UNIT = "";
-//		public static final String DEFAULT_MOBILE = "";
-//
-//		public static Maintainer defaultInstance() {
-//			return new Maintainer();
-//		}
-//
-//		public Maintainer() {
-//			this.enable = DEFAULT_ENABLE;
-//			this.name = DEFAULT_NAME;
-//			this.unit = DEFAULT_UNIT;
-//			this.mobile = DEFAULT_MOBILE;
-//		}
-//
-//		@FieldDescribe("是否启用")
-//		private Boolean enable;
-//		@FieldDescribe("维护者姓名")
-//		private String name;
-//		@FieldDescribe("组织")
-//		private String unit;
-//		@FieldDescribe("手机号")
-//		private String mobile;
-//
-//		public Boolean getEnable() {
-//			return BooleanUtils.isTrue(enable);
-//		}
-//
-//		public String getName() {
-//			return StringUtils.isEmpty(this.name) ? DEFAULT_NAME : this.name;
-//		}
-//
-//		public String getUnit() {
-//			return StringUtils.isEmpty(this.unit) ? DEFAULT_UNIT : this.unit;
-//		}
-//
-//		public String getMobile() {
-//			return StringUtils.isEmpty(this.mobile) ? DEFAULT_MOBILE : this.mobile;
-//		}
-//
-//	}
+	public Boolean getTokenCookieSecure() {
+		return tokenCookieSecure;
+	}
+
+	public void setTokenCookieSecure(Boolean tokenCookieSecure) {
+		this.tokenCookieSecure = tokenCookieSecure;
+	}
+
+	public Boolean getFirstLoginModifyPwd() {
+		return BooleanUtils.isTrue(this.firstLoginModifyPwd);
+	}
+
+	public void setFirstLoginModifyPwd(Boolean firstLoginModifyPwd) {
+		this.firstLoginModifyPwd = firstLoginModifyPwd;
+	}
+
+	public Integer getAppTokenExpiredMinutes() {
+		return (this.appTokenExpiredMinutes == null || this.appTokenExpiredMinutes < 0) ? getTokenExpiredMinutes()
+				: this.appTokenExpiredMinutes;
+	}
+
+	public void setAppTokenExpiredMinutes(Integer appTokenExpiredMinutes) {
+		this.appTokenExpiredMinutes = appTokenExpiredMinutes;
+	}
+
+	public Boolean getTwoFactorLogin() {
+		return twoFactorLogin;
+	}
+
+	public void setTwoFactorLogin(Boolean twoFactorLogin) {
+		this.twoFactorLogin = twoFactorLogin;
+	}
 }

@@ -7,6 +7,7 @@ import com.x.base.core.project.http.EffectivePerson;
 import com.x.base.core.project.http.WrapOutBoolean;
 import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
+import com.x.base.core.project.message.MessageConnector;
 import com.x.message.assemble.communicate.Business;
 import com.x.message.core.entity.IMConversation;
 import com.x.message.core.entity.IMConversationExt;
@@ -42,18 +43,8 @@ public class ActionDeleteGroupConversation extends BaseAction {
                     && !effectivePerson.getDistinguishedName().equals(conversation.getAdminPerson()))) {
                 throw new ExceptionConvDeleteNoPermission();
             }
-            // 先删除聊天记录
+
             Business business = new Business(emc);
-            List<String> msgIds = business.imConversationFactory().listAllMsgIdsWithConversationId(conversationId);
-            if (msgIds == null || msgIds.isEmpty()) {
-                LOGGER.info("没有聊天记录，无需清空！ conversationId:" + conversationId);
-            } else {
-                emc.beginTransaction(IMMsg.class);
-                emc.delete(IMMsg.class, msgIds);
-                emc.commit();
-                LOGGER.info("成功清空聊天记录！conversationId:" + conversationId + " msg size：" + msgIds.size() + " person："
-                        + effectivePerson.getDistinguishedName());
-            }
             // 然后删除会话扩展对象
             List<String> extIds = business.imConversationFactory().listAllConversationExtIdsWithConversationId(conversationId);
             if (extIds == null || extIds.isEmpty()) {
@@ -70,6 +61,9 @@ public class ActionDeleteGroupConversation extends BaseAction {
             emc.delete(IMConversation.class, conversation.getId());
             emc.commit();
             LOGGER.info("删除群聊成功==============================================");
+            // 发送消息
+            sendConversationMsg(conversation.getPersonList(), conversation, MessageConnector.TYPE_IM_CONVERSATION_DELETE);
+
             Wo wo = new Wo();
             wo.setValue(true);
             result.setData(wo);

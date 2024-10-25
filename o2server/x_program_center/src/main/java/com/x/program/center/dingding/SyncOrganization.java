@@ -3,11 +3,10 @@ package com.x.program.center.dingding;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -17,15 +16,13 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
-import javax.script.Bindings;
-import javax.script.CompiledScript;
-import javax.script.ScriptContext;
 
-import com.x.organization.core.entity.*;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections4.ListUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
+import org.graalvm.polyglot.Source;
 
 import com.x.base.core.container.EntityManagerContainer;
 import com.x.base.core.entity.annotation.CheckPersistType;
@@ -37,9 +34,20 @@ import com.x.base.core.project.gson.GsonPropertyObject;
 import com.x.base.core.project.gson.XGsonBuilder;
 import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
-import com.x.base.core.project.scripting.JsonScriptingExecutor;
-import com.x.base.core.project.scripting.ScriptingFactory;
+import com.x.base.core.project.scripting.GraalvmScriptingFactory;
 import com.x.base.core.project.tools.ListTools;
+import com.x.organization.core.entity.Group;
+import com.x.organization.core.entity.Identity;
+import com.x.organization.core.entity.Identity_;
+import com.x.organization.core.entity.Person;
+import com.x.organization.core.entity.PersonAttribute;
+import com.x.organization.core.entity.PersonAttribute_;
+import com.x.organization.core.entity.Person_;
+import com.x.organization.core.entity.Role;
+import com.x.organization.core.entity.Unit;
+import com.x.organization.core.entity.UnitAttribute;
+import com.x.organization.core.entity.UnitDuty;
+import com.x.organization.core.entity.Unit_;
 import com.x.program.center.Business;
 
 public class SyncOrganization {
@@ -47,7 +55,7 @@ public class SyncOrganization {
     private static Logger logger = LoggerFactory.getLogger(SyncOrganization.class);
 
     public PullResult execute(Business business) throws Exception {
-        logger.info("钉钉进行人员同步.");
+        logger.info("钉钉进行人员组织同步.");
         PullResult result = new PullResult();
         String accessToken = Config.dingding().corpAccessToken();
         List<Unit> units = new ArrayList<>();
@@ -55,16 +63,24 @@ public class SyncOrganization {
         List<PersonAttribute> personAttributes = new ArrayList<>();
         List<Identity> identities = new ArrayList<>();
         DingdingFactory factory = new DingdingFactory(accessToken);
-        for (Department root : factory.roots()) {
-            this.check(business, result, units, people, personAttributes, identities, accessToken, factory, null, root);
+        if(BooleanUtils.isTrue(Config.dingding().getSyncPersonOnly())){
+            logger.info("钉钉同步-仅同步人员(新用户创建和根据手机号码绑定钉钉ID).");
+            this.syncPerson(business, result, factory.listAllUser());
+            CacheManager.notify(Person.class);
+        }else{
+            for (Department root : factory.roots()) {
+                this.check(business, result, units, people, personAttributes, identities,
+                        accessToken,
+                        factory, null, root);
+            }
+            this.clean(business, result, units, people, identities);
+            CacheManager.notify(Person.class);
+            CacheManager.notify(PersonAttribute.class);
+            CacheManager.notify(Unit.class);
+            CacheManager.notify(UnitAttribute.class);
+            CacheManager.notify(UnitDuty.class);
+            CacheManager.notify(Identity.class);
         }
-        this.clean(business, result, units, people, identities);
-        CacheManager.notify(Person.class);
-        CacheManager.notify(PersonAttribute.class);
-        CacheManager.notify(Unit.class);
-        CacheManager.notify(UnitAttribute.class);
-        CacheManager.notify(UnitDuty.class);
-        CacheManager.notify(Identity.class);
         result.end();
         if (!result.getCreateUnitList().isEmpty()) {
             logger.info("创建组织({}):{}.", result.getCreateUnitList().size(),
@@ -102,8 +118,45 @@ public class SyncOrganization {
             logger.info("删除身份({}):{}.", result.getRemoveIdentityList().size(),
                     StringUtils.join(result.getRemoveIdentityList(), ","));
         }
-        logger.info("从钉钉同步人员结束.");
+        logger.info("从钉钉同步人员组织结束.");
         return result;
+    }
+
+    private void syncPerson(Business business, PullResult result, List<User> userList)
+            throws Exception {
+        for (User user : userList) {
+            EntityManagerContainer emc = business.entityManagerContainer();
+            Person person = emc.flag(user.getMobile(), Person.class);
+            if (null != person) {
+                if(StringUtils.isBlank(person.getDingdingId())) {
+                    emc.beginTransaction(Person.class);
+                    person.setDingdingId(Objects.toString(user.getUserid()));
+                    result.getUpdatePersonList().add(person.getDistinguishedName());
+                    emc.commit();
+                }
+            } else {
+                emc.beginTransaction(Person.class);
+                person = new Person();
+                person.setDingdingId(Objects.toString(user.getUserid()));
+                person.setName(user.getName());
+                person.setMobile(user.getMobile());
+                person.setUnique(user.getUserid());
+                String employee = user.getJob_number();
+                if (StringUtils.isNotEmpty(employee) && (business.person()
+                        .employeeExists(employee, person.getUnique()))) {
+                    employee = "";
+                }
+                person.setEmployee(employee);
+                person.setMail(user.getEmail());
+                person.setOfficePhone(user.getMobile());
+                person.setGenderType(GenderType.d);
+                /* 新增人员需要增加密码 */
+                business.person().setPassword(person, this.initPassword(business, person));
+                emc.persist(person);
+                result.getCreatePersonList().add(person.getDistinguishedName());
+                emc.commit();
+            }
+        }
     }
 
     private void check(Business business, PullResult result, List<Unit> units, List<Person> people,
@@ -120,7 +173,8 @@ public class SyncOrganization {
                 identities.add(identity);
                 if ((null != o.getExtattr()) && (!o.getExtattr().isEmpty())) {
                     for (Entry<String, String> en : o.getExtattr().entrySet()) {
-                        PersonAttribute personAttribute = this.checkPersonAttribute(business, result, person, o,
+                        PersonAttribute personAttribute = this.checkPersonAttribute(business,
+                                result, person, o,
                                 en.getKey(), en.getValue());
                         personAttributes.add(personAttribute);
                     }
@@ -128,12 +182,14 @@ public class SyncOrganization {
             }
         }
         for (Department o : factory.listSub(org)) {
-            this.check(business, result, units, people, personAttributes, identities, accessToken, factory, unit, o);
+            this.check(business, result, units, people, personAttributes, identities, accessToken,
+                    factory, unit, o);
         }
     }
 
-    private Unit checkUnit(Business business, PullResult result, Unit sup, Department org) throws Exception {
-        Unit unit = business.unit().getWithDingdingIdObject(Objects.toString(org.getId()));
+    private Unit checkUnit(Business business, PullResult result, Unit sup, Department org)
+            throws Exception {
+        Unit unit = business.unit().getWithDingdingIdObject(Objects.toString(org.getDept_id()));
         if (null != unit) {
             if ((null == sup) && (StringUtils.isNotEmpty(unit.getSuperior()))) {
                 /* 不是一个顶层组织所以只能删除重建 */
@@ -149,20 +205,22 @@ public class SyncOrganization {
         if (null == unit) {
             unit = this.createUnit(business, result, sup, org);
         } else {
-            if (!StringUtils.equals(unit.getDingdingHash(), DigestUtils.sha256Hex(XGsonBuilder.toJson(org)))) {
+            if (!StringUtils.equals(unit.getDingdingHash(),
+                    DigestUtils.sha256Hex(XGsonBuilder.toJson(org)))) {
                 unit = this.updateUnit(business, result, unit, org);
             }
         }
         return unit;
     }
 
-    private Unit createUnit(Business business, PullResult result, Unit sup, Department org) throws Exception {
+    private Unit createUnit(Business business, PullResult result, Unit sup, Department org)
+            throws Exception {
         EntityManagerContainer emc = business.entityManagerContainer();
         Unit unit = new Unit();
         emc.beginTransaction(Unit.class);
         unit.setName(org.getName());
-        unit.setUnique(org.getId().toString());
-        unit.setDingdingId(org.getId().toString());
+        unit.setUnique(org.getDept_id().toString());
+        unit.setDingdingId(org.getDept_id().toString());
         unit.setDingdingHash(DigestUtils.sha256Hex(XGsonBuilder.toJson(org)));
         if (null != sup) {
             unit.setSuperior(sup.getId());
@@ -177,7 +235,8 @@ public class SyncOrganization {
         return unit;
     }
 
-    private Unit updateUnit(Business business, PullResult result, Unit unit, Department department) throws Exception {
+    private Unit updateUnit(Business business, PullResult result, Unit unit, Department department)
+            throws Exception {
         EntityManagerContainer emc = business.entityManagerContainer();
         emc.beginTransaction(Unit.class);
         unit.setDingdingHash(DigestUtils.sha256Hex(XGsonBuilder.toJson(department)));
@@ -200,21 +259,25 @@ public class SyncOrganization {
         // unit本身要删除 把所有子组织查询出来一起删除
         os.addAll(business.unit().listSubNestedObject(unit));
         // level大的 先删除
-        os = os.stream().sorted(Comparator.comparing(Unit::getLevel, Comparator.nullsLast(Integer::compareTo)).reversed())
+        os = os.stream()
+                .sorted(Comparator.comparing(Unit::getLevel,
+                        Comparator.nullsLast(Integer::compareTo)).reversed())
                 .collect(Collectors.toList());
         for (Unit o : os) {
             this.removeSingleUnit(business, result, o);
         }
     }
 
-    private void removeSingleUnit(Business business, PullResult result, Unit unit) throws Exception {
+    private void removeSingleUnit(Business business, PullResult result, Unit unit)
+            throws Exception {
         logger.info("正在删除单个组织{}.", unit.getDistinguishedName());
         EntityManagerContainer emc = business.entityManagerContainer();
         emc.beginTransaction(UnitAttribute.class);
         emc.beginTransaction(UnitDuty.class);
         emc.beginTransaction(Identity.class);
         emc.beginTransaction(Group.class);
-        for (UnitAttribute o : emc.listEqual(UnitAttribute.class, UnitAttribute.unit_FIELDNAME, unit.getId())) {
+        for (UnitAttribute o : emc.listEqual(UnitAttribute.class, UnitAttribute.unit_FIELDNAME,
+                unit.getId())) {
             emc.remove(o, CheckRemoveType.all);
             result.getRemoveUnitAttributeList().add(o.getDistinguishedName());
         }
@@ -239,21 +302,25 @@ public class SyncOrganization {
         result.getRemoveUnitList().add(unit.getDistinguishedName());
     }
 
-    private Person checkPerson(Business business, PullResult result, String accessToken, User user) throws Exception {
+    private Person checkPerson(Business business, PullResult result, String accessToken, User user)
+            throws Exception {
         Person person = business.person().getWithDingdingIdObject(user.getUserid());
         if (null == person) {
-            if ((StringUtils.isNotEmpty(user.getMobile())) && StringUtils.isNotEmpty(user.getName())) {
+            if ((StringUtils.isNotEmpty(user.getMobile())) && StringUtils.isNotEmpty(
+                    user.getName())) {
                 person = this.createOrLinkPerson(business, result, user);
             }
         } else {
-            if (!StringUtils.equals(DigestUtils.sha256Hex(XGsonBuilder.toJson(user)), person.getDingdingHash())) {
+            if (!StringUtils.equals(DigestUtils.sha256Hex(XGsonBuilder.toJson(user)),
+                    person.getDingdingHash())) {
                 person = this.updatePerson(business, result, person, user);
             }
         }
         return person;
     }
 
-    private Person createOrLinkPerson(Business business, PullResult result, User user) throws Exception {
+    private Person createOrLinkPerson(Business business, PullResult result, User user)
+            throws Exception {
         EntityManagerContainer emc = business.entityManagerContainer();
         emc.beginTransaction(Person.class);
         Person person = emc.flag(user.getMobile(), Person.class);
@@ -263,7 +330,7 @@ public class SyncOrganization {
             person.setName(user.getName());
             person.setMobile(user.getMobile());
             person.setUnique(user.getUserid());
-            String employee = user.getJobnumber();
+            String employee = user.getJob_number();
             if (StringUtils.isNotEmpty(employee)) {
                 if (business.person().employeeExists(employee, person.getUnique())) {
                     employee = "";
@@ -282,7 +349,7 @@ public class SyncOrganization {
             person.setName(user.getName());
             person.setMobile(user.getMobile());
             person.setUnique(user.getUserid());
-            String employee = user.getJobnumber();
+            String employee = user.getJob_number();
             if (StringUtils.isNotEmpty(employee)) {
                 if (business.person().employeeExists(employee, person.getUnique())) {
                     employee = "";
@@ -303,25 +370,28 @@ public class SyncOrganization {
 
     private String initPassword(Business business, Person person) throws Exception {
         String str = Config.person().getPassword();
-        Pattern pattern = Pattern.compile(com.x.base.core.project.config.Person.REGULAREXPRESSION_SCRIPT);
+        Pattern pattern = Pattern.compile(
+                com.x.base.core.project.config.Person.REGULAREXPRESSION_SCRIPT);
         Matcher matcher = pattern.matcher(str);
         if (matcher.matches()) {
-            CompiledScript cs = ScriptingFactory
-                    .functionalizationCompile(StringEscapeUtils.unescapeJson(matcher.group(1)));
-            ScriptContext scriptContext = ScriptingFactory.scriptContextEvalInitialServiceScript();
-            Bindings bindings = scriptContext.getBindings(ScriptContext.ENGINE_SCOPE);
-            bindings.put(ScriptingFactory.BINDING_NAME_SERVICE_PERSON, person);
-            return JsonScriptingExecutor.evalString(cs, scriptContext);
-        } else {
-            return str;
+            Source source = GraalvmScriptingFactory.functionalization(
+                    StringEscapeUtils.unescapeJson(matcher.group(1)));
+            GraalvmScriptingFactory.Bindings bindings = new GraalvmScriptingFactory.Bindings()
+                    .putMember(GraalvmScriptingFactory.BINDING_NAME_SERVICE_PERSON, person);
+            Optional<String> opt = GraalvmScriptingFactory.evalAsString(source, bindings);
+            if (opt.isPresent()) {
+                str = opt.get();
+            }
         }
+        return str;
     }
 
-    private Person updatePerson(Business business, PullResult result, Person person, User user) throws Exception {
+    private Person updatePerson(Business business, PullResult result, Person person, User user)
+            throws Exception {
         EntityManagerContainer emc = business.entityManagerContainer();
         emc.beginTransaction(Person.class);
         person.setDingdingHash(DigestUtils.sha256Hex(XGsonBuilder.toJson(user)));
-        String employee = user.getJobnumber();
+        String employee = user.getJob_number();
         if (StringUtils.isNotEmpty(employee)) {
             if (business.person().employeeExists(employee, person.getUnique())) {
                 employee = "";
@@ -338,7 +408,8 @@ public class SyncOrganization {
         return person;
     }
 
-    private PersonAttribute checkPersonAttribute(Business business, PullResult result, Person person, User user,
+    private PersonAttribute checkPersonAttribute(Business business, PullResult result,
+            Person person, User user,
             String name, String value) throws Exception {
         EntityManagerContainer emc = business.entityManagerContainer();
         EntityManager em = emc.get(PersonAttribute.class);
@@ -347,20 +418,23 @@ public class SyncOrganization {
         Root<PersonAttribute> root = cq.from(PersonAttribute.class);
         Predicate p = cb.equal(root.get(PersonAttribute_.person), person.getId());
         p = cb.and(p, cb.equal(root.get(PersonAttribute_.name), name));
-        List<PersonAttribute> os = em.createQuery(cq.select(root).where(p)).setMaxResults(1).getResultList();
+        List<PersonAttribute> os = em.createQuery(cq.select(root).where(p)).setMaxResults(1)
+                .getResultList();
         PersonAttribute personAttribute = null;
         if (os.size() == 0) {
             personAttribute = this.createPersonAttribute(business, result, person, name, value);
         } else {
             personAttribute = os.get(0);
             if (!StringUtils.equals(personAttribute.getAttributeList().get(0), value)) {
-                personAttribute = this.updatePersonAttribute(business, result, personAttribute, name, value);
+                personAttribute = this.updatePersonAttribute(business, result, personAttribute,
+                        name, value);
             }
         }
         return personAttribute;
     }
 
-    private PersonAttribute createPersonAttribute(Business business, PullResult result, Person person, String name,
+    private PersonAttribute createPersonAttribute(Business business, PullResult result,
+            Person person, String name,
             String value) throws Exception {
         business.entityManagerContainer().beginTransaction(PersonAttribute.class);
         PersonAttribute personAttribute = new PersonAttribute();
@@ -373,7 +447,8 @@ public class SyncOrganization {
         return personAttribute;
     }
 
-    private PersonAttribute updatePersonAttribute(Business business, PullResult result, PersonAttribute personAttribute,
+    private PersonAttribute updatePersonAttribute(Business business, PullResult result,
+            PersonAttribute personAttribute,
             String name, String value) throws Exception {
         business.entityManagerContainer().beginTransaction(PersonAttribute.class);
         personAttribute.setAttributeList(ListTools.toList(value));
@@ -382,10 +457,12 @@ public class SyncOrganization {
         return personAttribute;
     }
 
-    private void removePerson(Business business, PullResult result, Person person) throws Exception {
+    private void removePerson(Business business, PullResult result, Person person)
+            throws Exception {
         EntityManagerContainer emc = business.entityManagerContainer();
         emc.beginTransaction(PersonAttribute.class);
-        for (PersonAttribute o : emc.listEqual(PersonAttribute.class, PersonAttribute.person_FIELDNAME,
+        for (PersonAttribute o : emc.listEqual(PersonAttribute.class,
+                PersonAttribute.person_FIELDNAME,
                 person.getId())) {
             result.getRemovePersonAttributeList().add(o.getDistinguishedName());
             emc.remove(o, CheckRemoveType.all);
@@ -399,14 +476,21 @@ public class SyncOrganization {
         }
         emc.commit();
 
+        emc.beginTransaction(Role.class);
+        for (Role role : business.role().listRoleByPersonId(person.getId())) {
+            role.getPersonList().remove(person.getId());
+            role.setPersonList(role.getPersonList());
+        }
+        emc.commit();
+
         emc.beginTransaction(Person.class);
         emc.remove(person, CheckRemoveType.all);
         emc.commit();
         result.getRemovePersonList().add(person.getDistinguishedName());
     }
 
-    @SuppressWarnings("unchecked")
-    private Identity checkIdentity(Business business, PullResult result, Person person, Unit unit, User user)
+    private Identity checkIdentity(Business business, PullResult result, Person person, Unit unit,
+            User user)
             throws Exception {
         EntityManagerContainer emc = business.entityManagerContainer();
         EntityManager em = emc.get(Identity.class);
@@ -415,17 +499,19 @@ public class SyncOrganization {
         Root<Identity> root = cq.from(Identity.class);
         Predicate p = cb.equal(root.get(Identity_.person), person.getId());
         p = cb.and(p, cb.equal(root.get(Identity_.unit), unit.getId()));
-        List<Identity> os = em.createQuery(cq.select(root).where(p)).setMaxResults(1).getResultList();
+        List<Identity> os = em.createQuery(cq.select(root).where(p)).setMaxResults(1)
+                .getResultList();
         Identity identity = null;
         Long order = null;
-        if (StringUtils.isNotEmpty(user.getOrderInDepts())) {
-            Map<Long, Long> map = new HashMap<Long, Long>();
-            map = XGsonBuilder.instance().fromJson(user.getOrderInDepts(), map.getClass());
-            for (Entry<Long, Long> en : map.entrySet()) {
-                if (Objects.equals(Long.parseLong(unit.getDingdingId()), en.getKey())) {
-                    order = en.getValue();
-                }
-            }
+        if (StringUtils.isNotEmpty(user.getDept_order())) {
+            order = Long.parseLong(user.getDept_order());
+            // Map<Long, Long> map = new HashMap<Long, Long>();
+            // map = XGsonBuilder.instance().fromJson(user.getDept_order(), map.getClass());
+            // for (Entry<Long, Long> en : map.entrySet()) {
+            // if (Objects.equals(Long.parseLong(unit.getDingdingId()), en.getKey())) {
+            // order = en.getValue();
+            // }
+            // }
         }
         if (os.size() == 0) {
             identity = this.createIdentity(business, result, person, unit, user, order);
@@ -436,7 +522,8 @@ public class SyncOrganization {
         return identity;
     }
 
-    private Identity createIdentity(Business business, PullResult result, Person person, Unit unit, User user,
+    private Identity createIdentity(Business business, PullResult result, Person person, Unit unit,
+            User user,
             Long order) throws Exception {
         EntityManagerContainer emc = business.entityManagerContainer();
         emc.beginTransaction(Identity.class);
@@ -459,10 +546,12 @@ public class SyncOrganization {
         return identity;
     }
 
-    private Identity updateIdentity(Business business, PullResult result, Unit unit, Identity identity, User user,
+    private Identity updateIdentity(Business business, PullResult result, Unit unit,
+            Identity identity, User user,
             Long order) throws Exception {
         if (null != order) {
-            if (!StringUtils.equals(Objects.toString(identity.getOrderNumber(), ""), Objects.toString(order, ""))) {
+            if (!StringUtils.equals(Objects.toString(identity.getOrderNumber(), ""),
+                    Objects.toString(order, ""))) {
                 EntityManagerContainer emc = business.entityManagerContainer();
                 emc.beginTransaction(Identity.class);
                 if (order != null) {
@@ -475,7 +564,8 @@ public class SyncOrganization {
         return identity;
     }
 
-    private void updateIdentityUnitNameAndUnitLevelName(Business business, Unit unit) throws Exception {
+    private void updateIdentityUnitNameAndUnitLevelName(Business business, Unit unit)
+            throws Exception {
         EntityManagerContainer emc = business.entityManagerContainer();
         List<Unit> os = new ArrayList<>();
         os.add(unit);
@@ -516,7 +606,8 @@ public class SyncOrganization {
         for (Identity identity : ListUtils.subtract(allIdentities, identities)) {
             Person person = emc.find(identity.getPerson(), Person.class);
             if (null == person || StringUtils.isNotEmpty(person.getDingdingId())) {
-                List<UnitDuty> uds = emc.listIsMember(UnitDuty.class, UnitDuty.identityList_FIELDNAME,
+                List<UnitDuty> uds = emc.listIsMember(UnitDuty.class,
+                        UnitDuty.identityList_FIELDNAME,
                         identity.getId());
                 if (ListTools.isNotEmpty(uds)) {
                     emc.beginTransaction(UnitDuty.class);
@@ -533,7 +624,8 @@ public class SyncOrganization {
         /* 组织单独方法删除 */
         List<Unit> allUnit = this.listUnit(business);
         List<Unit> removeUnits = ListUtils.subtract(allUnit, units).stream()
-                .sorted(Comparator.comparing(Unit::getLevel, Comparator.nullsLast(Integer::compareTo)).reversed())
+                .sorted(Comparator.comparing(Unit::getLevel,
+                        Comparator.nullsLast(Integer::compareTo)).reversed())
                 .collect(Collectors.toList());
         for (Unit unit : removeUnits) {
             this.removeSingleUnit(business, result, unit);
@@ -574,6 +666,8 @@ public class SyncOrganization {
     }
 
     public static class PullResult extends GsonPropertyObject {
+
+        private static final long serialVersionUID = 7271153699131617786L;
 
         private Date start = new Date();
 

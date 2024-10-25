@@ -71,7 +71,7 @@
       }
     },
     "section": {
-      "name": "区段",
+      "name": "区段标题",
       "styles": {
         "padding": "20px 0px",
         "background-color": "#FFF",
@@ -443,6 +443,21 @@
       "border-bottom": "1px solid #ccc"
     }
   },
+  "currency": {
+    "styles": {
+      "border-bottom": "0px solid #ccc",
+      "border-top": "0px",
+      "border-left": "0px",
+      "border-right": "0px",
+      "line-height": "26px"
+    },
+    "inputStyles": {
+      "height": "26px",
+      "color": "#666",
+      "border-bottom": "1px solid #ccc"
+    },
+    "symbolStyles": {}
+  },
   "personfield": {
     "styles": {
       "border-bottom": "0px solid #ccc",
@@ -589,6 +604,24 @@
     },
     "tableContentCellStyles_title": {
       "font-size": "14px"
+    }
+  },
+  "associatedDocument": {
+    "styles": {
+      "border": "1px solid #ccc",
+      "padding": "5px"
+    },
+    "buttonStyles": {
+      "color" : "#777",
+      "border-radius": "5px",
+      "border": "1px solid #ccc",
+      "cursor": "pointer",
+      "height": "26px",
+      "line-height": "26px",
+      "padding": "0px 5px",
+      "background-color": "#efefef",
+      "margin" : "5px",
+      "display": "inline-block"
     }
   }
 }

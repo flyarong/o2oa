@@ -18,7 +18,7 @@ import com.x.processplatform.assemble.surface.Business;
 import com.x.processplatform.core.entity.content.ReadCompleted;
 import com.x.processplatform.core.entity.element.Application;
 import com.x.processplatform.core.entity.element.Process;
-import com.x.processplatform.core.express.service.processing.jaxrs.readcompleted.ActionManageOpinionWi;
+import com.x.processplatform.core.express.assemble.surface.jaxrs.readcompleted.ActionManageOpinionWi;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -40,7 +40,8 @@ public class ActionManageOpinion extends BaseAction {
 			}
 			Process process = business.process().pick(readCompleted.getProcess());
 			Application application = business.application().pick(readCompleted.getApplication());
-			if (BooleanUtils.isFalse(business.canManageApplicationOrProcess(effectivePerson, application, process))) {
+			if (BooleanUtils
+					.isFalse(business.ifPersonCanManageApplicationOrProcess(effectivePerson, application, process))) {
 				throw new ExceptionAccessDenied(effectivePerson);
 			}
 			emc.beginTransaction(ReadCompleted.class);

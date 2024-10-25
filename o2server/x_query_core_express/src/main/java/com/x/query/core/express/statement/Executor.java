@@ -1,6 +1,13 @@
 package com.x.query.core.express.statement;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.sql.Clob;
+import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +39,9 @@ import net.sf.jsqlparser.statement.select.SelectItem;
 
 public class Executor {
 
+    private static final String JOIN_KEY = " JOIN ";
+    private static final String JOIN_ON_KEY = " ON ";
+
     private Executor() {
         // nothing
     }
@@ -40,33 +50,69 @@ public class Executor {
 
     public static Object executeData(Statement statement, Runtime runtime, ExecuteTarget executeTarget)
             throws Exception {
+        String sql = executeTarget.getSql().toUpperCase();
         if (StringUtils.equalsAnyIgnoreCase(statement.getFormat(), Statement.FORMAT_SQL, Statement.FORMAT_SQLSCRIPT)) {
-            return executeDataSql(runtime, executeTarget);
+            return executeDataSql(runtime, executeTarget, false);
+        } else if(sql.indexOf(JOIN_KEY) > -1 && sql.indexOf(JOIN_ON_KEY) > -1){
+            return executeDataSql(runtime, executeTarget, true);
         } else {
             return executeDataJpql(statement, runtime, executeTarget);
         }
     }
 
-    private static Object executeDataSql(Runtime runtime, ExecuteTarget executeTarget) throws Exception {
+    private static Object executeDataSql(Runtime runtime, ExecuteTarget executeTarget, boolean isOld) throws Exception {
         checkDeleteInsertUpdateDml(executeTarget.getParsedStatement());
         try (EntityManagerContainer emc = EntityManagerContainerFactory.instance().create()) {
             EntityManager em = emc.get(DynamicBaseEntity.class);
             LOGGER.debug("executeDataSql:{}, param:{}.", executeTarget::getSql, executeTarget::getQuestionMarkParam);
-            Query query = em.createNativeQuery(executeTarget.getSql(), LinkedHashMap.class);
+            Query query;
+            if(executeTarget.getParsedStatement() instanceof net.sf.jsqlparser.statement.select.Select) {
+                if (isOld) {
+                    query = em.createNativeQuery(joinSql(executeTarget.getSql()));
+                } else {
+                    query = em.createNativeQuery(executeTarget.getSql(), LinkedHashMap.class);
+                }
+            }else{
+                query = em.createNativeQuery(executeTarget.getSql());
+            }
             for (Map.Entry<String, Object> entry : executeTarget.getQuestionMarkParam().entrySet()) {
                 int idx = Integer.parseInt(entry.getKey().substring(1));
                 query.setParameter(idx, entry.getValue());
             }
             if (executeTarget.getParsedStatement() instanceof net.sf.jsqlparser.statement.select.Select) {
                 appendSelectRange(runtime, query);
-                return query.getResultList();
+                if(isOld){
+                    return query.getResultList();
+                }else{
+                    List<LinkedHashMap<String, Object>> list = query.getResultList();
+                    for (LinkedHashMap<String, Object> map : list) {
+                        for (Map.Entry<String, Object> entry : map.entrySet()) {
+                            if (entry.getValue() instanceof Clob) {
+                                map.put(entry.getKey(), convertClobToString((Clob) entry.getValue()));
+                            }
+                        }
+                    }
+                    return list;
+                }
             } else {
                 emc.beginTransaction(DynamicBaseEntity.class);
-                Object data = Integer.valueOf(query.executeUpdate());
+                Object data = query.executeUpdate();
                 emc.commit();
                 return data;
             }
         }
+    }
+
+    private static String convertClobToString(Clob clob) throws SQLException,IOException {
+        StringBuilder sb = new StringBuilder();
+        try (Reader reader = clob.getCharacterStream();
+                BufferedReader br = new BufferedReader(reader)) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                sb.append(line);
+            }
+        }
+        return sb.toString();
     }
 
     private static void appendSelectRange(Runtime runtime, Query query) {
@@ -116,7 +162,7 @@ public class Executor {
 
     /**
      * 在8.0.0以上版本jpql的输出值通过jsqlparser转换成字段属性该方法通过fv字段进行判断
-     * 
+     *
      * @param select
      * @param list
      * @return
@@ -169,7 +215,7 @@ public class Executor {
      * x.id
      * (x.id)
      * ((x.id))
-     * 
+     *
      * @param name
      * @return
      */
@@ -185,23 +231,27 @@ public class Executor {
     }
 
     public static Long executeCount(Statement statement, ExecuteTarget executeTarget) throws Exception {
+        String sql = executeTarget.getSql().toUpperCase();
         if (StringUtils.equalsAnyIgnoreCase(statement.getFormat(), Statement.FORMAT_SQL, Statement.FORMAT_SQLSCRIPT)) {
-            return executeCountSql(executeTarget);
+            return executeCountSql(executeTarget, false);
+        } else if(sql.indexOf(JOIN_KEY) > -1 && sql.indexOf(JOIN_ON_KEY) > -1){
+            return executeCountSql(executeTarget, true);
         } else {
             return executeCountJpql(statement, executeTarget);
         }
     }
 
-    private static Long executeCountSql(ExecuteTarget executeTarget) throws Exception {
+    private static Long executeCountSql(ExecuteTarget executeTarget, boolean isOld) throws Exception {
         try (EntityManagerContainer emc = EntityManagerContainerFactory.instance().create()) {
             EntityManager em = emc.get(DynamicBaseEntity.class);
             LOGGER.debug("executeCountSql:{}, param:{}.", executeTarget::getSql, executeTarget::getQuestionMarkParam);
-            Query query = em.createNativeQuery(executeTarget.getSql());
+            String sql = isOld ? joinSql(executeTarget.getSql()) : executeTarget.getSql();
+            Query query = em.createNativeQuery(sql);
             for (Map.Entry<String, Object> entry : executeTarget.getQuestionMarkParam().entrySet()) {
                 int idx = Integer.parseInt(entry.getKey().substring(1));
                 query.setParameter(idx, entry.getValue());
             }
-            return (Long) query.getSingleResult();
+            return ((Number) query.getSingleResult()).longValue();
         }
     }
 
@@ -221,13 +271,13 @@ public class Executor {
                 int idx = Integer.parseInt(entry.getKey().substring(1));
                 query.setParameter(idx, entry.getValue());
             }
-            return (Long) query.getSingleResult();
+            return ((Number) query.getSingleResult()).longValue();
         }
     }
 
     /**
      * jpql不支持insert,进行单独判断,然后判断checkDeleteInsertUpdateDml
-     * 
+     *
      * @param statement
      * @throws Exception
      */
@@ -242,7 +292,7 @@ public class Executor {
 
     /**
      * 检查配置文件是否允许执行 delete,insert,update语句
-     * 
+     *
      * @param statement
      * @throws Exception
      */
@@ -283,5 +333,23 @@ public class Executor {
                     .loadClass(dynamicEntity.className());
         }
         return cls;
+    }
+
+    private static String joinSql(String sql) throws Exception{
+        String upSql = sql.toUpperCase();
+        if (upSql.indexOf(JOIN_KEY) > -1 && upSql.indexOf(JOIN_ON_KEY) > -1) {
+            sql = sql.replaceAll("\\.", ".x");
+            sql = sql.replaceAll("\\.x\\*", ".*");
+            List<Table> tables;
+            try (EntityManagerContainer emc = EntityManagerContainerFactory.instance().create()) {
+                tables = emc.fetchEqual(Table.class,
+                        ListTools.toList(Table.NAME_FIELDNAME), Table.STATUS_FIELDNAME, Table.STATUS_BUILD);
+            }
+            for (Table table : tables) {
+                sql = sql.replaceAll(" " + table.getName() + " ",
+                        " " + DynamicEntity.TABLE_PREFIX + table.getName().toUpperCase() + " ");
+            }
+        }
+        return sql;
     }
 }

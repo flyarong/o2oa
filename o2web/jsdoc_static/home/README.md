@@ -6,7 +6,7 @@
 
 * O2OA 前端脚本运行在浏览器和移动端h5页面，基于您使用浏览器的Javascript引擎，使用Javascript语法。
 
-* O2OA 后端脚本运行在服务器上，基于JDK8标准的Nashorn，遵循ECMAScript 5.1规范。除本API的modules.server章节外，后端脚本还支持该文章所描述的特性：[https://www.o2oa.net/cms/service/531.html](https://www.o2oa.net/cms/service/531.html)。
+* O2OA 后端脚本运行在服务器上。V9.0.0版本开始基于GraalVM，完全兼容 ECMAScript 2021 规范。9.0.0（不含）之前基于Nashorn，遵循ECMAScript 5.1规范。除本API的modules.server章节外，后端脚本还支持该文章所描述的特性：[https://www.o2oa.net/cms/service/531.html](https://www.o2oa.net/cms/service/531.html)。
 
 * 本API是O2OA脚本的编写说明，您可以通过脚本访问和操作平台内的各种对象。
 
@@ -64,8 +64,19 @@
 #### Portal 门户页面组件
    {@o2IndexTable classes|o2category=FormComponents|o2range=Portal}
 
+### Query
 
+* Query为数据中心的应用，本章节包括视图、查询视图、导入模型的api。
 
+#### QueryView 视图类
+   {@o2IndexTable classes|o2category=QueryView|o2range=QueryView}
+   
+#### QueryStatement 查询视图类
+   {@o2IndexTable classes|o2category=QueryStatement|o2range=QueryStatement}
+   
+#### QueryImporter 导入模型类
+   {@o2IndexTable classes|o2category=QueryImporter|o2range=QueryImporter}
+    
 ### 服务
 
 * 服务是O2OA后台提供的一系列restful服务。

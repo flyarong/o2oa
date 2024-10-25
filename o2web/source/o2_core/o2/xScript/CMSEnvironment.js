@@ -54,8 +54,8 @@ MWF.xScript.CMSEnvironment = function(ev){
          * @static
          * @return {Document} 文档对象.
          * <pre><code class='language-js'>{
-         * 	"id": "3359aedd-c2d8-4d8c-b8b0-02507da1b3f4",		//数据库主键,自动生成.
-         * 	"summary": " ",		//文档摘要
+         * 	    "id": "3359aedd-c2d8-4d8c-b8b0-02507da1b3f4",		//数据库主键,自动生成.
+         * 	    "summary": " ",		//文档摘要
          * 		"title": "航天科工外部董事调研组到培训中心调研",		//文档标题
          * 		"documentType": "信息",		//文档类型，跟随分类类型，信息 | 数据
          * 		"appId": "c295f34c-9ce1-4122-b795-820267e32b68",		//栏目ID
@@ -121,6 +121,23 @@ MWF.xScript.CMSEnvironment = function(ev){
          * 		"createTime": "2022-09-01 17:05:47",		//创建时间,自动生成,索引创建在约束中.
          * 		"updateTime": "2022-09-01 17:05:47",		//修改时间,自动生成,索引创建在约束中.
          * 		"sequence": " ",		//列表序号,由创建时间以及ID组成.在保存时自动生成,索引创建在约束中.
+         *      "stringValue01": "", //业务数据String值01.
+         *      "stringValue02": "", //业务数据String值02.
+         *      "stringValue03": "", //业务数据String值03.
+         *      "stringValue04": "", //业务数据String值04.
+         *      "stringValue05": "", //业务数据String值05.
+         *      "stringValue06": "", //业务数据String值06.
+         *      "stringValue07": "", //业务数据String值07.
+         *      "stringValue08": "", //业务数据String值08.
+         *      "stringValue09": "", //业务数据String值09.
+         *      "stringValue10": "", //业务数据String值10.
+         *      "longValue01": "", //业务数据Long值01.
+         *      "longValue02": "", //业务数据Long值02.
+         *      "doubleValue01": "", //业务数据double值01.
+         *      "doubleValue02": "", //业务数据double值02.
+         *      "dateTimeValue01": "", //业务数据dateTime值01.
+         *      "dateTimeValue02": "", //业务数据dateTime值02.
+         *      "dateTimeValue03": "", //业务数据dateTime值03.
          * 	}
          *</code></pre>
          * @o2syntax
@@ -149,7 +166,7 @@ MWF.xScript.CMSEnvironment = function(ev){
          * @method getAttachmentList
          * @static
          * @return {DocumentFileInfo[]} 当前文档的附件对象列表.
-         * @o2ActionOut x_cms_assemble_control.FileInfoAction.get|example=Attachment
+         * @o2ActionOut x_cms_assemble_control.FileInfoAction.get|example=Attachment|ignoreProps=[properties]
          * @o2syntax
          * var attachmentList = this.documentContext.getAttachmentList();
          */
@@ -381,7 +398,7 @@ MWF.xScript.CMSEnvironment = function(ev){
                 return v;
             };
 
-            var promise = orgActions.listRoleWithPerson(data, cb, null, !!async);
+            var promise = orgActions.personHasRole(data, cb, null, !!async);
             return (!!async) ? promise : v;
 
             // var v = false;
@@ -1283,10 +1300,12 @@ MWF.xScript.CMSEnvironment = function(ev){
                 return this._execute(obj, callback, async, obj.format);
             }else{
                 if( this.needCheckFormat(obj) ){
-                    var p = MWF.Actions.load("x_query_assemble_surface").StatementAction.getFormat(obj.name, null, null, async);
-                    Promise.resolve(p).then(function (json) {
-                        return this._execute(obj, callback, async, json.data.format);
-                    }.bind(this));
+                    var result;
+                    var p = MWF.Actions.load("x_query_assemble_surface").StatementAction.getFormat(obj.name, function(json){
+                        result = this._execute(obj, callback, async, json.data.format);
+                        return result;
+                    }.bind(this), null, async);
+                    return result || p;
                 }else{
                     return this._execute(obj, callback, async, "");
                 }
@@ -1327,6 +1346,8 @@ MWF.xScript.CMSEnvironment = function(ev){
             if( !parameter )parameter = {};
             var filterList = [];
             ( filter || [] ).each( function (d) {
+                if( !d.logic )d.logic = "and";
+
                 //var parameterName = d.path.replace(/\./g, "_");
                 var pName = d.path.replace(/\./g, "_");
 
@@ -1813,7 +1834,7 @@ MWF.xScript.CMSEnvironment = function(ev){
         "getApp": function(){return _form.app;},
         "app": _form.app,
         "node": function(){return _form.node;},
-        "readonly": _form.options.readonly,
+        // "readonly": _form.options.readonly,
         "get": function(name,subformName ){
             if( !_form.all )return null;
             if( subformName ){
@@ -1832,16 +1853,41 @@ MWF.xScript.CMSEnvironment = function(ev){
         },
         "close": function(){_form.closeDocument();},
 
+        /**
+         * @summary 根据表单中所有组件的校验设置和表单的“发布校验”脚本进行校验。<b>（仅内容管理表单中可用）</b>
+         * @method verifyPublish
+         * @static
+         * @o2syntax
+         * this.form.verifyPublish()
+         *  @example
+         *  if( !this.form.verifyPublish() ){
+         *      return false;
+         *  }
+         *  @return {Boolean} 是否通过校验
+         */
+        "verifyPublish": function(isSave){
+            return !(!_form.formValidation("publish") || !_form[isSave ? 'formSaveValidation' : 'formPublishValidation']());
+        },
+
         /**发布当前文档。<b>（仅内容管理表单中可用）</b>
          * @method publish
          * @memberOf module:form
-         * @param {Function} callback - 发布后的回调方法
+         * @param {Function} callback - 发布后的回调方法，如果接收的参数<b>为空</b>表示校验未通过，如果参数<b>不为空</b>为发布后的回调
          * @o2syntax
-         this.form.publish( callback );
+         * this.form.publish( callback );
+         * @sample
+         * this.form.publish( function(json){
+         *     if( !json ){
+         *         //校验未通过
+         *     }else{
+         *         //校验通过，json.data.id 为文档id
+         *     }
+         * });
          */
         "publish": function(callback){
             _form.publishDocument(callback)
         },
+
         //"archive": function(option){
         //    _form.archiveDocument()
         //},
@@ -1882,6 +1928,10 @@ MWF.xScript.CMSEnvironment = function(ev){
         "dialog": function ( options ) {
             return _form.dialog( options );
         },
+        "selectOrg": function ( container, options,  delayLoad) {
+            if( !container )container = _form.app.content;
+            return new MWF.O2Selector(container, options, delayLoad);
+        },
         "addEvent": function(e, f){_form.addEvent(e, f);},
         "openWork": function(id, completedId, title, options){
             var op = options || {};
@@ -1904,7 +1954,7 @@ MWF.xScript.CMSEnvironment = function(ev){
                     if( o2.typeOf(queryLoad) === "function" )queryLoad.call(this);
                     callback(this);
                 }
-            };
+            }
 
             runCallback = function ( handel ) {
                 if( o2.typeOf(callback) === "function" ) {
@@ -1913,7 +1963,11 @@ MWF.xScript.CMSEnvironment = function(ev){
                     } else if (options && options.appId) {
                         if (layout.desktop && layout.desktop.apps && layout.desktop.apps[options.appId]) {
                             callback(layout.desktop.apps[options.appId], true);
+                        }else{
+                            callback(handel, false);
                         }
+                    }else{
+                        callback(handel, false);
                     }
                 }
             };
@@ -1946,7 +2000,7 @@ MWF.xScript.CMSEnvironment = function(ev){
                             action.addEvent("click", function(e){
                                 var work = e.target.retrieve("work");
                                 if (work){
-                                   handel =  this.openWork(work.id, null, work.title, options);
+                                    handel =  this.openWork(work.id, null, work.title, options);
                                     runCallback( handel );
                                 }
                                 dlg.close();
@@ -1999,26 +2053,54 @@ MWF.xScript.CMSEnvironment = function(ev){
                             ]
                         });
                     }else{
-                        if (workData.workList.length) {
-                            var work = workData.workList[0];
+                        if (workData.workList.length){
+                            var work =  workData.workList[0];
                             handel = this.openWork(work.id, null, work.title, options);
-                            runCallback(handel);
+                            runCallback( handel );
                             return handel;
-                        } else {
-                            var work = workData.workCompletedList[0];
+                        }else{
+                            var work =  workData.workCompletedList[0];
                             handel = this.openWork(null, work.id, work.title, options);
-                            runCallback(handel);
+                            runCallback( handel );
                             return handel;
                         }
                     }
+                }else{
+                    runCallback(new Error("Can't open this Job", {
+                        cause: workData
+                    }));
                 }
+            }else{
+                runCallback(new Error("Can't open this Job", {
+                    cause: workData
+                }));
             }
         },
         "openDocument": function(id, title, options){
             var op = options || {};
             op.documentId = id;
-            op.docTitle = title;
+            op.docTitle = title || "";
             op.appId = (op.appId) || ("cms.Document"+id);
+            if( op.onPostPublish ){
+                op.postPublish = op.onPostPublish;
+                delete op.onPostPublish;
+            }
+            if( op.onAfterPublish ){
+                op.afterPublish = op.onAfterPublish;
+                delete op.onAfterPublish;
+            }
+            if( op.onAfterSave ){
+                op.afterSave = op.onAfterSave;
+                delete op.onAfterSave;
+            }
+            if( op.onBeforeClose ){
+                op.beforeClose = op.onBeforeClose;
+                delete op.onBeforeClose;
+            }
+            if( op.onPostDelete ){
+                op.postDelete = op.onPostDelete;
+                delete op.onPostDelete;
+            }
             return layout.desktop.openApplication(this.event, "cms.Document", op);
         },
         "openPortal": function (name, page, par) {
@@ -2120,7 +2202,7 @@ MWF.xScript.CMSEnvironment = function(ev){
                 starter.load();
             })
         },
-        "startProcess": function(app, process, data, identity, callback, target, latest, afterCreated){
+        "startProcess": function(app, process, data, identity, callback, target, latest, afterCreated, skipDraftCheck){
             if (arguments.length>2){
                 for (var i=2; i<arguments.length; i++){
                     if (typeOf(arguments[i])=="boolean"){
@@ -2161,60 +2243,71 @@ MWF.xScript.CMSEnvironment = function(ev){
                     }, false);
 
                     if (!cmpt.processStarter) cmpt.processStarter = new o2.xApplication.process.TaskCenter.Starter(obj);
-                    cmpt.processStarter.load();
+                    cmpt.processStarter.load({
+                        "appFlag": app
+                    });
                 }, true, true);
                 return "";
             }
+            MWF.xDesktop.requireApp("process.TaskCenter", "ProcessStarter", null, false);
             var action = MWF.Actions.get("x_processplatform_assemble_surface").getProcessByName(process, app, function(json){
                 if (json.data){
-                    MWF.xDesktop.requireApp("process.TaskCenter", "ProcessStarter", function(){
-                        var starter = new MWF.xApplication.process.TaskCenter.ProcessStarter(json.data, _form.app, {
-                            "workData": data,
-                            "identity": identity,
-                            "latest": latest,
-                            "onStarted": function(data, title, processName){
-                                var application;
-                                if (data.work){
-                                    var work = data.work;
-                                    var options = {"draft": work, "appId": "process.Work"+(new o2.widget.UUID).toString(), "desktopReload": false};
+                    var starter = new MWF.xApplication.process.TaskCenter.ProcessStarter(json.data, _form.app, {
+                        "workData": data,
+                        "identity": identity,
+                        "latest": latest,
+                        "skipDraftCheck": skipDraftCheck,
+                        "onStarted": function(data, title, processName){
+                            var application;
+                            if (data.work){
+                                var work = data.work;
+                                var options = {
+                                    "draft": work,
+                                    "draftData":data.data||{},
+                                    "appId": "process.Work"+(new o2.widget.UUID).toString(),
+                                    "desktopReload": false
+                                };
+                                if( !layout.inBrowser && afterCreated )options.onPostLoadForm = afterCreated;
+                                application = layout.desktop.openApplication(null, "process.Work", options);
+                            }else{
+                                var currentTask = [];
+                                data.each(function(work){
+                                    if (work.currentTaskIndex != -1) currentTask.push(work.taskList[work.currentTaskIndex].work);
+                                }.bind(this));
+
+                                if (currentTask.length==1){
+                                    var options = {"workId": currentTask[0], "appId": currentTask[0]};
                                     if( !layout.inBrowser && afterCreated )options.onPostLoadForm = afterCreated;
-                                    application = layout.desktop.openApplication(null, "process.Work", options);
-                                }else{
-                                    var currentTask = [];
-                                    data.each(function(work){
-                                        if (work.currentTaskIndex != -1) currentTask.push(work.taskList[work.currentTaskIndex].work);
-                                    }.bind(this));
+                                    application =layout.desktop.openApplication(null, "process.Work", options);
+                                }else{}
+                            }
 
-                                    if (currentTask.length==1){
-                                        var options = {"workId": currentTask[0], "appId": currentTask[0]};
-                                        if( !layout.inBrowser && afterCreated )options.onPostLoadForm = afterCreated;
-                                        application =layout.desktop.openApplication(null, "process.Work", options);
-                                    }else{}
-                                }
+                            // var currentTask = [];
+                            // data.each(function(work){
+                            //     if (work.currentTaskIndex != -1) currentTask.push(work.taskList[work.currentTaskIndex].work);
+                            // }.bind(this));
+                            //
+                            // if (currentTask.length==1){
+                            //     var options = {"workId": currentTask[0], "appId": currentTask[0]};
+                            //     layout.desktop.openApplication(null, "process.Work", options);
+                            // }else{}
 
-                                // var currentTask = [];
-                                // data.each(function(work){
-                                //     if (work.currentTaskIndex != -1) currentTask.push(work.taskList[work.currentTaskIndex].work);
-                                // }.bind(this));
-                                //
-                                // if (currentTask.length==1){
-                                //     var options = {"workId": currentTask[0], "appId": currentTask[0]};
-                                //     layout.desktop.openApplication(null, "process.Work", options);
-                                // }else{}
+                            if (callback) callback(data);
 
-                                if (callback) callback(data);
-
-                                if(layout.inBrowser && afterCreated){
-                                    afterCreated(application)
-                                }
-                            }.bind(this)
-                        });
-                        starter.load();
-                    }.bind(this));
+                            if(layout.inBrowser && afterCreated){
+                                afterCreated(application)
+                            }
+                        }.bind(this)
+                    });
+                    starter.load();
                 }
             });
         }
     };
+
+    Object.defineProperty(this.form, "readonly", {
+        get: function(){ return  !!_form.options.readonly; }
+    });
 
     this.target = ev.target;
     this.event = ev.event;

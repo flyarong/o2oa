@@ -20,8 +20,9 @@ import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
 import com.x.base.core.project.tools.ExtractTextTools;
 import com.x.processplatform.assemble.surface.Business;
+import com.x.processplatform.assemble.surface.Control;
 import com.x.processplatform.assemble.surface.ThisApplication;
-import com.x.processplatform.assemble.surface.WorkControl;
+import com.x.processplatform.assemble.surface.WorkControlBuilder;
 import com.x.processplatform.core.entity.content.Attachment;
 import com.x.processplatform.core.entity.content.Work;
 
@@ -62,7 +63,7 @@ class ActionUpdate extends BaseAction {
 				fileName = this.adjustFileName(business, work.getJob(), fileName);
 			}
 			// 统计待办数量判断用户是否可以上传附件
-			Control control = business.getControl(effectivePerson, work, Control.class);
+			Control control = new WorkControlBuilder(effectivePerson, business, work).enableAllowSave().build();
 			if (BooleanUtils.isNotTrue(control.getAllowSave())) {
 				throw new ExceptionAccessDenied(effectivePerson, work);
 			}
@@ -79,7 +80,7 @@ class ActionUpdate extends BaseAction {
 			StorageMapping mapping = ThisApplication.context().storageMappings().get(Attachment.class,
 					attachment.getStorage());
 			emc.beginTransaction(Attachment.class);
-			attachment.updateContent(mapping, bytes, fileName);
+			attachment.updateContent(mapping, bytes, fileName, Config.general().getStorageEncrypt());
 			attachment.setType((new Tika()).detect(bytes, fileName));
 			LOGGER.debug("filename:{}, file type:{}.", attachment.getName(), attachment.getType());
 			if (BooleanUtils.isTrue(Config.query().getExtractImage())
@@ -101,12 +102,6 @@ class ActionUpdate extends BaseAction {
 
 		private static final long serialVersionUID = 7301158712641170039L;
 
-	}
-
-	public static class Control extends WorkControl {
-
-		private static final long serialVersionUID = 8979609721676077161L;
-		
 	}
 
 }

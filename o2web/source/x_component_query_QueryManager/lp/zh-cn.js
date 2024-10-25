@@ -26,6 +26,7 @@ MWF.xApplication.query.QueryManager.LP = {
 
     "deleteElementTitle": "删除设计确认",
     "deleteElement": "是否确定要删除选中的设计元素？",
+    "deleteElementTable": "删除后系统会自动删除对应的查询配置，是否确定要删除选中的表格？",
 
     "viewName": "视图",
     "statName": "统计",
@@ -40,6 +41,14 @@ MWF.xApplication.query.QueryManager.LP = {
     "interfaceConfig": "界面导航配置",
     "moveUp": "上移",
 
+    "name": "名称",
+    "alias": "别名",
+    "sorkKeyNote": "-排序-",
+    "createTime": "创建时间",
+    "updateTime": "更新时间",
+    "asc": "正序",
+    "desc": "倒序",
+    "searchPlacholder": "输入名称/别名/id搜索",
 
     "select": {
         "create": "新建选择器",

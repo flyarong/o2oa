@@ -1,25 +1,29 @@
 package com.x.processplatform.core.entity.content;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-
 import com.x.base.core.entity.JsonProperties;
 import com.x.base.core.project.annotation.FieldDescribe;
 import com.x.base.core.project.gson.GsonPropertyObject;
 import com.x.processplatform.core.entity.element.ActivityType;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 public class TaskCompletedProperties extends JsonProperties {
+
+	private static final long serialVersionUID = -7986324325800894903L;
 
 	@FieldDescribe("从task带过来的上一处理人")
 	private List<String> prevTaskIdentityList;
 
+	@Deprecated(since = "8.2")
 	@FieldDescribe("后续处理人")
-	private List<String> nextTaskIdentityList = new ArrayList<String>();
+	private List<String> nextTaskIdentityList = new ArrayList<>();
 
+	@Deprecated(since = "8.2")
 	@FieldDescribe("上一人工环节待办对象列表")
 	private List<PrevTask> prevTaskList;
 
+	@Deprecated(since = "8.2")
 	@FieldDescribe("上一人工环节最近待办对象")
 	private PrevTask prevTask;
 
@@ -28,6 +32,17 @@ public class TaskCompletedProperties extends JsonProperties {
 
 	@FieldDescribe("意见")
 	private String opinion;
+
+	@FieldDescribe("Ticket创建方式,create,reset,add.")
+	private String act;
+
+	public String getAct() {
+		return act;
+	}
+
+	public void setAct(String act) {
+		this.act = act;
+	}
 
 	public List<PrevTask> getPrevTaskList() {
 		if (null == this.prevTaskList) {

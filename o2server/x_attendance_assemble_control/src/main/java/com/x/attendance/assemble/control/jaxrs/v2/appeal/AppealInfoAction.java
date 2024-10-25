@@ -51,6 +51,44 @@ public class AppealInfoAction extends StandardJaxrsAction {
         asyncResponse.resume(ResponseFactory.getEntityTagActionResultResponse(request, result));
     }
 
+    @JaxrsMethodDescribe(value = "管理员查询申诉数据列表.", action = ActionListByPageByAdmin.class)
+    @POST
+    @Path("list/manager/{page}/size/{size}")
+    @Produces(HttpMediaType.APPLICATION_JSON_UTF_8)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public void managerListByPaging(@Suspended final AsyncResponse asyncResponse, @Context HttpServletRequest request,
+                             @JaxrsParameterDescribe("分页") @PathParam("page") Integer page,
+                             @JaxrsParameterDescribe("数量") @PathParam("size") Integer size, JsonElement jsonElement) {
+        ActionResult<List<ActionListByPageByAdmin.Wo>> result = new ActionResult<>();
+        EffectivePerson effectivePerson = this.effectivePerson(request);
+        try {
+            result = new ActionListByPageByAdmin().execute(effectivePerson, page, size, jsonElement);
+        } catch (Exception e) {
+            logger.error(e, effectivePerson, request, null);
+            result.error(e);
+        }
+        asyncResponse.resume(ResponseFactory.getEntityTagActionResultResponse(request, result));
+    }
+
+
+
+    @JaxrsMethodDescribe(value = "管理员处理异常数据为正常.", action = ActionUpdateStatusByAdmin.class)
+    @GET
+    @Path("{id}/manager/status")
+    @Produces(HttpMediaType.APPLICATION_JSON_UTF_8)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public void managerSetNormal(@Suspended final AsyncResponse asyncResponse, @Context HttpServletRequest request,
+                       @JaxrsParameterDescribe("申诉数据ID") @PathParam("id") String id) {
+        ActionResult<ActionUpdateStatusByAdmin.Wo> result = new ActionResult<>();
+        EffectivePerson effectivePerson = this.effectivePerson(request);
+        try {
+            result = new ActionUpdateStatusByAdmin().execute(effectivePerson, id);
+        } catch (Exception e) {
+            logger.error(e, effectivePerson, request, null);
+            result.error(e);
+        }
+        asyncResponse.resume(ResponseFactory.getEntityTagActionResultResponse(request, result));
+    }
 
 
     @JaxrsMethodDescribe(value = "申诉数据获取.", action = ActionGet.class)
@@ -94,16 +132,36 @@ public class AppealInfoAction extends StandardJaxrsAction {
 
 
     @JaxrsMethodDescribe(value = "启动流程后修改状态.", action = ActionUpdateForStart.class)
-    @GET
+    @POST
     @Path("{id}/start/process")
     @Produces(HttpMediaType.APPLICATION_JSON_UTF_8)
     @Consumes(MediaType.APPLICATION_JSON)
     public void startProcess(@Suspended final AsyncResponse asyncResponse, @Context HttpServletRequest request,
-                       @JaxrsParameterDescribe("申诉数据ID") @PathParam("id") String id) {
+                       @JaxrsParameterDescribe("申诉数据ID") @PathParam("id") String id,
+                             JsonElement jsonElement) {
         ActionResult<ActionUpdateForStart.Wo> result = new ActionResult<>();
         EffectivePerson effectivePerson = this.effectivePerson(request);
         try {
-            result = new ActionUpdateForStart().execute(effectivePerson, id);
+            result = new ActionUpdateForStart().execute(effectivePerson, id, jsonElement);
+        } catch (Exception e) {
+            logger.error(e, effectivePerson, request, jsonElement);
+            result.error(e);
+        }
+        asyncResponse.resume(ResponseFactory.getEntityTagActionResultResponse(request, result));
+    }
+
+
+    @JaxrsMethodDescribe(value = "还原数据状态，清除流程关联.", action = ActionUpdateForResetStatus.class)
+    @GET
+    @Path("{id}/reset/status")
+    @Produces(HttpMediaType.APPLICATION_JSON_UTF_8)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public void resetStatus(@Suspended final AsyncResponse asyncResponse, @Context HttpServletRequest request,
+                       @JaxrsParameterDescribe("申诉数据ID") @PathParam("id") String id) {
+        ActionResult<ActionUpdateForResetStatus.Wo> result = new ActionResult<>();
+        EffectivePerson effectivePerson = this.effectivePerson(request);
+        try {
+            result = new ActionUpdateForResetStatus().execute(effectivePerson, id);
         } catch (Exception e) {
             logger.error(e, effectivePerson, request, null);
             result.error(e);

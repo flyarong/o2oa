@@ -79,6 +79,11 @@
     "text": MWF.xApplication.cms.FormDesigner.LP.modules.combox,
     "className": "Combox"
   },
+  "currency": {
+    "icon": "currency.png",
+    "text": MWF.xApplication.cms.FormDesigner.LP.modules.currency,
+    "className": "Currency"
+  },
   "button": {
     "icon": "button.png",
     "text": MWF.xApplication.cms.FormDesigner.LP.modules.button,
@@ -205,6 +210,11 @@
     "text": MWF.xApplication.cms.FormDesigner.LP.modules.documenteditor,
     "className": "Documenteditor"
   },
+  "security": {
+    "icon": "security.png",
+    "text": MWF.xApplication.process.FormDesigner.LP.modules.security,
+    "className": "Security"
+  },
   "office": {
     "icon": "office.png",
     "text": MWF.xApplication.cms.FormDesigner.LP.modules.office,
@@ -224,6 +234,11 @@
     "icon": "officeOnline.png",
     "text": "officeOnline",
     "className": "OfficeOnline"
+  },
+  "pdfView": {
+    "icon": "pdfview.png",
+    "text": "PDF View",
+    "className": "PdfView"
   },
   "wpsOffice": {
     "icon": "wpsOffice.png",
@@ -265,11 +280,11 @@
     "text": MWF.xApplication.cms.FormDesigner.LP.modules.importer,
     "className": "Importer"
   },
-  "SmartBI": {
-    "icon": "smartbi.png",
-    "text": MWF.xApplication.cms.FormDesigner.LP.modules.SmartBI,
-    "className": "SmartBI"
-  },
+//  "SmartBI": {
+//    "icon": "smartbi.png",
+//    "text": MWF.xApplication.cms.FormDesigner.LP.modules.SmartBI,
+//    "className": "SmartBI"
+//  },
   "writingBoard": {
     "icon": "writingBoard.png",
     "text": MWF.xApplication.cms.FormDesigner.LP.modules.writingBoard,
@@ -279,6 +294,11 @@
     "icon": "relatedLink.png",
     "text": MWF.xApplication.cms.FormDesigner.LP.modules.relatedLink,
     "className": "Relatedlink"
+  },
+  "associatedDocument": {
+    "icon": "associatedDocument.png",
+    "text": MWF.xApplication.cms.FormDesigner.LP.modules.associatedDocument,
+    "className": "AssociatedDocument"
   },
   "elcontainer": {
     "fontIcon": "el-icon-s-grid",

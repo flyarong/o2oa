@@ -17,7 +17,11 @@ MWF.xApplication.service.ScriptDesigner.Main = new Class({
 		"appTitle": MWF.APPSD.LP.title,
 		"id": "",
 		"actions": null,
-		"category": null
+		"category": null,
+
+        "sortKeys": ['name', 'alias', 'createTime', 'updateTime'],
+        "sortKey": '',
+        "listToolbarExpanded": false
 	},
 	onQueryLoad: function(){
 		if (this.status){
@@ -39,6 +43,29 @@ MWF.xApplication.service.ScriptDesigner.Main = new Class({
         }.bind(this));
 	},
 
+    getUd: function ( callback ){
+        MWF.UD.getDataJson(this.options.name, function (data){
+            if( data ){
+                this.options.sortKey = data.sortKey;
+                this.options.listToolbarExpanded = data.listToolbarExpanded || false;
+            }
+            callback();
+        }.bind(this));
+    },
+    setUd: function (){
+        var data = {
+            sortKey: this.options.sortKey,
+            listToolbarExpanded: this.options.listToolbarExpanded
+        };
+        MWF.UD.putData(this.options.name, data);
+    },
+    openApp: function (){
+        layout.openApplication(null, 'service.ServiceManager', {
+            appId: 'service.ServiceManager'
+        }, {
+            "navi":2
+        });
+    },
 
     getApplication:function(callback){
         if (callback) callback();
@@ -46,7 +73,20 @@ MWF.xApplication.service.ScriptDesigner.Main = new Class({
 
 
     loadScriptList: function() {
+        if( this.currentListScriptItem ){
+            var d = this.currentListScriptItem.retrieve('script');
+            this.options.id = d.id;
+        }
+        if( this.itemArray && this.itemArray.length  ){
+            this.itemArray = this.itemArray.filter(function(i){
+                if(!i.data.isNewScript)i.node.destroy();
+                return i.data.isNewScript;
+            });
+        }else{
+            this.itemArray = [];
+        }
         this.actions.listScript(function (json) {
+            this.checkSort(json.data);
             json.data.each(function(script){
                 this.createListScriptItem(script);
             }.bind(this));
@@ -122,6 +162,8 @@ MWF.xApplication.service.ScriptDesigner.Main = new Class({
                             script.load();
                         }.bind(this), true);
                     }.bind(this));
+
+                    this.status.openScripts = [];
                 }
             }
 		}.bind(this));
@@ -177,17 +219,23 @@ MWF.xApplication.service.ScriptDesigner.Main = new Class({
 	},
     getFormToolbarHTML: function(callback){
         var toolbarUrl = "../x_component_service_ScriptDesigner/$Main/default/toolbars.html";
-        var r = new Request.HTML({
-            url: toolbarUrl,
-            method: "get",
-            onSuccess: function(responseTree, responseElements, responseHTML, responseJavaScript){
-                var toolbarNode = responseTree[0];
-                if (callback) callback(toolbarNode);
-            }.bind(this),
-            onFailure: function(xhr){
-                this.notice("request processToolbars error: "+xhr.responseText, "error");
-            }.bind(this)
-        });
-        r.send();
+        MWF.getRequestText(toolbarUrl, function(responseText, responseXML){
+            var htmlString = responseText;
+            htmlString = o2.bindJson(htmlString, {"lp": MWF.APPSD.LP.formToolbar});
+            var temp = new Element('div').set('html', htmlString);
+            if (callback) callback( temp.childNodes[0] );
+        }.bind(this));
+        // var r = new Request.HTML({
+        // 	url: toolbarUrl,
+        // 	method: "get",
+        // 	onSuccess: function(responseTree, responseElements, responseHTML, responseJavaScript){
+        // 		var toolbarNode = responseTree[0];
+        // 		if (callback) callback(toolbarNode);
+        // 	}.bind(this),
+        // 	onFailure: function(xhr){
+        // 		this.notice("request cmsToolbars error: "+xhr.responseText, "error");
+        // 	}.bind(this)
+        // });
+        // r.send();
     }
 });

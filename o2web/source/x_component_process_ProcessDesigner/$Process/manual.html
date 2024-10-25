@@ -110,6 +110,28 @@
                     <div class="MWFFormFieldPerson" name="taskDataPathList"></div>
                 </td>
             </tr>
+
+            <tr>
+                <td class="editTableTitle">{{$.lp.participant}}:</td>
+                <td class="editTableValue">
+                    <label><input class="editTableRadio" name="taskParticipant.type" text{(!$.taskParticipant || !$.taskParticipant.type)?'checked':''} type="radio" value=""
+                        onclick="if (this.checked){ var nodes = this.getParent('td').getChildren('div'); nodes.setStyle('display', 'none'); }"/>{{$.lp.participant_none}}</label>
+                    <label><input class="editTableRadio" name="taskParticipant.type" text{($.taskParticipant && $.taskParticipant.type=='creator')?'checked':''} type="radio" value="creator"
+                           onclick="if (this.checked){ var nodes = this.getParent('td').getChildren('div'); nodes.setStyle('display', 'none'); nodes[0].setStyle('display', 'block'); }"/>{{$.lp.participant_creator}}</label>
+                    <label><input class="editTableRadio" name="taskParticipant.type" text{($.taskParticipant && $.taskParticipant.type=='maintenance')?'checked':''} type="radio" value="maintenance"
+                           onclick="if (this.checked){ var nodes = this.getParent('td').getChildren('div'); nodes.setStyle('display', 'none'); nodes[1].setStyle('display', 'block'); }"/>{{$.lp.participant_maintenance}}</label>
+                    <label><input class="editTableRadio" name="taskParticipant.type" text{($.taskParticipant && $.taskParticipant.type=='activity')?'checked':''} type="radio" value="activity"
+                                  onclick="if (this.checked){ var nodes = this.getParent('td').getChildren('div'); nodes.setStyle('display', 'none'); nodes[2].setStyle('display', 'block'); }"/>{{$.lp.participant_activity}}</label>
+
+                    <div style="color: #999999; font-size: 12px; display: text{($.taskParticipant && $.taskParticipant.type=='creator')?'block':'none'}">{{$.lp.participant_creator_info}}</div>
+                    <div style="color: #999999; font-size: 12px; display: text{($.taskParticipant && $.taskParticipant.type=='maintenance')?'block':'none'}">{{$.lp.participant_maintenance_info}}</div>
+                    <div style="display: text{($.taskParticipant && $.taskParticipant.type=='activity')?'block':'none'}">
+                        <div style="color: #999999; font-size: 12px;">{{$.lp.participant_activity_info}}</div>
+                        <div class="MWFActivityParticipant"></div>
+                    </div>
+
+                </td>
+            </tr>
             <tr>
                 <td class="editTableTitle">{{$.lp.script}}:</td>
                 <td class="editTableValue">
@@ -251,7 +273,7 @@
                 <div style="margin: 5px;">{{$.lp.returnJson}}: <br>
                     return {hour: 3}  <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>//{{$.lp.hourTimeout}}}<br>
                     return {workHour: 5}   <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>//{{$.lp.hourWorkTimeout}}}<br>
-                    return {date: '2016-08-01'}    <span>&nbsp;&nbsp;</span>//{{$.lp.specifyTimeout}}}<br>
+                    return {date: '2016-08-01 08:11:02'}    <span>&nbsp;&nbsp;</span>//{{$.lp.specifyTimeout}}}<br>
                     {{$.lp.oneOfThree}}</div>
                 <div><a href="../api/server.module_expire.html#server.module_expire" target="_blank">{{$.lp.apiDoc}}</a></div>
             </div>
@@ -270,6 +292,11 @@
             <tr>
                 <td class="editTableValue"  colspan="2"><b>{{$.lp.allowDelete}}：</b><input class="editTableRadio" name="allowDeleteWork" text{($.allowDeleteWork)?'checked':''} type="radio" value="true"/>{{$.lp.yes}}
                     <input class="editTableRadio" name="allowDeleteWork" text{(!$.allowDeleteWork)?'checked':''} type="radio" value="false"/>{{$.lp.no}}</td>
+            </tr>
+
+            <tr>
+                <td class="editTableValue"  colspan="2"><b>{{$.lp.allowTerminate}}：</b><input class="editTableRadio" name="allowTerminate" text{($.allowTerminate)?'checked':''} type="radio" value="true"/>{{$.lp.yes}}
+                    <input class="editTableRadio" name="allowTerminate" text{(!$.allowTerminate)?'checked':''} type="radio" value="false"/>{{$.lp.no}}</td>
             </tr>
             <!--<tr>-->
             <!--<td class="editTableValue"  colspan="2"><b>允许添加附件：</b><input class="editTableRadio" name="canAddAttachment" text{($.canAddAttachment)?'checked':''} type="radio" value="true"/>是-->
@@ -328,7 +355,7 @@
             </tr>
             <tr id="text{$.id}resetRangeScriptTextTr" style="display: text{($.resetRange!=='script')?'none':''};">
                 <td colspan="2">
-                    <div class="MWFScriptText" name="resetRangeScriptText"></div>
+                    <div class="MWFScriptText" name="resetRangeScriptText" data-type="web"></div>
                 </td>
             </tr>
         </table>
@@ -377,12 +404,81 @@
                     <input class="editTableRadio" name="allowPause" text{(!$.allowPause)?'checked':''} type="radio" value="false"/>{{$.lp.no}}</td>
             </tr>
         </table>
+        <hr />
+        <div style="height: 28px;line-height: 28px; background-color: #f1f1f1; font-weight: bold;text-align: center; border-bottom: 1px solid #cccccc;">{{$.lp.backConfig}}</div>
+
+        <table width="100%" border="0" cellpadding="5" cellspacing="0" class="editTable">
+            <tr>
+                <td class="editTableTitle">{{$.lp.allowBack}}: </td>
+                <td class="editTableValue">
+                    <label><input onclick="if (this.checked){ $('text{$.id}gobackConfigArea').setStyle('display', 'block'); }" class="editTableRadio" name="allowGoBack" text{($.allowGoBack)?'checked':''} type="radio" value="true"/>{{$.lp.yes}}</label>
+                    <label><input onclick="if (this.checked){ $('text{$.id}gobackConfigArea').setStyle('display', 'none'); }" class="editTableRadio" name="allowGoBack" text{(!$.allowGoBack)?'checked':''} type="radio" value="false"/>{{$.lp.no}}</label>
+                </td>
+            </tr>
+        </table>
+        <div id="text{$.id}gobackConfigArea" style="display: text{($.allowGoBack)?'block':'none'};">
+            <table width="100%" border="0" cellpadding="5" cellspacing="0" class="editTable">
+                <tr>
+                    <td class="editTableValue"  colspan="2"><b>{{$.lp.multiTaskEnable}}: </b>
+                        <label><input class="editTableRadio" name="goBackConfig.multiTaskEnable" text{($.goBackConfig && $.goBackConfig.multiTaskEnable)?'checked':''} type="radio" value="true"/>{{$.lp.yes}}</label>
+                        <label><input class="editTableRadio" name="goBackConfig.multiTaskEnable" text{(!$.goBackConfig || !$.goBackConfig.multiTaskEnable)?'checked':''} type="radio" value="false"/>{{$.lp.no}}</label>
+<!--                        <div style="color: #999999">{{$.lp.multiTaskEnableInfo}}</div>-->
+                    </td>
+                </tr>
+                <tr>
+                    <td class="editTableTitle">{{$.lp.backWay}}: </td>
+                    <td class="editTableValue">
+                        <label><input class="editTableRadio" name="goBackConfig.way" text{(!$.goBackConfig || $.goBackConfig.way!=='jump')?'checked':''} type="radio" value="step"/>{{$.lp.backWayStep}}</label><br>
+                        <label><input class="editTableRadio" name="goBackConfig.way" text{($.goBackConfig && $.goBackConfig.way=='jump')?'checked':''} type="radio" value="jump"/>{{$.lp.backWayJump}}</label><br>
+                        <label><input class="editTableRadio" name="goBackConfig.way" text{($.goBackConfig && $.goBackConfig.way=='custom')?'checked':''} type="radio" value="custom"/>{{$.lp.backWayCustom}}</label>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="editTableTitle">{{$.lp.backType}}: </td>
+                    <td class="editTableValue">
+                        <label><input onclick="if (this.checked){ $('text{$.id}gobackConfigActivityArea').setStyle('display', 'none'); }" class="editTableRadio" name="goBackConfig.type" text{(!$.goBackConfig || !$.goBackConfig.type || $.goBackConfig.type==='prev')?'checked':''} type="radio" value="prev"/><b>{{$.lp.backPrev}}</b></label>
+                        <div style="color: #999999;">{{$.lp.backPrevInfo}}</div>
+                        <label><input onclick="if (this.checked){ $('text{$.id}gobackConfigActivityArea').setStyle('display', 'none'); }" class="editTableRadio" name="goBackConfig.type" text{($.goBackConfig && $.goBackConfig.type==='any')?'checked':''} type="radio" value="any"/><b>{{$.lp.backAny}}</b></label>
+                        <div style="color: #999999;}">{{$.lp.backAnyInfo}}</div>
+                        <label><input onclick="if (this.checked){ $('text{$.id}gobackConfigActivityArea').setStyle('display', 'block'); }" class="editTableRadio" name="goBackConfig.type" text{($.goBackConfig && $.goBackConfig.type==='define')?'checked':''} type="radio" value="define"/><b>{{$.lp.backDefine}}</b></label>
+                        <div style="color: #999999;">{{$.lp.backDefineInfo}}</div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div id="text{$.id}gobackConfigActivityArea" style="display: text{($.goBackConfig && $.goBackConfig.type==='define')?'block':'none'};">
+            <div style="height: 24px; line-height: 24px; background-color: #f1f1f1; font-weight: bold;text-align: center; border-bottom: 1px solid #cccccc; border-top: 1px solid #cccccc;">{{$.lp.backActivitySelectTitle}}</div>
+            <div style="color: #999999; padding: 5px; border-bottom: 1px solid #cccccc;">{{$.lp.backActivitySelectInfo}}</div>
+            <div class="gobackActivityConfig"></div>
+        </div>
+<!--        <div id="text{$.id}gobackDefineConfigArea" style="display: text{($.goBackConfig && $.goBackConfig.type==='define')?'block':'none'};">-->
+<!--            <table width="100%" border="0" cellpadding="5" cellspacing="0" class="editTable">-->
+<!--                <tr>-->
+<!--                    <td class="editTableValue"  colspan="2"><b>{{$.lp.multiTaskEnable}}: </b>-->
+<!--                        <label><input class="editTableRadio" name="multiTaskEnable" text{($.multiTaskEnable)?'checked':''} type="radio" value="true"/>{{$.lp.yes}}</label>-->
+<!--                        <label><input class="editTableRadio" name="multiTaskEnable" text{(!$.multiTaskEnable)?'checked':''} type="radio" value="false"/>{{$.lp.no}}</label>-->
+<!--                        <div style="color: #999999">{{$.lp.multiTaskEnableInfo}}</div>-->
+<!--                    </td>-->
+<!--                </tr>-->
+<!--                <tr>-->
+<!--                    <td class="editTableTitle">{{$.lp.backType}}: </td>-->
+<!--                    <td class="editTableValue">-->
+<!--                        <label><input class="editTableRadio" name="goBackConfig.type" text{(!$.goBackConfig || $.goBackConfig.type==='prev')?'checked':''} type="radio" value="prev"/><b>{{$.lp.backPrev}}</b></label>-->
+<!--                        <div style="color: #999999;">{{$.lp.backPrevInfo}}</div>-->
+<!--                        <label><input class="editTableRadio" name="goBackConfig.type" text{($.goBackConfig && $.goBackConfig.type==='any')?'checked':''} type="radio" value="any"/><b>{{$.lp.backAny}}</b></label>-->
+<!--                        <div style="color: #999999;}">{{$.lp.backAnyInfo}}</div>-->
+<!--                        <label><input class="editTableRadio" name="goBackConfig.type" text{($.goBackConfig && $.goBackConfig.type==='define')?'checked':''} type="radio" value="define"/><b>{{$.lp.backDefine}}</b></label>-->
+<!--                        <div style="color: #999999;">{{$.lp.backDefineInfo}}</div>-->
+<!--                    </td>-->
+<!--                </tr>-->
+<!--            </table>-->
+<!--        </div>-->
 
     </div>
 
     <div title="{{$.lp.event}}"  class="MWFTab" data-o2-advanced="yes">
         <div onclick="var node = this.getNext(); if (node.getStyle('display')=='none'){node.setStyle('display', 'block');}else{node.setStyle('display', 'none');}" style="cursor: pointer; line-height: 28px; height: 30px; font-weight: bold; background-color: #EEEEEE;">
-            <div style="height: 30px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/text{($.beforeArriveScript || $.beforeArriveScriptText) ? "event_code" : "event"}.png) no-repeat center center;"></div>
+            <div style="height: 30px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/text{($.beforeArriveScript || $.beforeArriveScriptText) ? 'event_code' : 'event'}.png) no-repeat center center;"></div>
             <div style="margin-left: 20px; padding: 0px 5px;">{{$.lp.beforeWorkArrive}}</div>
         </div>
         <div style="display: none; overflow:hidden; border-left: 10px solid #EEEEEE; border-bottom: 10px solid #EEEEEE;">
@@ -403,7 +499,7 @@
         </div>
 
         <div onclick="var node = this.getNext(); if (node.getStyle('display')=='none'){node.setStyle('display', 'block');}else{node.setStyle('display', 'none');}" style="cursor: pointer; line-height: 28px; height: 30px; font-weight: bold; background-color: #EEEEEE;">
-            <div style="height: 30px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/text{($.afterArriveScript || $.afterArriveScriptText) ? "event_code" : "event"}.png) no-repeat center center;"></div>
+            <div style="height: 30px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/text{($.afterArriveScript || $.afterArriveScriptText) ? 'event_code' : 'event'}.png) no-repeat center center;"></div>
             <div style="margin-left: 20px; padding: 0px 5px;">{{$.lp.afterArriveActivity}}</div>
         </div>
         <div style="display: none; overflow:hidden; border-left: 10px solid #EEEEEE; border-bottom: 10px solid #EEEEEE;">
@@ -418,12 +514,12 @@
             <div class="MWFScriptText" name="afterArriveScriptText"></div><hr />
         </div>
 
-        <div style="line-height: 20px; height: 26px; border-bottom: 1px solid #CCCCCC; border-top: 1px solid #CCCCCC">
-            <div style="height: 26px; background: url(../x_component_process_ProcessDesigner/$Process/down16.png) no-repeat center center;"></div>
+        <div style="line-height: 20px; min-height: 26px; border-bottom: 1px solid #CCCCCC; border-top: 1px solid #CCCCCC">
+            <div style="min-height: 26px; background: url(../x_component_process_ProcessDesigner/$Process/down16.png) no-repeat center center;"></div>
         </div>
 
         <div onclick="var node = this.getNext(); if (node.getStyle('display')=='none'){node.setStyle('display', 'block');}else{node.setStyle('display', 'none');}" style="cursor: pointer; line-height: 28px; height: 30px; font-weight: bold; background-color: #EEEEEE;">
-            <div style="height: 30px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/text{($.beforeExecuteScript || $.beforeExecuteScriptText) ? "event_code" : "event"}.png) no-repeat center center;"></div>
+            <div style="height: 30px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/text{($.beforeExecuteScript || $.beforeExecuteScriptText) ? 'event_code' : 'event'}.png) no-repeat center center;"></div>
             <div style="margin-left: 20px; padding: 0px 5px;">{{$.lp.beforeExecute}}</div>
         </div>
         <div style="display: none; overflow:hidden; border-left: 10px solid #EEEEEE; border-bottom: 10px solid #EEEEEE;">
@@ -446,7 +542,7 @@
 
 
             <div onclick="var node = this.getNext(); if (node.getStyle('display')=='none'){node.setStyle('display', 'block');}else{node.setStyle('display', 'none');}" style="cursor: pointer; line-height: 28px; height: 30px; font-weight: bold; background-color: #EEEEEE;">
-                <div style="height: 30px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/text{($.manualStayScript || $.manualStayScriptText) ? "event_code" : "event"}.png) no-repeat center center;"></div>
+                <div style="height: 30px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/text{($.manualStayScript || $.manualStayScriptText) ? 'event_code' : 'event'}.png) no-repeat center center;"></div>
                 <div style="margin-left: 20px; padding: 0px 5px;">{{$.lp.manualStay}}</div>
             </div>
             <div style="display: none; overflow:hidden; border-left: 10px solid #EEEEEE; border-bottom: 10px solid #EEEEEE;">
@@ -460,13 +556,13 @@
                 </table>
                 <div class="MWFScriptText" name="manualStayScriptText"></div><hr />
             </div>
-            <div style="line-height: 20px; height: 26px; border-bottom: 1px solid #CCCCCC; border-top: 1px solid #CCCCCC; border-left: 1px solid #CCCCCC; background-color:#f6f6f6;">
-                <div style="height: 26px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/down16.png) no-repeat center center;"></div>
+            <div style="line-height: 20px; min-height: 26px; border-bottom: 1px solid #CCCCCC; border-top: 1px solid #CCCCCC; border-left: 1px solid #CCCCCC; background-color:#f6f6f6;">
+                <div style="min-height: 26px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/down16.png) no-repeat center center;"></div>
                 <div style="margin-left: 20px; padding: 3px 10px; text-align: center; color: #666666;">{{$.lp.eventInfo8}}</div>
             </div>
 
             <div onclick="var node = this.getNext(); if (node.getStyle('display')=='none'){node.setStyle('display', 'block');}else{node.setStyle('display', 'none');}" style="cursor: pointer; line-height: 28px; height: 30px; font-weight: bold; background-color: #EEEEEE;">
-                <div style="height: 30px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/text{($.manualBeforeTaskScript || $.manualBeforeTaskScriptText) ? "event_code" : "event"}.png) no-repeat center center;"></div>
+                <div style="height: 30px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/text{($.manualBeforeTaskScript || $.manualBeforeTaskScriptText) ? 'event_code' : 'event'}.png) no-repeat center center;"></div>
                 <div style="margin-left: 20px; padding: 0px 5px;">{{$.lp.manualBeforeTask}}</div>
             </div>
             <div style="display: none; overflow:hidden; border-left: 10px solid #EEEEEE; border-bottom: 10px solid #EEEEEE;">
@@ -481,13 +577,13 @@
                 <div class="MWFScriptText" name="manualBeforeTaskScriptText"></div><hr />
             </div>
 
-            <div style="line-height: 20px; height: 26px; border-bottom: 1px solid #CCCCCC; border-top: 1px solid #CCCCCC; border-left: 1px solid #CCCCCC; background-color:#f6f6f6;">
-                <div style="height: 26px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/down16.png) no-repeat center center;"></div>
+            <div style="line-height: 20px; min-height: 26px; border-bottom: 1px solid #CCCCCC; border-top: 1px solid #CCCCCC; border-left: 1px solid #CCCCCC; background-color:#f6f6f6;">
+                <div style="min-height: 26px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/down16.png) no-repeat center center;"></div>
                 <div style="margin-left: 20px; padding: 3px 10px; text-align: center; color: #666666;">{{$.lp.eventInfo9}}</div>
             </div>
 
             <div onclick="var node = this.getNext(); if (node.getStyle('display')=='none'){node.setStyle('display', 'block');}else{node.setStyle('display', 'none');}" style="cursor: pointer; line-height: 28px; height: 30px; font-weight: bold; background-color: #EEEEEE;">
-                <div style="height: 30px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/text{($.manualAfterTaskScript || $.manualAfterTaskScriptText) ? "event_code" : "event"}.png) no-repeat center center;"></div>
+                <div style="height: 30px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/text{($.manualAfterTaskScript || $.manualAfterTaskScriptText) ? 'event_code' : 'event'}.png) no-repeat center center;"></div>
                 <div style="margin-left: 20px; padding: 0px 5px;">{{$.lp.manualAfterTask}}</div>
             </div>
             <div style="display: none; overflow:hidden; border-left: 10px solid #EEEEEE; border-bottom: 10px solid #EEEEEE;">
@@ -502,15 +598,15 @@
                 <div class="MWFScriptText" name="manualAfterTaskScriptText"></div><hr />
             </div>
 
-            <div style="line-height: 20px; height: 26px; border-bottom: 1px solid #CCCCCC; border-top: 1px solid #CCCCCC; border-left: 1px solid #CCCCCC; background-color:#f6f6f6;">
-                <div style="height: 26px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/down16.png) no-repeat center center;"></div>
+            <div style="line-height: 20px; min-height: 26px; border-bottom: 1px solid #CCCCCC; border-top: 1px solid #CCCCCC; border-left: 1px solid #CCCCCC; background-color:#f6f6f6;">
+                <div style="min-height: 26px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/down16.png) no-repeat center center;"></div>
                 <div style="margin-left: 20px; padding: 3px 10px; text-align: center; color: #666666;">{{$.lp.eventInfo10}}</div>
             </div>
 
         </div>
 
         <div onclick="var node = this.getNext(); if (node.getStyle('display')=='none'){node.setStyle('display', 'block');}else{node.setStyle('display', 'none');}" style="cursor: pointer; line-height: 28px; height: 30px; font-weight: bold; background-color: #EEEEEE;">
-            <div style="height: 30px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/text{($.afterExecuteScript || $.afterExecuteScriptText) ? "event_code" : "event"}.png) no-repeat center center;"></div>
+            <div style="height: 30px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/text{($.afterExecuteScript || $.afterExecuteScriptText) ? 'event_code' : 'event'}.png) no-repeat center center;"></div>
             <div style="margin-left: 20px; padding: 0px 5px;">{{$.lp.afterExecute}}</div>
         </div>
         <div style="display: none; overflow:hidden; border-left: 10px solid #EEEEEE; border-bottom: 10px solid #EEEEEE;">
@@ -525,12 +621,12 @@
             <div class="MWFScriptText" name="afterExecuteScriptText"></div><hr />
         </div>
 
-        <div style="line-height: 20px; height: 26px; border-bottom: 1px solid #CCCCCC; border-top: 1px solid #CCCCCC">
-            <div style="height: 26px; background: url(../x_component_process_ProcessDesigner/$Process/down16.png) no-repeat center center;"></div>
+        <div style="line-height: 20px; min-height: 26px; border-bottom: 1px solid #CCCCCC; border-top: 1px solid #CCCCCC">
+            <div style="min-height: 26px; background: url(../x_component_process_ProcessDesigner/$Process/down16.png) no-repeat center center;"></div>
         </div>
 
         <div onclick="var node = this.getNext(); if (node.getStyle('display')=='none'){node.setStyle('display', 'block');}else{node.setStyle('display', 'none');}" style="cursor: pointer; line-height: 28px; height: 30px; font-weight: bold; background-color: #EEEEEE;">
-            <div style="height: 30px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/text{($.beforeInquireScript || $.beforeInquireScriptText) ? "event_code" : "event"}.png) no-repeat center center;"></div>
+            <div style="height: 30px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/text{($.beforeInquireScript || $.beforeInquireScriptText) ? 'event_code' : 'event'}.png) no-repeat center center;"></div>
             <div style="margin-left: 20px; padding: 0px 5px;">{{$.lp.beforeInquire}}</div>
         </div>
         <div style="display: none; overflow:hidden; border-left: 10px solid #EEEEEE; border-bottom: 10px solid #EEEEEE;">
@@ -551,7 +647,7 @@
         </div>
 
         <div onclick="var node = this.getNext(); if (node.getStyle('display')=='none'){node.setStyle('display', 'block');}else{node.setStyle('display', 'none');}" style="cursor: pointer; line-height: 28px; height: 30px; font-weight: bold; background-color: #EEEEEE;">
-            <div style="height: 30px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/text{($.afterInquireScript || $.afterInquireScriptText) ? "event_code" : "event"}.png) no-repeat center center;"></div>
+            <div style="height: 30px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/text{($.afterInquireScript || $.afterInquireScriptText) ? 'event_code' : 'event'}.png) no-repeat center center;"></div>
             <div style="margin-left: 20px; padding: 0px 5px;">{{$.lp.afterInquire}}</div>
         </div>
         <div style="display: none; overflow:hidden; border-left: 10px solid #EEEEEE; border-bottom: 10px solid #EEEEEE;">
@@ -565,6 +661,28 @@
                 </tr>
             </table>
             <div class="MWFScriptText" name="afterInquireScriptText"></div><hr />
+        </div>
+
+        <div style="line-height: 20px; height: 46px; border-bottom: 1px solid #CCCCCC; border-top: 1px solid #CCCCCC; background-color:#f6f6f6;">
+            <div style="height: 46px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/down.png) no-repeat center center;"></div>
+            <div style="margin-left: 20px; padding: 3px 10px; text-align: center; color: #666666;">{{$.lp.eventInfo11}}</div>
+        </div>
+
+        <div onclick="var node = this.getNext(); if (node.getStyle('display')=='none'){node.setStyle('display', 'block');}else{node.setStyle('display', 'none');}" style="cursor: pointer; line-height: 28px; height: 30px; font-weight: bold; background-color: #EEEEEE;">
+            <div style="height: 30px; width: 30px; float: left; background: url(../x_component_process_ProcessDesigner/$Process/text{($.afterInquireScript || $.afterInquireScriptText) ? 'event_code' : 'event'}.png) no-repeat center center;"></div>
+            <div style="margin-left: 20px; padding: 0px 5px;">{{$.lp.afterProcess}}</div>
+        </div>
+        <div style="display: none; overflow:hidden; border-left: 10px solid #EEEEEE; border-bottom: 10px solid #EEEEEE;">
+
+            <table width="100%" border="0" cellpadding="5" cellspacing="0" class="editTable">
+                <tr>
+                    <td style="width:80px; font-weight: bold; font-size: 12px; line-height: 24px">{{$.lp.afterProcess}}:</td>
+                    <td class="editTableValue">
+                        <div class="MWFScript" name="manualAfterProcessingScript"></div>
+                    </td>
+                </tr>
+            </table>
+            <div class="MWFScriptText" name="manualAfterProcessingScriptText"></div><hr />
         </div>
 
     </div>

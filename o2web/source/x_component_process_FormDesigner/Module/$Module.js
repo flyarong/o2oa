@@ -27,6 +27,13 @@ MWF.xApplication.process.FormDesigner.Module.$Module = MWF.FC$Module = new Class
 				"event": "click",
 				"action": "delete",
 				"title": MWF.APPFD.LP.formAction["delete"]
+			},
+			{
+				"name": "selectParent",
+				"icon": "selectParent.png",
+				"event": "click",
+				"action": "selectParent",
+				"title": MWF.APPFD.LP.formAction["selectParent"]
 			}
 			// {
 			//     "name": "styleBrush",
@@ -140,22 +147,27 @@ MWF.xApplication.process.FormDesigner.Module.$Module = MWF.FC$Module = new Class
 		this.treeNode.module = this;
 	},
 	copyStyles: function(from, to){
-		if (!this.json[to]) this.json[to] = {};
+		if( this.form.isForceClearCustomStyle() ){
+			this.json[to] = {};
+		}else{
+			if (!this.json[to]) this.json[to] = {};
+		}
 		Object.each(from, function(style, key){
 			//if (!this.json[to][key])
 			this.json[to][key] = style;
 		}.bind(this));
 	},
 	removeStyles: function(from, to){
-		if (this.json[to]){
-			Object.each(from, function(style, key){
-				if (this.json[to][key] && this.json[to][key]==style){
-					delete this.json[to][key];
-				}
-				//if (this.json[from][key]){
-				//   delete this.json[to][key];
-				//}
-			}.bind(this));
+		if( this.form.isForceClearCustomStyle() ){
+			this.json[to] = {};
+		}else{
+			if (this.json[to]){
+				Object.each(from, function(style, key){
+					if (this.json[to][key] && this.json[to][key]==style){
+						delete this.json[to][key];
+					}
+				}.bind(this));
+			}
 		}
 	},
 	setTemplateStyles: function(styles){
@@ -227,7 +239,11 @@ MWF.xApplication.process.FormDesigner.Module.$Module = MWF.FC$Module = new Class
 					"styles": this.options.actionNodeStyles,
 					"title": action.title
 				}).inject(this.actionArea);
-				actionNode.setStyle("background", "url("+this.path+this.options.style+"/icon/"+action.icon+") no-repeat left center");
+				if( action.name === "selectParent" ){
+					actionNode.setStyle("background", "url(../x_component_process_FormDesigner/Module/Form/default/icon/selectParent.png) no-repeat left center");
+				}else{
+					actionNode.setStyle("background", "url("+this.path+this.options.style+"/icon/"+action.icon+") no-repeat left center");
+				}
 				actionNode.addEvent(action.event, function(e){
 					this[action.action](e);
 				}.bind(this));
@@ -287,11 +303,17 @@ MWF.xApplication.process.FormDesigner.Module.$Module = MWF.FC$Module = new Class
 
 		var className = this.moduleName.capitalize();
 		var prefix = (this.form.moduleType=="page") ? "PC" : "FC";
+		if( this.form.designer.options.name.contains("cms.") ){
+			prefix = "CMSFC";
+		}
 		var newTool = new MWF[prefix+className](this.form);
+        var oldId = newModuleJson.id;
 		newTool.json = newModuleJson;
 		newModuleJson.id = newTool._getNewId();
 		newNode.set("id", newModuleJson.id);
-
+        if( this.form.copyedModule && this.form.copyedModule.checkCopySubModule){
+			this.form.copyedModule.checkCopySubModule(newModuleJson, oldId);
+		}
 		this.form.json.moduleList[newModuleJson.id] = newModuleJson;
 		if (this.form.scriptDesigner) this.form.scriptDesigner.createModuleScript(newModuleJson);
 
@@ -324,6 +346,29 @@ MWF.xApplication.process.FormDesigner.Module.$Module = MWF.FC$Module = new Class
 		//@todo
 		this.form.styleBrushContent = Object.clone(this.json.styles);
 		if (this.json.inputStyles) this.form.inputStyleBrushContent = Object.clone(this.json.inputStyles);
+	},
+	selectParent: function(){
+		var parentModule = this.getParentModule();
+		if(parentModule){
+			parentModule.selected();
+			if( parentModule.actionArea ){
+
+			}
+		}
+	},
+	getParentModule: function(){
+		var module;
+		var parent = this.node.getParent();
+		while(parent) {
+			var MWFtype = parent.get("MWFtype");
+			if( MWFtype ){
+				module = parent.retrieve("module");
+				if( module )return module;
+			}else{
+				parent = parent.getParent();
+			}
+		}
+		return null;
 	},
 
 	_setNodeEvent: function(){
@@ -501,12 +546,13 @@ MWF.xApplication.process.FormDesigner.Module.$Module = MWF.FC$Module = new Class
 	},
 
 	create: function(data, e, group){
-		debugger;
 		data.moduleGroup = group;
 		this.json = data;
 		this.json.id = this._getNewId();
-		this._createMoveNode();
-		this._setNodeMove(e, "create");
+		if (this.json.id){
+			this._createMoveNode();
+			this._setNodeMove(e, "create");
+		}
 	},
 	createImmediately: function(data, relativeNode, position, selectDisabled){
 		this.json = data;
@@ -1136,6 +1182,7 @@ MWF.xApplication.process.FormDesigner.Module.$Module = MWF.FC$Module = new Class
 	_setEditStyle: function(name, obj, oldValue){
 		var title = "";
 		var text = "";
+		debugger;
 		if (name==="name"){
 			title = this.json.name || this.json.id;
 			if (this.json.type==="Common"){

@@ -1,12 +1,5 @@
 package com.x.portal.assemble.designer.jaxrs.page;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.commons.lang3.StringUtils;
-
 import com.google.gson.JsonElement;
 import com.x.base.core.container.EntityManagerContainer;
 import com.x.base.core.container.factory.EntityManagerContainerFactory;
@@ -20,8 +13,16 @@ import com.x.base.core.project.http.ActionResult;
 import com.x.base.core.project.http.EffectivePerson;
 import com.x.base.core.project.jaxrs.WoId;
 import com.x.portal.assemble.designer.Business;
+import com.x.portal.assemble.designer.ThisApplication;
 import com.x.portal.core.entity.Page;
+import com.x.portal.core.entity.PageVersion;
 import com.x.portal.core.entity.Portal;
+import org.apache.commons.lang3.StringUtils;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 class ActionCreate extends BaseAction {
 
@@ -43,19 +44,24 @@ class ActionCreate extends BaseAction {
 			page.getProperties().setRelatedScriptMap(wi.getRelatedScriptMap());
 			page.getProperties().setMobileRelatedScriptMap(wi.getMobileRelatedScriptMap());
 			emc.persist(page, CheckPersistType.all);
+			emc.beginTransaction(Portal.class);
 			/** 更新首页 */
 			if (this.isBecomeFirstPage(business, portal, page)) {
-				emc.beginTransaction(Portal.class);
 				portal.setFirstPage(page.getId());
 			} else if (StringUtils.isEmpty(portal.getFirstPage())
 					|| (null == emc.find(portal.getFirstPage(), Page.class))) {
 				/* 如果是第一个页面,设置这个页面为当前页面 */
-				emc.beginTransaction(Portal.class);
 				portal.setFirstPage(page.getId());
+			}
+			if(StringUtils.isNotBlank(wi.getCornerMarkScript()) && StringUtils.isNotBlank(wi.getCornerMarkScriptText())) {
+				portal.setCornerMarkScript(wi.getCornerMarkScript());
+				portal.setCornerMarkScriptText(wi.getCornerMarkScriptText());
 			}
 			emc.commit();
 			CacheManager.notify(Page.class);
 			CacheManager.notify(Portal.class);
+			// 保存历史版本
+			ThisApplication.pageVersionQueue.send(new PageVersion(page.getId(), jsonElement, effectivePerson.getDistinguishedName()));
 			Wo wo = new Wo();
 			wo.setId(page.getId());
 			result.setData(wo);
@@ -81,6 +87,12 @@ class ActionCreate extends BaseAction {
 
 		@FieldDescribe("移动端关联脚本.")
 		private Map<String, String> mobileRelatedScriptMap = new LinkedHashMap<>();
+
+		@FieldDescribe("角标关联脚本.")
+		private String cornerMarkScript;
+
+		@FieldDescribe("角标脚本文本.")
+		private String cornerMarkScriptText;
 
 		public List<String> getRelatedWidgetList() {
 			return this.relatedWidgetList == null ? new ArrayList<>() : this.relatedWidgetList;
@@ -112,6 +124,22 @@ class ActionCreate extends BaseAction {
 
 		public void setMobileRelatedScriptMap(Map<String, String> mobileRelatedScriptMap) {
 			this.mobileRelatedScriptMap = mobileRelatedScriptMap;
+		}
+
+		public String getCornerMarkScript() {
+			return cornerMarkScript;
+		}
+
+		public void setCornerMarkScript(String cornerMarkScript) {
+			this.cornerMarkScript = cornerMarkScript;
+		}
+
+		public String getCornerMarkScriptText() {
+			return cornerMarkScriptText;
+		}
+
+		public void setCornerMarkScriptText(String cornerMarkScriptText) {
+			this.cornerMarkScriptText = cornerMarkScriptText;
 		}
 	}
 

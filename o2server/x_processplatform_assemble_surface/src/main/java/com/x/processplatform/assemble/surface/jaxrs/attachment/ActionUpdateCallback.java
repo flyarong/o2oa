@@ -7,6 +7,7 @@ import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 
 import com.x.base.core.container.EntityManagerContainer;
 import com.x.base.core.container.factory.EntityManagerContainerFactory;
+import com.x.base.core.project.config.Config;
 import com.x.base.core.project.config.StorageMapping;
 import com.x.base.core.project.exception.ExceptionAccessDenied;
 import com.x.base.core.project.http.ActionResult;
@@ -14,8 +15,9 @@ import com.x.base.core.project.http.EffectivePerson;
 import com.x.base.core.project.jaxrs.WoCallback;
 import com.x.base.core.project.jaxrs.WoId;
 import com.x.processplatform.assemble.surface.Business;
+import com.x.processplatform.assemble.surface.Control;
 import com.x.processplatform.assemble.surface.ThisApplication;
-import com.x.processplatform.assemble.surface.WorkControl;
+import com.x.processplatform.assemble.surface.WorkControlBuilder;
 import com.x.processplatform.core.entity.content.Attachment;
 import com.x.processplatform.core.entity.content.Work;
 
@@ -45,14 +47,14 @@ class ActionUpdateCallback extends BaseAction {
 			this.verifyConstraint(bytes.length, fileName, null);
 
 			// 统计待办数量判断用户是否可以上传附件
-			Control control = business.getControl(effectivePerson, work, Control.class);
+			Control control = new WorkControlBuilder(effectivePerson, business, work).enableAllowProcessing().build();
 			if (BooleanUtils.isNotTrue(control.getAllowProcessing())) {
 				throw new ExceptionAccessDenied(effectivePerson, work);
 			}
 			StorageMapping mapping = ThisApplication.context().storageMappings().get(Attachment.class,
 					attachment.getStorage());
 			emc.beginTransaction(Attachment.class);
-			attachment.updateContent(mapping, bytes, fileName);
+			attachment.updateContent(mapping, bytes, fileName, Config.general().getStorageEncrypt());
 			attachment.setType((new Tika()).detect(bytes, fileName));
 			emc.commit();
 			WoObject woObject = new WoObject();
@@ -72,12 +74,6 @@ class ActionUpdateCallback extends BaseAction {
 	public static class WoObject extends WoId {
 
 		private static final long serialVersionUID = 6522273856576987533L;
-	}
-
-	public static class Control extends WorkControl {
-
-		private static final long serialVersionUID = 6252872887587834820L;
-
 	}
 
 }

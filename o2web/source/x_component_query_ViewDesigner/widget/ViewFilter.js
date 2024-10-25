@@ -25,6 +25,7 @@ MWF.xApplication.query.ViewDesigner.widget.ViewFilter = new Class({
 
     },
     load: function(data){
+        this.setHtml();
         this.getInputNodes();
         this.createActionNode();
         //this.createAddNode();
@@ -52,6 +53,9 @@ MWF.xApplication.query.ViewDesigner.widget.ViewFilter = new Class({
         MWF.require("MWF.widget.ScriptArea", function(){
             this.scriptArea = new MWF.widget.ScriptArea(node, {
                 "title": title,
+                "isload": true,
+                "isbind": false,
+                "forceType": "ace",
                 "maxObj": this.app.formContentNode || this.app.pageContentNode,
                 "onChange": function(){
                     this.scriptData = this.scriptArea.toJson();
@@ -87,6 +91,7 @@ MWF.xApplication.query.ViewDesigner.widget.ViewFilter = new Class({
             this.customFilterValueScriptArea.load(v);
         }.bind(this));
     },
+    setHtml: function(){},
     getInputNodes: function(){
         debugger;
         this.inputAreaNode = this.node.getElement(".inputAreaNode_vf");
@@ -115,7 +120,7 @@ MWF.xApplication.query.ViewDesigner.widget.ViewFilter = new Class({
 
         this.comparisonInput = this.inputAreaNode.getElement(".comparisonInput_vf");
         this.comparisonInput.addEvent("change", function(){
-            this.switchInputDisplay();
+            this.switchInputDisplay( null,true );
         }.bind(this))
 
         this.valueTextInput = this.inputAreaNode.getElement(".valueTextInput_vf");
@@ -221,7 +226,7 @@ MWF.xApplication.query.ViewDesigner.widget.ViewFilter = new Class({
             }
         }
     },
-    switchInputDisplay : function(){
+    switchInputDisplay : function( data, holdComparison ){
         var id = "";
         if( this.app.view ){
             id = this.app.view.data.id;
@@ -272,12 +277,12 @@ MWF.xApplication.query.ViewDesigner.widget.ViewFilter = new Class({
                 "range": {}
             },
             "dateTimeValue": {
-                "equals": {
-                    "invalidValue" : ["@year","@season","@month","@time","@date"]
-                },
-                "notEquals": {
-                    "selectorArea" : ["#"+id+"viewFilterDateFormulaSelector"]
-                },
+                // "equals": {
+                //     "invalidValue" : ["@year","@season","@month","@time","@date"]
+                // },
+                // "notEquals": {
+                //     "selectorArea" : ["#"+id+"viewFilterDateFormulaSelector"]
+                // },
                 "greaterThan": {
                     "selectorArea" : ["#"+id+"viewFilterDateFormulaSelector"]
                 },
@@ -295,12 +300,12 @@ MWF.xApplication.query.ViewDesigner.widget.ViewFilter = new Class({
                 }
             },
             "dateValue": {
-                "equals": {
-                    "invalidValue" : ["@year","@season","@month","@date"]
-                },
-                "notEquals": {
-                    "selectorArea" : ["#"+id+"viewFilterDateOnlyFormulaSelector"]
-                },
+                // "equals": {
+                //     "invalidValue" : ["@year","@season","@month","@date"]
+                // },
+                // "notEquals": {
+                //     "selectorArea" : ["#"+id+"viewFilterDateOnlyFormulaSelector"]
+                // },
                 "greaterThan":{
                     "selectorArea" : ["#"+id+"viewFilterDateOnlyFormulaSelector"]
                 },
@@ -318,12 +323,12 @@ MWF.xApplication.query.ViewDesigner.widget.ViewFilter = new Class({
                 }
             },
             "timeValue": {
-                "equals": {
-                    "invalidValue" : ["@time"]
-                },
-                "notEquals": {
-                    "selectorArea" : ["#"+id+"viewFilterTimeOnlyFormulaSelector"]
-                },
+                // "equals": {
+                //     "invalidValue" : ["@time"]
+                // },
+                // "notEquals": {
+                //     "selectorArea" : ["#"+id+"viewFilterTimeOnlyFormulaSelector"]
+                // },
                 "greaterThan": {
                     "selectorArea" : ["#"+id+"viewFilterTimeOnlyFormulaSelector"]
                 },
@@ -355,13 +360,31 @@ MWF.xApplication.query.ViewDesigner.widget.ViewFilter = new Class({
             "#"+id+"viewFilterTimeOnlyFormulaSelector"
         ];
 
-        var formatType = this.datatypeInput.options[this.datatypeInput.selectedIndex].value;
+        var formatType;
+        if( data && data.formatType ){
+            formatType = data.formatType;
+            for (var i=0; i<this.datatypeInput.options.length; i++){
+                if (this.datatypeInput.options[i].value===data.formatType){
+                    this.datatypeInput.options[i].set("selected", true);
+                    break;
+                }
+            }
+        }else{
+            formatType = this.datatypeInput.options[this.datatypeInput.selectedIndex].value;
+        }
+
         var object = config[formatType];
 
         var availableComparisonList = Object.keys( object );
         var options = this.comparisonInput.options;
 
-        var comparison = options[this.comparisonInput.selectedIndex].value;
+        var comparison = "";
+        if(data && data.comparison){
+            comparison = data.comparison;
+        }else if( holdComparison ){
+            comparison = options[this.comparisonInput.selectedIndex].value;
+        }
+
         if( availableComparisonList.contains( "in" ) && comparison === "in" ){
             if(this.multiValueNoticeNode)this.multiValueNoticeNode.show()
         }else{
@@ -382,6 +405,7 @@ MWF.xApplication.query.ViewDesigner.widget.ViewFilter = new Class({
             this.comparisonInput.options[0].destroy();
         }
 
+        var selected = false;
         for( var i=0; i<this.originalComparisonOptions.length; i++ ){
             var opt = this.originalComparisonOptions[i];
             if( availableComparisonList.contains( opt.value )){
@@ -389,7 +413,17 @@ MWF.xApplication.query.ViewDesigner.widget.ViewFilter = new Class({
                     text : opt.text,
                     value : opt.value
                 }).inject( this.comparisonInput );
-                if( opt.value === comparison )option.selected = true;
+                if( opt.value === comparison ){
+                    option.selected = true;
+                    selected = true;
+                }
+            }
+        }
+        if(!selected){
+            var firstOption = this.comparisonInput.getFirst("option");
+            if(firstOption){
+                firstOption.selected = true;
+                comparison = firstOption.value;
             }
         }
 
@@ -959,6 +993,14 @@ MWF.xApplication.query.ViewDesigner.widget.ViewFilter = new Class({
     },
 
     setData: function(data){
+
+        // for (var i=0; i<this.datatypeInput.options.length; i++){
+        //     if (this.datatypeInput.options[i].value===data.formatType){
+        //         this.datatypeInput.options[i].set("selected", true);
+        //         break;
+        //     }
+        // }
+
         for (var i=0; i<this.logicInput.options.length; i++){
             if (this.logicInput.options[i].value===data.logic){
                 this.logicInput.options[i].set("selected", true);
@@ -966,22 +1008,17 @@ MWF.xApplication.query.ViewDesigner.widget.ViewFilter = new Class({
             }
         }
 
+        this.switchInputDisplay(data);
+
         this.titleInput.set("value", data.title);
         this.pathInput.set("value", data.path);
 
-        for (var i=0; i<this.comparisonInput.options.length; i++){
-            if (this.comparisonInput.options[i].value===data.comparison){
-                this.comparisonInput.options[i].set("selected", true);
-                break;
-            }
-        }
-
-        for (var i=0; i<this.datatypeInput.options.length; i++){
-            if (this.datatypeInput.options[i].value===data.formatType){
-                this.datatypeInput.options[i].set("selected", true);
-                break;
-            }
-        }
+        // for (var i=0; i<this.comparisonInput.options.length; i++){
+        //     if (this.comparisonInput.options[i].value===data.comparison){
+        //         this.comparisonInput.options[i].set("selected", true);
+        //         break;
+        //     }
+        // }
 
         switch (data.formatType){
             case "textValue":
@@ -1061,12 +1098,9 @@ MWF.xApplication.query.ViewDesigner.widget.ViewFilter = new Class({
                 }
             }
         }
-
-
-        this.switchInputDisplay();
-        if(this.datatypeInput.onchange){
-            this.datatypeInput.onchange();
-        }
+        // if(this.datatypeInput.onchange){
+        //     this.datatypeInput.onchange();
+        // }
     },
 
     deleteItem: function(item){
@@ -1118,11 +1152,17 @@ MWF.xApplication.query.ViewDesigner.widget.ViewFilter.Item = new Class({
     },
     getText: function(){
         var lp = this.app.lp.filter;
-        if( this.data.formatType === "numberValue" ){
-            return lp[this.data.logic]+" "+this.data.path+" "+lp[this.data.comparison] + " "+this.data.value+((this.data.comparison=="range") ? ", \""+this.data.otherValue+"\"" : "");
-        }else{
-            return lp[this.data.logic]+" "+this.data.path+" "+lp[this.data.comparison] + " \""+this.data.value+"\""+((this.data.comparison=="range") ? ", \""+this.data.otherValue+"\"" : "");
+        var value = "";
+        if( this.data.value ){
+            if( this.data.formatType === "numberValue" ){
+                value = this.data.value+((this.data.comparison=="range") ? ", \""+this.data.otherValue+"\"" : "")
+            }else{
+                value = " \""+this.data.value+"\""+((this.data.comparison=="range") ? ", \""+this.data.otherValue+"\"" : "");
+            }
+        }else if( this.data.code && this.data.code.code ){
+            value =  " " + (lp.script||"脚本") +":\"" + this.data.code.code.substr(0, 200) + "\"";
         }
+        return lp[this.data.logic]+" "+this.data.path+" "+lp[this.data.comparison] + " "+value;
     },
     reload: function(data){
         this.data = data;

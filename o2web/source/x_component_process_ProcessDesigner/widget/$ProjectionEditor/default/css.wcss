@@ -23,7 +23,8 @@
         "border-bottom": "1px solid #cccccc",
         "height": "24px",
         "cursor": "pointer",
-        "line-height": "24px"
+        "line-height": "24px",
+        "word-break": "break-all"
     },
     "actionNode": {
         "width": "80%",
@@ -31,8 +32,6 @@
         "height": "24px",
         "line-height": "24px",
         "border-radius": "15px",
-        "color": "#ffffff",
-        "background-color": "#4a90e2",
         "text-align": "center",
         "cursor": "pointer"
     },

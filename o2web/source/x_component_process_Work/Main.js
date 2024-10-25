@@ -19,6 +19,7 @@ MWF.xApplication.process.Work.Main = new Class({
         "draft": null,
         "workCompletedId": "",
         "taskId": "",
+        "taskCompletedId":"",
         "jobId": "",
         "form": null,
         "priorityWork": "",
@@ -37,16 +38,18 @@ MWF.xApplication.process.Work.Main = new Class({
         } else {
             this.options.workId = this.status.workId;
             this.options.taskId = this.status.taskId;
+            this.options.taskCompletedId = this.status.taskCompletedId;
             this.options.workCompletedId = this.status.workCompletedId;
             this.options.jobId = this.status.jobId;
             this.options.draftId = this.status.draftId;
             this.options.priorityWork = this.status.priorityWork;
+            this.options.formid = this.status.formid;
+            if( this.status.form && this.status.form.id )this.options.form = this.status.form;
             this.options.readonly = (this.status.readonly === true || this.status.readonly === "true");
         }
         this.action = MWF.Actions.get("x_processplatform_assemble_surface");
 	},
     loadWorkApplication: function(callback, mask){
-	    debugger;
         var maskStyle = (Browser.name=="firefox") ? "work_firefox" : "desktop";
         //alert(maskStyle);
         if (mask) this.mask = new MWF.widget.Mask({"style": maskStyle, "loading": mask});
@@ -149,6 +152,15 @@ MWF.xApplication.process.Work.Main = new Class({
             delete this.options.jobid;
             delete this.options.job;
             this.loadWorkByJob(jobId);
+        }else if(this.options.taskCompletedId){
+            MWF.Actions.load('x_processplatform_assemble_surface').TaskCompletedAction.get(this.options.taskCompletedId, function (json){
+                if( json.data.completed ){
+                    this.options.workCompletedId = json.data.workCompleted;
+                }else{
+                    this.options.workId = json.data.work;
+                }
+                this.loadWork();
+            }.bind(this));
         }
     },
     loadWorkByWork: function(id){
@@ -188,6 +200,7 @@ MWF.xApplication.process.Work.Main = new Class({
                         this.loadWork();
                     }else{
                         layout.sessionPromise.then(function(){
+                            this.notice( this.lp.openWorkError, "error")
                             this.close();
                         }.bind(this), function(){});
                         //this.close();
@@ -217,7 +230,15 @@ MWF.xApplication.process.Work.Main = new Class({
                     //this.close();
                 }.bind(this)}, id, id, id, [this.options.formid || this.options.form.id , new Date().getTime()]);
         }else{
-            this.action[((layout.mobile) ? "lookupFormWithWorkMobile" : "lookupFormWithWork")](id, function(json){
+            var lookupMethod, lookupId;
+            if( this.options.taskCompletedId ){
+                lookupId = this.options.taskCompletedId;
+                lookupMethod = layout.mobile ? "lookupFormWithTaskCompletedMobile" : "lookupFormWithTaskCompleted";
+            }else{
+                lookupId = id;
+                lookupMethod = layout.mobile ? "lookupFormWithWorkMobile" : "lookupFormWithWork";
+            }
+            this.action[lookupMethod](lookupId, function(json){
                 var formId = json.data.id;
                 if (json.data.form){
                     json_form = json;
@@ -311,18 +332,17 @@ MWF.xApplication.process.Work.Main = new Class({
                 }
             }else{
                 layout.sessionPromise.then(function(){
+                    this.notice( this.lp.openWorkError, "error");
                     this.close();
                 }.bind(this), function(){});
                 //this.close();
             }
-        }.bind(this), function(){
-            //this.close();
         }.bind(this));
     },
     loadWorkByDraft: function(work, data){
-	    debugger;
         o2.Actions.invokeAsync([
-            {"action": this.action, "name": (layout.mobile) ? "getFormMobile": "getForm"}
+            //{"action": this.action, "name": (layout.mobile) ? "getFormMobile": "getForm"}
+            {"action": this.action, "name": (layout.mobile) ? "getFormV2Mobile": "getFormV2"}
         ], {"success": function(json_form){
             if (json_form){
                 var workData = {
@@ -333,6 +353,7 @@ MWF.xApplication.process.Work.Main = new Class({
                 };
                 var control = {
                     "allowVisit": true,
+                    "allowFlow": true,
                     "allowProcessing": true,
                     "allowSave": true,
                     "allowDelete": true
@@ -449,7 +470,10 @@ MWF.xApplication.process.Work.Main = new Class({
         this.recordList = recordData;
         this.attachmentList = attData;
 
-        this.control = controlData;
+        this.control = controlData || {};
+        if( this.control.allowProcessing || this.control.allowReset || this.control.allowAddTask || this.control.allowGoBack ){
+            this.control.allowFlow = true;
+        }
 
         if (formData){
             if (formData.form){
@@ -706,6 +730,9 @@ MWF.xApplication.process.Work.Main = new Class({
                     if (this.options.action=="processTask"){
                         this.appForm.processWork();
                         this.options.action = "";
+                    }else if( this.options.action=="flowTask" ){
+                        this.appForm.flowWork();
+                        this.options.action = "";
                     }
 
                     this.fireEvent("postLoadForm", [this]);
@@ -720,7 +747,19 @@ MWF.xApplication.process.Work.Main = new Class({
 
     recordStatus: function(){
 	    debugger;
-        return {"workId": this.options.workId, "taskId": this.options.taskId, "workCompletedId": this.options.workCompletedId, "jobId": this.options.jobId, "draftId": this.options.draftId, "priorityWork": this.options.priorityWork, "readonly": this.readonly};
+	    var status = {
+            "workId": this.options.workId,
+            "taskId": this.options.taskId,
+            "taskCompletedId": this.options.taskCompletedId,
+            "workCompletedId": this.options.workCompletedId,
+            "jobId": this.options.jobId,
+            "draftId": this.options.draftId,
+            "priorityWork": this.options.priorityWork,
+            "readonly": this.readonly
+        };
+        if( this.options.formid )status.formid = this.options.formid;
+        if( this.options.form && this.options.form.id )status.form = this.options.form;
+        return status;
     },
     onPostClose: function(){
         if (this.appForm){

@@ -17,6 +17,10 @@ public class ActionProcessingWi extends GsonPropertyObject {
 	@Schema(description = "待办选择路由名称.")
 	private String routeName;
 
+//	@FieldDescribe("决策.")
+//	@Schema(description = "决策.")
+//	private String decision;
+
 	@FieldDescribe("待办办理意见.")
 	@Schema(description = "待办办理意见.")
 	private String opinion;
@@ -29,6 +33,10 @@ public class ActionProcessingWi extends GsonPropertyObject {
 	@Schema(description = "路由数据.")
 	private JsonElement routeData;
 
+	@FieldDescribe("新添加的待办处理人组织专用标识.")
+	@Schema(description = "新添加的待办处理人组织专用标识.")
+	private List<String> distinguishedNameList;
+
 	@FieldDescribe("新添加的待办处理人身份.")
 	@Schema(description = "新添加的待办处理人身份.")
 	private List<String> appendTaskIdentityList;
@@ -37,16 +45,56 @@ public class ActionProcessingWi extends GsonPropertyObject {
 	@Schema(description = "忽略授权身份.")
 	private List<String> ignoreEmpowerIdentityList;
 
-	public List<String> getAppendTaskIdentityList() {
-		return ListTools.trim(appendTaskIdentityList, true, true);
-	}
+	@FieldDescribe("待办处理类型:goBack.")
+	@Schema(description = "待办处理类型:goBack.")
+	private String action;
 
-	public List<String> getIgnoreEmpowerIdentityList() {
-		return ListTools.trim(ignoreEmpowerIdentityList, true, true);
+	@FieldDescribe("action的参数对象.")
+	@Schema(description = "action的参数对象.")
+	private JsonElement option;
+
+//	public String getDecision() {
+//		return decision;
+//	}
+//
+//	public void setDecision(String decision) {
+//		this.decision = decision;
+//	}
+
+	public List<String> getAppendTaskIdentityList() {
+		return appendTaskIdentityList;
 	}
 
 	public void setAppendTaskIdentityList(List<String> appendTaskIdentityList) {
 		this.appendTaskIdentityList = appendTaskIdentityList;
+	}
+
+	public String getAction() {
+		return action;
+	}
+
+	public void setAction(String action) {
+		this.action = action;
+	}
+
+	public JsonElement getOption() {
+		return option;
+	}
+
+	public void setOption(JsonElement option) {
+		this.option = option;
+	}
+
+	public List<String> getDistinguishedNameList() {
+		return distinguishedNameList;
+	}
+
+	public void setDistinguishedNameList(List<String> distinguishedNameList) {
+		this.distinguishedNameList = distinguishedNameList;
+	}
+
+	public List<String> getIgnoreEmpowerIdentityList() {
+		return ListTools.trim(ignoreEmpowerIdentityList, true, true);
 	}
 
 	public String getRouteName() {

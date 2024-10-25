@@ -22,7 +22,10 @@ import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
 import com.x.base.core.project.tools.ListTools;
 import com.x.processplatform.assemble.surface.Business;
+import com.x.processplatform.assemble.surface.Control;
+import com.x.processplatform.assemble.surface.JobControlBuilder;
 import com.x.processplatform.assemble.surface.ThisApplication;
+import com.x.processplatform.assemble.surface.jaxrs.record.ActionListWithJob.Wo;
 import com.x.processplatform.core.entity.content.Record;
 import com.x.processplatform.core.entity.content.Task;
 import com.x.processplatform.core.entity.content.WorkCompleted;
@@ -60,14 +63,14 @@ class ActionListWithWorkOrWorkCompleted extends BaseAction {
 				Business business = new Business(emc);
 				String job = business.job().findWithWork(flag);
 				if (null != job) {
-					wos = emc.fetchEqual(Record.class, Wo.copier, Record.job_FIELDNAME, job);
+					wos = Wo.copier.copy(emc.listEqual(Record.class, Record.job_FIELDNAME, job));
 				} else {
 					job = business.job().findWithWorkCompleted(flag);
 					WorkCompleted workCompleted = emc.firstEqual(WorkCompleted.class, WorkCompleted.job_FIELDNAME, job);
-					if (ListTools.isNotEmpty(workCompleted.getProperties().getRecordList())) {
-						wos = Wo.copier.copy(workCompleted.getProperties().getRecordList());
+					if (ListTools.isNotEmpty(workCompleted.getRecordList())) {
+						wos = Wo.copier.copy(workCompleted.getRecordList());
 					} else {
-						wos = emc.fetchEqual(Record.class, Wo.copier, Record.job_FIELDNAME, job);
+						wos = Wo.copier.copy(emc.listEqual(Record.class, Record.job_FIELDNAME, job));
 					}
 				}
 				wos = wos.stream().sorted(Comparator.comparing(Wo::getOrder)).collect(Collectors.toList());
@@ -79,7 +82,7 @@ class ActionListWithWorkOrWorkCompleted extends BaseAction {
 				LOGGER.error(e);
 			}
 			return wos;
-		}, ThisApplication.threadPool());
+		}, ThisApplication.forkJoinPool());
 	}
 
 	private CompletableFuture<Boolean> checkControlFuture(EffectivePerson effectivePerson, String flag) {
@@ -87,12 +90,13 @@ class ActionListWithWorkOrWorkCompleted extends BaseAction {
 			Boolean value = false;
 			try (EntityManagerContainer emc = EntityManagerContainerFactory.instance().create()) {
 				Business business = new Business(emc);
-				value = business.readableWithWorkOrWorkCompleted(effectivePerson, flag);
+				Control control = new JobControlBuilder(effectivePerson, business, flag).enableAllowVisit().build();
+				value = control.getAllowVisit();
 			} catch (Exception e) {
 				LOGGER.error(e);
 			}
 			return value;
-		}, ThisApplication.threadPool());
+		}, ThisApplication.forkJoinPool());
 	}
 
 	@Schema(name = "com.x.processplatform.assemble.surface.jaxrs.record.ActionListWithWorkOrWorkCompleted$Wo")
@@ -100,8 +104,8 @@ class ActionListWithWorkOrWorkCompleted extends BaseAction {
 
 		private static final long serialVersionUID = -7666329770246726197L;
 
-		static WrapCopier<Record, Wo> copier = WrapCopierFactory.wo(Record.class, Wo.class,
-				JpaObject.singularAttributeField(Record.class, true, false), JpaObject.FieldsInvisible);
+		static WrapCopier<Record, Wo> copier = WrapCopierFactory.wo(Record.class, Wo.class, null,
+				JpaObject.FieldsInvisible);
 
 	}
 

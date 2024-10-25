@@ -9,11 +9,14 @@ import com.x.processplatform.assemble.surface.jaxrs.application.ApplicationActio
 import com.x.processplatform.assemble.surface.jaxrs.applicationdict.ApplicationDictAction;
 import com.x.processplatform.assemble.surface.jaxrs.attachment.AttachmentAction;
 import com.x.processplatform.assemble.surface.jaxrs.control.ControlAction;
+import com.x.processplatform.assemble.surface.jaxrs.correlation.CorrelationAction;
 import com.x.processplatform.assemble.surface.jaxrs.data.DataAction;
+import com.x.processplatform.assemble.surface.jaxrs.datarecord.DataRecordAction;
 import com.x.processplatform.assemble.surface.jaxrs.documentversion.DocumentVersionAction;
 import com.x.processplatform.assemble.surface.jaxrs.draft.DraftAction;
 import com.x.processplatform.assemble.surface.jaxrs.file.FileAction;
 import com.x.processplatform.assemble.surface.jaxrs.form.FormAction;
+import com.x.processplatform.assemble.surface.jaxrs.handover.HandoverAction;
 import com.x.processplatform.assemble.surface.jaxrs.job.JobAction;
 import com.x.processplatform.assemble.surface.jaxrs.keylock.KeyLockAction;
 import com.x.processplatform.assemble.surface.jaxrs.process.ProcessAction;
@@ -30,6 +33,8 @@ import com.x.processplatform.assemble.surface.jaxrs.sign.SignAction;
 import com.x.processplatform.assemble.surface.jaxrs.snap.SnapAction;
 import com.x.processplatform.assemble.surface.jaxrs.task.TaskAction;
 import com.x.processplatform.assemble.surface.jaxrs.taskcompleted.TaskCompletedAction;
+import com.x.processplatform.assemble.surface.jaxrs.taskprocessmode.TaskProcessModeAction;
+import com.x.processplatform.assemble.surface.jaxrs.touch.TouchAction;
 import com.x.processplatform.assemble.surface.jaxrs.work.WorkAction;
 import com.x.processplatform.assemble.surface.jaxrs.workcompleted.WorkCompletedAction;
 import com.x.processplatform.assemble.surface.jaxrs.worklog.WorkLogAction;
@@ -77,5 +82,10 @@ public class ActionApplication extends AbstractActionApplication {
 		classes.add(SnapAction.class);
 		classes.add(AnonymousAction.class);
 		classes.add(SignAction.class);
+		classes.add(CorrelationAction.class);
+		classes.add(DataRecordAction.class);
+		classes.add(TaskProcessModeAction.class);
+		classes.add(HandoverAction.class);
+		classes.add(TouchAction.class);
 	}
 }

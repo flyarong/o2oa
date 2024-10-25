@@ -118,7 +118,7 @@ MWF.xApplication.process.ApplicationExplorer.Main = new Class({
 	searchApp: function(){
 		var key = this.searchInput && this.searchInput.get("value");
 		this.applicationList.each(function (app) {
-			if( !key || app.node.getElement(".o2_process_AppExp_item_titleName").get("text").contains( key )){
+			if( !key || app.data.id.contains(key) || app.data.name.contains(key) || app.data.alias.contains(key)){
 				app.node.show();
 			}else{
 				app.node.hide();
@@ -596,7 +596,7 @@ MWF.xApplication.process.ApplicationExplorer.Main = new Class({
         var check = "<br/><br/><input style='display:none' type=\"checkbox\" id=\"deleteApplicationAllCheckbox\" value=\"yes\">"+this.lp.application.deleteApplicationAllInfo;
 		confirmStr += check;
 
-		this.confirm("infor", e, this.lp.application.deleteElementsTitle, {"html":confirmStr}, 530, 250, function(){
+		this.confirm("infor", e, this.lp.application.deleteElementsTitle, {"html":confirmStr}, 600, 280, function(){
 			confirmStr = _self.lp.application.deleteElementsConfirmAgain+"<br/><br/><font style='color:red; font-size:14px; font-weight: bold'>"+applicationList.join("、")+"</font>";
 			var checkbox = this.content.getElement("#deleteApplicationAllCheckbox");
 

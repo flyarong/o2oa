@@ -60,17 +60,19 @@ MWF.xDesktop.getUserLayout = function(callback){
     MWF.UD.getPublicData("forceLayout", function(json) {
         var forceStatus = null;
         if (json) forceStatus = json;
+        debugger;
         MWF.UD.getDataJson("layout", function(json) {
             if (json) {
                 layout.userLayout = json;
-                if( !layout.userLayout.flatStyle )layout.userLayout.flatStyle = "blue";
+                if( !layout.userLayout.flatStyle )layout.userLayout.flatStyle = layout.config.defaultSkin;
                 if( !layout.userLayout.apps )layout.userLayout.apps = {};
                 if (forceStatus) layout.userLayout.apps = Object.merge(layout.userLayout.apps, forceStatus.apps);
                 if (callback) callback();
             }else{
                 MWF.UD.getPublicData("defaultLayout", function(json) {
                     layout.userLayout = json || {};
-                    if( !layout.userLayout.flatStyle )layout.userLayout.flatStyle = "blue";
+                    // if( !layout.userLayout.flatStyle )
+                        layout.userLayout.flatStyle = layout.config.defaultSkin || 'blue';
                     if( !layout.userLayout.apps )layout.userLayout.apps = {};
                     if (forceStatus) layout.userLayout.apps = Object.merge(layout.userLayout.apps, forceStatus.apps);
                     if (callback) callback();
@@ -274,12 +276,14 @@ MWF.xDesktop.getImageSrc = function( id ){
     }
 
     var addressObj = layout.serviceAddressList["x_file_assemble_control"];
+    var defaultPort = layout.config.app_protocol==='https' ? "443" : "80";
     if (addressObj){
-        var address = layout.config.app_protocol+"//"+addressObj.host+((!addressObj.port || addressObj.port==80) ? "" : ":"+addressObj.port)+addressObj.context;
+        var appPort = addressObj.port || window.location.port;
+        var address = layout.config.app_protocol+"//"+(addressObj.host || window.location.hostname)+((!appPort || appPort.toString()===defaultPort) ? "" : ":"+appPort)+addressObj.context;
     }else{
         var host = layout.config.center.host || window.location.hostname;
-        var port = layout.config.center.port;
-        var address = layout.config.app_protocol+"//"+host+((port || port=="80") ? "" : ":"+port)+"/x_file_assemble_control";
+        var port = layout.config.center.port || window.location.port;
+        var address = layout.config.app_protocol+"//"+host+((!port || port.toString()===defaultPort) ? "" : ":"+port)+"/x_file_assemble_control";
     }
     var url = "/jaxrs/file/"+id+"/download/stream";
     return o2.filterUrl(address+url);
@@ -524,7 +528,7 @@ MWF.org = {
     },
     parseIdentityData: function(data, flat, simple){
         if( simple ){
-            var data = {
+            var ndata = {
                 "id": data.id,
                 "name": data.name,
                 "distinguishedName": data.distinguishedName,
@@ -533,9 +537,9 @@ MWF.org = {
                 "unit": data.unit,
                 "unitName": data.unitName,
             };
-            if( data.ignoreEmpower )rData.ignoreEmpower = true;
-            if( data.ignoredEmpower )rData.ignoredEmpower = true;
-            return data;
+            if( data.ignoreEmpower )ndata.ignoreEmpower = true;
+            if( data.ignoredEmpower )ndata.ignoredEmpower = true;
+            return ndata;
         }
         var rData = {
             "id": data.id,

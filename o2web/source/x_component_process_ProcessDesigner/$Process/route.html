@@ -89,7 +89,7 @@
             </table>
         </div>
     </div>
-    <div title="{{$.lp.expand}}" class="MWFTab" data-o2-advanced="yes">
+    <div title="{{$.lp.expand}}" class="MWFTab" data-o2-advanced="yes" data-o2-manual="yes">
         <table width="100%" border="0" cellpadding="5" cellspacing="0" class="editTable">
             <tr>
                 <td class="editTableTitle">{{$.lp.decisionGroup}}:</td>
@@ -99,7 +99,7 @@
                 </td>
             </tr>
             <tr>
-                <td class="editTableTitle">{{$.lp.defaultRoute}}:</td>
+                <td class="editTableTitle">{{$.lp.sole}}:</td>
                 <td class="editTableValue" id="text{$.id}sole" >
                     <input class="editTableRadio" name="sole" text{($.sole)?'checked':''} type="radio" value="true"/>{{$.lp.yes}}
                     <input class="editTableRadio" name="sole" text{(!$.sole)?'checked':''} type="radio" value="false"/>{{$.lp.no}}
@@ -124,7 +124,7 @@
             </tr>
             <tr>
                 <td class="editTableValue" colspan="2">
-                    <div style="height: 24px; line-height: 24px; font-size: 12px; font-weight: bold;">{{$.lp.routeCheck}}: <span style="font-weight: normal;">{{$.lp.routeCheckInfo}}</span></div>
+                    <div style="min-height: 24px; line-height: 20px; font-size: 12px; font-weight: bold;">{{$.lp.routeCheck}}: <span style="font-weight: normal;">{{$.lp.routeCheckInfo}}</span></div>
                     <div class="MWFScriptText" name="validationScriptText" data-type="web"></div>
                 </td>
             </tr>
@@ -143,7 +143,7 @@
 
         </table>
     </div>
-    <div title="{{$.lp.select}}" class="MWFTab">
+    <div title="{{$.lp.select}}" class="MWFTab" data-o2-manual="yes">
         <div class="MWFOrgEditor"></div>
     </div>
     <!--<div title="条件" class="MWFTab MWFRouteCondition" style="display: none">-->

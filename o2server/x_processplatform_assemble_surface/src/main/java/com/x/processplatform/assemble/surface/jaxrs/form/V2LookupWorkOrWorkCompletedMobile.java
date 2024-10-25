@@ -90,7 +90,7 @@ class V2LookupWorkOrWorkCompletedMobile extends BaseAction {
 			} else if (null != workCompleted) {
 				this.form = business.form().pick(workCompleted.getForm());
 				if (null == this.form) {
-					StoreForm storeForm = workCompleted.getProperties().storeForm(true);
+					StoreForm storeForm = workCompleted.storeForm(true);
 					this.wo = XGsonBuilder.convert(storeForm, Wo.class);
 				}
 			}
@@ -131,7 +131,7 @@ class V2LookupWorkOrWorkCompletedMobile extends BaseAction {
 				}
 			}
 			return list;
-		}, ThisApplication.threadPool());
+		}, ThisApplication.forkJoinPool());
 	}
 
 	private CompletableFuture<List<String>> relatedScriptFuture(FormProperties properties) {
@@ -147,7 +147,7 @@ class V2LookupWorkOrWorkCompletedMobile extends BaseAction {
 				}
 			}
 			return list;
-		}, ThisApplication.threadPool());
+		}, ThisApplication.forkJoinPool());
 	}
 
 	@Schema(name = "com.x.processplatform.assemble.surface.jaxrs.form.V2LookupWorkOrWorkCompletedMobile$Wo")

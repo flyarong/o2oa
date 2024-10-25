@@ -19,7 +19,8 @@ import com.x.base.core.project.jaxrs.WoId;
 import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
 import com.x.processplatform.assemble.surface.Business;
-import com.x.processplatform.assemble.surface.WorkControl;
+import com.x.processplatform.assemble.surface.Control;
+import com.x.processplatform.assemble.surface.WorkControlBuilder;
 import com.x.processplatform.core.entity.content.Attachment;
 import com.x.processplatform.core.entity.content.Work;
 
@@ -49,7 +50,7 @@ class ActionEdit extends BaseAction {
 			if (null == attachment) {
 				throw new ExceptionEntityNotExist(id, Attachment.class);
 			}
-			Control control = business.getControl(effectivePerson, work, Control.class);
+			Control control = new WorkControlBuilder(effectivePerson, business, work).enableAllowSave().build();
 			if (BooleanUtils.isNotTrue(control.getAllowSave())) {
 				throw new ExceptionAccessDenied(effectivePerson, work);
 			}
@@ -73,10 +74,6 @@ class ActionEdit extends BaseAction {
 		return result;
 	}
 
-	public static class Control extends WorkControl {
-
-	}
-
 	@Schema(name = "com.x.processplatform.assemble.surface.jaxrs.attachment.ActionEdit$Wi")
 	public static class Wi extends Attachment {
 
@@ -86,8 +83,9 @@ class ActionEdit extends BaseAction {
 				Arrays.asList(Attachment.readIdentityList_FIELDNAME, Attachment.readUnitList_FIELDNAME,
 						Attachment.editIdentityList_FIELDNAME, Attachment.editUnitList_FIELDNAME,
 						Attachment.controllerIdentityList_FIELDNAME, Attachment.controllerUnitList_FIELDNAME,
-						Attachment.divisionList_FIELDNAME, Attachment.stringValue01_FIELDNAME,
-						Attachment.stringValue02_FIELDNAME, Attachment.stringValue03_FIELDNAME),
+						Attachment.divisionList_FIELDNAME, Attachment.OBJECTSECURITYCLEARANCE_FIELDNAME,
+						Attachment.stringValue01_FIELDNAME, Attachment.stringValue02_FIELDNAME,
+						Attachment.stringValue03_FIELDNAME),
 				null);
 
 	}

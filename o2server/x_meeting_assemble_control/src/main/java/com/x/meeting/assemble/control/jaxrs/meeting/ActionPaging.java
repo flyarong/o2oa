@@ -59,7 +59,7 @@ class ActionPaging extends BaseAction {
 			p = filterSubject(cb, root, p, wi.getSubject());
 			p = filterRoom(cb, root, p, wi.getRoom());
 
-			if (!StringUtils.isBlank(wi.getMeetingStatus())) {
+			if (StringUtils.isNotBlank(wi.getMeetingStatus())) {
 				p = filterMeetingStatus(cb, root, p, wi.getMeetingStatus());
 			} else {
 				p = filterStartTime(cb, root, p, wi.getStartTime());
@@ -121,6 +121,7 @@ class ActionPaging extends BaseAction {
 			List<Meeting> os = em.createQuery(cqMeeting).getResultList();
 
 			List<Wo> wos = Wo.copier.copy(os);
+			this.setOnlineLink(business, effectivePerson, wos);
 			WrapTools.decorate(business, wos, effectivePerson);
 			WrapTools.setAttachment(business, wos);
 			result.setData(wos);
@@ -167,7 +168,7 @@ class ActionPaging extends BaseAction {
 		@FieldDescribe("会议是否手工结束.(true|false)")
 		private Boolean manualCompleted;
 
-		@FieldDescribe("会议当前状态.(wait|processing|completed)")
+		@FieldDescribe("会议当前状态.(applying|wait|processing|completed)")
 		private String meetingStatus;
 
 		@FieldDescribe("排序字段.(startTime|completedTime|room)")

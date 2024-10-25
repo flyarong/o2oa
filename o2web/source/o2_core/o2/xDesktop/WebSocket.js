@@ -7,10 +7,13 @@ MWF.xDesktop.WebSocket = new Class({
     options: {},
     initialize: function(options){
         var addressObj = layout.serviceAddressList["x_message_assemble_communicate"];
+        var defaultPort = layout.config.app_protocol==='https' ? "443" : "80";
+        var appPort = addressObj.port || window.location.port;
+
         var uri = new URI(window.location.href);
         var scheme = uri.get("scheme");
         var wsScheme = (scheme.toString().toLowerCase()==="https") ? "wss" : "ws";
-        this.ws = wsScheme+"://"+addressObj.host+(addressObj.port==80 ? "" : ":"+addressObj.port)+addressObj.context+"/ws/collaboration";
+        this.ws = wsScheme+"://"+addressObj.host+( (!appPort || appPort.toString()===defaultPort) ? "" : ":"+appPort)+addressObj.context+"/ws/collaboration";
 
         this.reConnect = true;
         this.checking = false;
@@ -170,10 +173,15 @@ MWF.xDesktop.WebSocket = new Class({
                                 break;
                             case "im_create":
                             case "im_revoke":
+                            case "im_conv_update":
+                            case "im_conv_delete":
                                 this.receiveIMMessage(data);
                                 break;
                             case "cms_publish" :
                                 this.receiveCMSPublishMessage(data);
+                                break;
+                            case "bbs_replyCreate" :
+                                this.receivBBSReplyCreateMessage(data);
                                 break;
                             default:
                         }
@@ -247,8 +255,8 @@ MWF.xDesktop.WebSocket = new Class({
         var content = "<font style='color: #ea621f'>"+(data.body.creatorPerson||"").split("@")[0]+"</font>"+MWF.LP.desktop.messsage.publishDocument+data.body.title;
 
         var msg = {
-            "subject": data.body.categoryName,
-            "content": content
+            "subject": data.body.msgTitle?data.body.msgTitle:data.body.categoryName,
+            "content": data.body.msgContent?data.body.msgContent:content
         };
         var messageItem = layout.desktop.message.addMessage(msg);
         var tooltipItem = layout.desktop.message.addTooltip(msg);
@@ -281,7 +289,7 @@ MWF.xDesktop.WebSocket = new Class({
         //if (layout.desktop.top.userPanel) layout.desktop.top.userPanel.receiveChatMessage(data);
     },
     openWork: function(id, e){
-        o2.Actions.get("x_processplatform_assemble_surface").loadWork(id, function(){
+        o2.Actions.get("x_processplatform_assemble_surface").loadWorkV2(id, function(){
             var options = {"workId": id, "appId": "process.Work"+id};
             layout.desktop.openApplication(e, "process.Work", options);
         }.bind(this), function(){
@@ -330,17 +338,18 @@ MWF.xDesktop.WebSocket = new Class({
         var tooltipItem = layout.desktop.message.addTooltip(msg, data.body.startTime);
         tooltipItem.contentNode.addEvent("click", function(e){
             layout.desktop.message.hide();
-            this.openWork(read.work,e);
+            this.openWork(read.work || read.workCompleted,e);
         }.bind(this));
 
         messageItem.contentNode.addEvent("click", function(e){
             layout.desktop.message.addUnread(-1);
             layout.desktop.message.hide();
-            this.openWork(read.work,e);
+            this.openWork(read.work || read.workCompleted,e);
         }.bind(this));
     },
     receiveCustomMessage: function(data){
-        var content = "<font style='color: #333; font-weight: bold'>"+MWF.LP.desktop.messsage.customMessage+"：</font>"+o2.txt(data.body);
+        var text =  o2.typeOf(data.body) === "string" ? data.body : data.title;
+        var content = "<font style='color: #333; font-weight: bold'>"+MWF.LP.desktop.messsage.customMessage+"：</font>"+o2.txt(text);
         var msg = {
             "subject": MWF.LP.desktop.messsage.customMessageTitle,
             "content": content
@@ -357,6 +366,14 @@ MWF.xDesktop.WebSocket = new Class({
     /// im消息处理
     receiveIMMessage: function(data){
         var imBody = data.body;
+        // 更新会话或删除会话
+        if (data.type === "im_conv_update" || data.type === "im_conv_delete") {
+            // 执行im callback 刷新页面信息
+            if (this.imListenerMap && this.imListenerMap["im_conversation"] && typeof this.imListenerMap["im_conversation"] == 'function') {
+                this.imListenerMap["im_conversation"](imBody);
+            }
+            return;
+        }
         // 撤回消息
         if (data.type == "im_revoke") {
             // 执行im callback 刷新页面信息
@@ -368,42 +385,44 @@ MWF.xDesktop.WebSocket = new Class({
         // im_create 暂时不变
         if (data.type == "im_create") {
             // 系统消息
-            var jsonBody = imBody.body;
-            var conversationId = imBody.conversationId;
-            var body = JSON.parse(jsonBody);
-            var msgBody = body.body; //默认text 文本消息
-            if (body.type && body.type == "emoji") { //表情 消息
-                msgBody = "["+MWF.LP.desktop.messsage.emoji+"]";
-            } else if (body.type == "process") {
-                msgBody = "["+MWF.LP.desktop.messsage.processWork+"]";
-            } else if (body.type == "cms") {
-                msgBody = "["+MWF.LP.desktop.messsage.cmsDoc+"]";
-            }
-            var content = "<font style='color: #333; font-weight: bold'>"+o2.txt(data.title)+"</font>: "+o2.txt(msgBody);
-            var msg = {
-                "subject": MWF.LP.desktop.messsage.customMessageTitle,
-                "content": content
-            };
-            var messageItem = layout.desktop.message.addMessage(msg);
-            var options = {"conversationId": conversationId};
-            messageItem.contentNode.addEvent("click", function(e){
-                layout.desktop.message.addUnread(-1);
-                layout.desktop.message.hide();
-                layout.desktop.openApplication(e, "IMV2", options);
-            }.bind(this));
+            if (layout.desktop.message) {
+                var jsonBody = imBody.body;
+                var conversationId = imBody.conversationId;
+                var body = JSON.parse(jsonBody);
+                var msgBody = body.body; //默认text 文本消息
+                if (body.type && body.type == "emoji") { //表情 消息
+                    msgBody = "["+MWF.LP.desktop.messsage.emoji+"]";
+                } else if (body.type == "process") {
+                    msgBody = "["+MWF.LP.desktop.messsage.processWork+"]";
+                } else if (body.type == "cms") {
+                    msgBody = "["+MWF.LP.desktop.messsage.cmsDoc+"]";
+                }
+                var content = "<font style='color: #333; font-weight: bold'>"+o2.txt(data.title)+"</font>: "+o2.txt(msgBody);
+                var msg = {
+                    "subject": MWF.LP.desktop.messsage.customMessageTitle,
+                    "content": content
+                };
+                var messageItem = layout.desktop.message.addMessage(msg);
+                var options = {"conversationId": conversationId};
+                messageItem.contentNode.addEvent("click", function(e){
+                    layout.desktop.message.addUnread(-1);
+                    layout.desktop.message.hide();
+                    layout.desktop.openApplication(e, "IMV2", options);
+                }.bind(this));
 
-            var tooltipItem = layout.desktop.message.addTooltip(msg);
-            tooltipItem.contentNode.addEvent("click", function(e){
-                layout.desktop.message.hide();
-                layout.desktop.openApplication(e, "IMV2", options);
-            }.bind(this));
+                var tooltipItem = layout.desktop.message.addTooltip(msg);
+                tooltipItem.contentNode.addEvent("click", function(e){
+                    layout.desktop.message.hide();
+                    layout.desktop.openApplication(e, "IMV2", options);
+                }.bind(this));
+            }
             // 执行im callback 刷新页面信息
             if (this.imListenerMap && this.imListenerMap["im_create"] && typeof this.imListenerMap["im_create"] == 'function') {
                 this.imListenerMap["im_create"](imBody);
             }
             return;
         }
-       
+
     },
 
 
@@ -808,4 +827,81 @@ MWF.xDesktop.WebSocket = new Class({
             layout.desktop.openApplication(e, "TeamWork.Task", options);
         }.bind(this));
     },
+    receiveBBSSubjectCreateMessage: function (data) {
+        var content = MWF.LP.desktop.messsage.canlendarAlarm;
+        content = content.replace(/{title}/g, o2.txt(data.title));
+
+        var msg = {
+            "subject": MWF.LP.desktop.messsage.canlendarAlarmMessage,
+            "content": content
+        };
+        var messageItem = layout.desktop.message.addMessage(msg);
+        var tooltipItem = layout.desktop.message.addTooltip(msg);
+        tooltipItem.contentNode.addEvent("click", function(e){
+            layout.desktop.message.hide();
+            if ( layout.desktop.apps && layout.desktop.apps["Calendar"] ) {
+                if( layout.desktop.apps["Calendar"].openEvent ){
+                    layout.desktop.apps["Calendar"].setCurrent();
+                    layout.desktop.apps["Calendar"].openEvent( data.body.id );
+                }else if(layout.desktop.apps["Calendar"].options){
+                    layout.desktop.apps["Calendar"].options.eventId = data.body.id;
+                    layout.desktop.apps["Calendar"].setCurrent();
+                }else{
+                    layout.desktop.openApplication(e, "Calendar", {"eventId": data.body.id });
+                }
+            }else{
+                layout.desktop.openApplication(e, "Calendar", {"eventId": data.body.id });
+            }
+        });
+
+        messageItem.contentNode.addEvent("click", function(e){
+            layout.desktop.message.addUnread(-1);
+            layout.desktop.message.hide();
+            if ( layout.desktop.apps && layout.desktop.apps["Calendar"] ) {
+                if( layout.desktop.apps["Calendar"].openEvent ){
+                    layout.desktop.apps["Calendar"].setCurrent();
+                    layout.desktop.apps["Calendar"].openEvent( data.body.id );
+                }else if(layout.desktop.apps["Calendar"].options){
+                    layout.desktop.apps["Calendar"].options.eventId = data.body.id;
+                    layout.desktop.apps["Calendar"].setCurrent();
+                }else{
+                    layout.desktop.openApplication(e, "Calendar", {"eventId": data.body.id });
+                }
+            }else{
+                layout.desktop.openApplication(e, "Calendar", {"eventId": data.body.id });
+            }
+        });
+    },
+    receivBBSReplyCreateMessage: function (data) {
+        debugger;
+        var content = MWF.LP.desktop.messsage.bbsReplyCreate;
+        content = content.replace(/{title}/g, (data.body.createPerson||"").split("@")[0] + o2.txt(data.title));
+
+        var msg = {
+            "subject": MWF.LP.desktop.messsage.bbsReplyCreateMessage,
+            "content": content
+        };
+        var messageItem = layout.desktop.message.addMessage(msg);
+        var tooltipItem = layout.desktop.message.addTooltip(msg);
+        tooltipItem.contentNode.addEvent("click", function(e){
+            layout.desktop.message.hide();
+            var appId = "ForumDocument" + data.body.subjectId;
+            if ( layout.desktop.apps && layout.desktop.apps[appId] ) {
+                layout.desktop.apps[appId].setCurrent();
+            }else{
+                layout.desktop.openApplication(e, "ForumDocument", {"id": data.body.subjectId, "isEdited": false });
+            }
+        });
+
+        messageItem.contentNode.addEvent("click", function(e){
+            layout.desktop.message.addUnread(-1);
+            layout.desktop.message.hide();
+            var appId = "ForumDocument" + data.body.subjectId;
+            if ( layout.desktop.apps && layout.desktop.apps[appId] ) {
+                layout.desktop.apps[appId].setCurrent();
+            }else{
+                layout.desktop.openApplication(e, "ForumDocument", {"id": data.body.subjectId, "isEdited": false });
+            }
+        });
+    }
 });

@@ -300,6 +300,9 @@
   "lookupFormWithWork": {"uri": "/jaxrs/form/v2/lookup/workorworkcompleted/{workOrWorkCompleted}"},
   "lookupFormWithWorkMobile": {"uri": "/jaxrs/form/v2/lookup/workorworkcompleted/{workOrWorkCompleted}/mobile"},
 
+  "lookupFormWithTaskCompleted": {"uri": "/jaxrs/form/v2/lookup/taskcompleted/{taskcompleted}"},
+  "lookupFormWithTaskCompletedMobile": {"uri": "/jaxrs/form/v2/lookup/taskcompleted/{taskcompleted}/mobile"},
+
   "listTaskByJob": {"uri": "/jaxrs/task/list/job/{job}"},
   "listTaskCompletedByJob": {"uri": "/jaxrs/taskcompleted/list/job/{job}"},
   "listReadByJob": {"uri": "/jaxrs/read/list/job/{job}"},
@@ -309,6 +312,10 @@
   "listTaskCompletedByWork": {"uri": "/jaxrs/taskcompleted/list/work/{work}"},
   "listReadByWork": {"uri": "/jaxrs/read/list/work/{work}"},
   "listReadCompletedByWork": {"uri": "/jaxrs/readcompleted/list/work/{work}"},
+
+  "listTaskCompletedByWorkOrWorkCompleted": {"uri": "/jaxrs/taskcompleted/list/workorworkcompleted/{workOrWorkCompleted}"},
+  "listReadByWorkOrWorkCompleted": {"uri": "/jaxrs/read/list/workorworkcompleted/{workOrWorkCompleted}"},
+  "listReadCompletedByWorkOrWorkCompleted": {"uri": "/jaxrs/readcompleted/list/workorworkcompleted/{workOrWorkCompleted}"},
 
   "rollback": {"uri": "/jaxrs/work/{id}/rollback", "method": "PUT"},
   "rollbackWorkcompleted": {"uri": "/jaxrs/workcompleted/{flag}/rollback", "method": "PUT"},

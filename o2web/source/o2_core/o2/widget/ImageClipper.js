@@ -288,12 +288,15 @@ o2.widget.FlashImageClipper = new Class({
 		}else{
 			//公共图片服务
 			var addressObj = layout.serviceAddressList["x_file_assemble_control"];
+			var defaultPort = layout.config.app_protocol==='https' ? "443" : "80";
 			if (addressObj){
-				var address = layout.config.app_protocol+"//"+addressObj.host+(addressObj.port==80 ? "" : ":"+addressObj.port)+addressObj.context;
+				var appPort = addressObj.port || window.location.port;
+				var address = layout.config.app_protocol+"//"+(addressObj.host || window.location.hostname)+((!appPort || appPort.toString()===defaultPort) ? "" : ":"+appPort)+addressObj.context;
+				// var address = layout.config.app_protocol+"//"+addressObj.host+(addressObj.port==80 ? "" : ":"+addressObj.port)+addressObj.context;
 			}else{
 				var host = layout.desktop.centerServer.host || window.location.hostname;
-				var port = layout.desktop.centerServer.port;
-				var address = layout.config.app_protocol+"//"+host+(port=="80" ? "" : ":"+port)+"/x_file_assemble_control";
+				var port = layout.desktop.centerServer.port || window.location.port;
+				var address = layout.config.app_protocol+"//"+host+((!port || port.toString()===defaultPort) ? "" : ":"+port)+"/x_file_assemble_control";
 			}
 			var url = "/jaxrs/file/upload/referencetype/"+ this.options.referenceType + "/reference/" + this.options.reference + "/scale/" + this.options.resultMaxSize;
 			this.uploadUrl = address+url;
@@ -391,7 +394,7 @@ o2.widget.HTML5ImageClipper = new Class({
 	uploadImage: function(  success, failure  ){
 		if( this.resizedImage ){
 			if( this.options.action ){
-				this.action = (typeOf(this.options.action)=="string") ? o2.Actions.get(action).action : this.options.action;
+				this.action = (typeOf(this.options.action)=="string") ? o2.Actions.get(this.options.action).action : this.options.action;
 				this.action.invoke({
 					"name": this.options.method,
 					"async": true,
@@ -825,6 +828,12 @@ o2.widget.HTML5ImageClipper = new Class({
 		}
 
 		this.resizedImage = new Blob([ia], {type: this.fileType });
+		var fileName = "image_"+new Date().getTime();
+		if( this.fileType && this.fileType.contains("/") ) {
+			this.resizedImage.name = fileName + "." + this.fileType.split("/")[1];
+		}else{
+			this.resizedImage.name = fileName + ".unknow";
+		}
 
 		var min = Math.min(this.options.previewerSize, nh, nw, this.options.resultMaxSize);
 		size = this.getRatioMaxSize(min, min, ratio);

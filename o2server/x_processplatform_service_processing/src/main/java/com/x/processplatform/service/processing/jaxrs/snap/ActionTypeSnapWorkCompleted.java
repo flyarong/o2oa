@@ -9,13 +9,11 @@ import com.x.base.core.container.EntityManagerContainer;
 import com.x.base.core.container.factory.EntityManagerContainerFactory;
 import com.x.base.core.entity.annotation.CheckPersistType;
 import com.x.base.core.project.exception.ExceptionEntityNotExist;
-import com.x.base.core.project.executor.ProcessPlatformExecutorFactory;
 import com.x.base.core.project.http.ActionResult;
 import com.x.base.core.project.http.EffectivePerson;
 import com.x.base.core.project.jaxrs.WoId;
 import com.x.base.core.project.logger.Logger;
 import com.x.base.core.project.logger.LoggerFactory;
-import com.x.processplatform.core.entity.content.Attachment;
 import com.x.processplatform.core.entity.content.DocSign;
 import com.x.processplatform.core.entity.content.DocSignScrawl;
 import com.x.processplatform.core.entity.content.Read;
@@ -27,6 +25,7 @@ import com.x.processplatform.core.entity.content.TaskCompleted;
 import com.x.processplatform.core.entity.content.WorkCompleted;
 import com.x.processplatform.core.entity.content.WorkLog;
 import com.x.processplatform.service.processing.Business;
+import com.x.processplatform.service.processing.ProcessPlatformKeyClassifyExecutorFactory;
 import com.x.query.core.entity.Item;
 
 class ActionTypeSnapWorkCompleted extends BaseAction {
@@ -45,7 +44,7 @@ class ActionTypeSnapWorkCompleted extends BaseAction {
 			}
 			job = workCompleted.getJob();
 		}
-		return ProcessPlatformExecutorFactory.get(job).submit(new CallableImpl(workCompletedId)).get(300,
+		return ProcessPlatformKeyClassifyExecutorFactory.get(job).submit(new CallableImpl(workCompletedId)).get(300,
 				TimeUnit.SECONDS);
 	}
 
@@ -73,11 +72,10 @@ class ActionTypeSnapWorkCompleted extends BaseAction {
 				List<Review> reviews = new ArrayList<>();
 				List<WorkLog> workLogs = new ArrayList<>();
 				List<Record> records = new ArrayList<>();
-				List<Attachment> attachments = new ArrayList<>();
 				List<DocSign> docSigns = new ArrayList<>();
 				List<DocSignScrawl> docSignScrawls = new ArrayList<>();
 				snap.setProperties(snap(business, workCompleted.getJob(), items, workCompleted, taskCompleteds, reads,
-						readCompleteds, reviews, workLogs, records, attachments, docSigns, docSignScrawls));
+						readCompleteds, reviews, workLogs, records, docSigns, docSignScrawls));
 				snap.setType(Snap.TYPE_SNAPWORKCOMPLETED);
 				emc.beginTransaction(Snap.class);
 				emc.persist(snap, CheckPersistType.all);

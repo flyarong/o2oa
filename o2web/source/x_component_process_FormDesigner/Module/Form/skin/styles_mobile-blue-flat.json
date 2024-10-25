@@ -64,9 +64,8 @@
       }
     },
     "section": {
-      "name": "区段",
+      "name": "区段标题",
       "styles": {
-        "height": "18px",
         "background-color": "#ffffff",
         "line-height": "18px",
         "padding": "0px 10px",
@@ -103,7 +102,7 @@
       "border-bottom": "1px solid #E8ECEE",
       "border-right": "1px solid #CFD9DF",
       "border-radius" : "0px",
-      "width" : "calc(33.3% - 1px)"
+      "width" : "calc(25% - 1px)"
     },
     "tabTextStyles": {
       "color": "#000000",
@@ -113,7 +112,7 @@
       "margin-right": "2px",
       "margin-top": "0px",
       "margin-left": "2px",
-      "font-size": "18px"
+      "font-size": "16px"
     },
     "tabCurrentStyles": {
       "position": "relative",
@@ -126,7 +125,7 @@
       "border-bottom": "1px solid #1D1E1F",
       "border-right": "1px solid #CFD9DF",
       "border-radius" : "0px",
-      "width" : "calc(33.3% - 1px)"
+      "width" : "calc(25% - 1px)"
     },
     "tabCurrentTextStyles": {
       "color": "#000000",
@@ -135,7 +134,7 @@
       "text-align": "center",
       "margin-right": "2px",
       "margin-left": "2px",
-      "font-size": "18px"
+      "font-size": "16px"
     }
   },
   "tab$Content": {
@@ -299,7 +298,7 @@
       "font-size": "16px",
       "font-weight": "normal",
       "border-bottom": "0px",
-      "border-left" : "4px solid #32AAFF",
+      "border-left" : "0px",
       "margin-bottom" : "10px",
       "margin-top" : "10px"
     },
@@ -413,16 +412,15 @@
       "text-align": "right"
     },
     "itemTitleStyles": {
-      "height": "16px",
       "overflow" : "hidden",
       "background-color": "#ffffff",
-      "line-height": "16px",
+      "line-height": "28px",
       "padding": "0px 0px 0px 5px",
-      "color": "#000",
+      "color": "#32AAFF",
       "font-size": "16px",
       "font-weight": "normal",
       "border-bottom": "0px",
-      "border-left" : "4px solid #32AAFF",
+      "border-left" : "0px",
       "margin-bottom" : "10px",
       "margin-top" : "10px"
     },
@@ -576,6 +574,24 @@
       "float": "left",
       "text-align": "right"
     }
+  },
+  "currency": {
+    "styles": {
+      "border": "0px solid #979797",
+      "border-radius": "0px",
+      "color": "#000"
+    },
+    "inputStyles": {
+      "border-radius": "0px",
+      "border-bottom": "0px",
+      "border": "0px solid #979797",
+      "height": "auto",
+      "color": "#000",
+      "font-size": "15px",
+      "float": "left",
+      "text-align": "right"
+    },
+    "symbolStyles": {}
   },
   "personfield": {
     "styles": {
@@ -740,6 +756,24 @@
     },
     "tableContentCellStyles_title": {
       "font-size": "14px"
+    }
+  },
+  "associatedDocument": {
+    "styles": {
+      "border": "1px solid #ccc",
+      "padding": "5px"
+    },
+    "buttonStyles": {
+      "color" : "#777",
+      "border-radius": "5px",
+      "border": "1px solid #ccc",
+      "cursor": "pointer",
+      "height": "26px",
+      "line-height": "26px",
+      "padding": "0px 5px",
+      "background-color": "#efefef",
+      "margin" : "5px",
+      "display": "inline-block"
     }
   }
 }

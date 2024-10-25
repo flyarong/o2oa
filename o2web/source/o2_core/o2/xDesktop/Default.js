@@ -396,6 +396,7 @@ o2.xDesktop.Default = new Class({
             }
             o2.UD.getPublicData("forceMainMenuData", function(fData){
                 if (fData){
+                    this.isUseForceMainMenuData = true;
                     this.status.menuData=fData;
                     this.menuData = this.status.menuData;
                     if (this.menuData.linkList) this.status.flatLnks = this.menuData.linkList;
@@ -679,6 +680,7 @@ o2.xDesktop.Default = new Class({
             }
         }.bind(this));
         var status = this.getLayoutStatusData();
+        console.log(status);
 
         // if (navigator.sendBeacon) {
         //     var obj = this.personalAction.action.actions["putUserData"];
@@ -1004,7 +1006,8 @@ o2.xDesktop.Default.StartMenu = new Class({
             "   <div class='layout_start_item_badge'></div>";
     },
     load: function(){
-        var view = this.layout.path+this.layout.options.style+((o2.session.isMobile || layout.mobile) ? "/layout-menu-mobile.html" : "/layout-menu-pc.html");
+        //var view = this.layout.path+this.layout.options.style+((o2.session.isMobile || layout.mobile) ? "/layout-menu-mobile.html" : "/layout-menu-pc.html");
+        var view = this.layout.path+this.layout.options.style+ "/layout-menu-pc.html";
         this.container.loadHtml(view, {"module": this}, function(){
             this.maskNode.setStyle("z-index", o2.xDesktop.zIndexPool.applyZindex());
             this.node.setStyle("z-index", o2.xDesktop.zIndexPool.applyZindex());
@@ -1017,7 +1020,7 @@ o2.xDesktop.Default.StartMenu = new Class({
 
             this.triangleNode = new Element("div.layout_menu_start_triangle").inject(this.layout.menuNode, "after");
             this.hideMessage = function(){ this.hide(); }.bind(this);
-            this.fireEvent("load");
+
             this.layout.addEvent("resize", this.setSize.bind(this));
             this.loadTitle();
             this.loadLnks();
@@ -1833,7 +1836,11 @@ o2.xDesktop.Default.StartMenu.Item = new Class({
         }
     },
     loadBadge: function(){
-        this.badgeNode.set("title", o2.LP.desktop.addLnk).addClass("icon_add_red");
+        if( this.layout.isUseForceMainMenuData ){
+            this.badgeNode.hide();
+        }else{
+            this.badgeNode.set("title", o2.LP.desktop.addLnk).addClass("icon_add_red");
+        }
     },
     loadText: function(){
         if (this.data.path && this.data.path.indexOf("@url") !== 0 ){
@@ -1909,14 +1916,16 @@ o2.xDesktop.Default.StartMenu.Item = new Class({
         }.bind(this));
     },
     makeLnk: function(){
-        var drag = new Drag(this.node, {
-            "stopPropagation": true,
-            "compensateScroll": true,
-            "onStart": function(el, e){
-                this.doDragMove(e);
-                drag.stop();
-            }.bind(this)
-        });
+        if( !this.layout.isUseForceMainMenuData ) {
+            var drag = new Drag(this.node, {
+                "stopPropagation": true,
+                "compensateScroll": true,
+                "onStart": function (el, e) {
+                    this.doDragMove(e);
+                    drag.stop();
+                }.bind(this)
+            });
+        }
     },
     getDragNode: function(){
         if (!this.dragNode){
@@ -1950,13 +1959,27 @@ o2.xDesktop.Default.StartMenu.Item = new Class({
             "stopPropagation": true,
             "compensateScroll": true,
             "droppables": droppables,
-            "onStart": function(el){ this._drag_start(el); }.bind(this),
-            "onDrag": function(dragging,e){ this._drag_drag(dragging, e); }.bind(this),
-            "onEnter": function(dragging, inObj){ this._drag_enter(dragging, inObj); }.bind(this),
-            "onLeave": function(dragging, obj){ this._drag_leave(dragging, obj); }.bind(this),
-            "onDrop": function(dragging, inObj){ this._drag_drop(dragging, inObj); }.bind(this),
-            "onCancel": function(dragging){ this._drag_cancel(dragging); }.bind(this),
-            "onComplete": function(dragging, e){ this._drag_complete(dragging, e); }.bind(this),
+            "onStart": function (el) {
+                this._drag_start(el);
+            }.bind(this),
+            "onDrag": function (dragging, e) {
+                this._drag_drag(dragging, e);
+            }.bind(this),
+            "onEnter": function (dragging, inObj) {
+                this._drag_enter(dragging, inObj);
+            }.bind(this),
+            "onLeave": function (dragging, obj) {
+                this._drag_leave(dragging, obj);
+            }.bind(this),
+            "onDrop": function (dragging, inObj) {
+                this._drag_drop(dragging, inObj);
+            }.bind(this),
+            "onCancel": function (dragging) {
+                this._drag_cancel(dragging);
+            }.bind(this),
+            "onComplete": function (dragging, e) {
+                this._drag_complete(dragging, e);
+            }.bind(this),
         });
         drag.start(e);
         this.dragStatus == "remove";
@@ -2212,11 +2235,71 @@ o2.xDesktop.Default.StartMenu.GroupItem = new Class({
     init: function(){
         this.itemTempletedHtml = this.menu.itemTempletedHtml;
 
-        if (this.data.itemDataList && this.data.itemDataList.length){
-            for (var i=0; i<Math.min(this.data.itemDataList.length, 4); i++){
-                var icon = this.setSubItemIcon(this.data.itemDataList[i], this.sunIconNodes[i]);
+        var user = this.menu.layout.session.user;
+        var currentNames = [user.name, user.distinguishedName, user.id, user.unique];
+        if (user.roleList) currentNames = currentNames.concat(user.roleList);
+        if (user.groupList) currentNames = currentNames.concat(user.groupList);
+
+        // console.log('this.data.itemDataList', this.data.itemDataList);
+        // console.log('this.menu.portalJson', this.menu.portalJson);
+        // console.log('this.menu.processJson', this.menu.processJson);
+        // console.log('this.menu.inforJson', this.menu.inforJson);
+        // console.log('this.menu.queryJson', this.menu.queryJson);
+        // console.log('this.menu.componentJson', this.menu.componentJson);
+        // console.log('this.menu.layoutJson', this.menu.layoutJson);
+
+        var itemDataList = (this.data.itemDataList || []).filter(function(data){
+            var json;
+            switch (data.type){
+                case "portal":
+                   return this.checkPermission(data, this.menu.portalJson);
+                case "process":
+                    return this.checkPermission(data, this.menu.processJson);
+                case "cms":
+                    return this.checkPermission(data, this.menu.inforJson);
+                case "query":
+                    return this.checkPermission(data, this.menu.queryJson);
+                default:
+                    var component = this.getComponent(data.path, this.menu.componentJson);
+                    var layout = this.getComponent(data.path, this.menu.layoutJson);
+                    if(!component && !layout)return false;
+                    if (component){
+                        return this.menu.checkMenuItem(component, currentNames);
+                    }
+                    if (layout){
+                        return this.menu.checkMenuItem(layout, currentNames);
+                    }
+                    return false;
+            }
+        }.bind(this));
+
+        if (itemDataList && itemDataList.length){
+            for (var i=0; i<Math.min(itemDataList.length, 4); i++){
+                var icon = this.setSubItemIcon(itemDataList[i], this.sunIconNodes[i]);
             }
         }
+
+        if( !itemDataList.length ){
+            this.node.hide();
+        }else{
+            this.node.show();
+        }
+
+        this.availableItemDataList = itemDataList;
+    },
+    getComponent: function (path, array){
+        if( !array )array = [];
+        for( var i=0; i<array.length; i++ ){
+            if( path === array[i].path )return array[i];
+        }
+        return null;
+    },
+    checkPermission: function (itemData, array){
+        if( !array )array = [];
+        for( var i=0; i<array.length; i++ ){
+            if( itemData.id === array[i].id )return true;
+        }
+        return false;
     },
     resetSubItemIcon: function(){
         this.sunIconNodes.each(function(e){
@@ -2269,7 +2352,8 @@ o2.xDesktop.Default.StartMenu.GroupItem = new Class({
     },
     loadItems: function(){
         if (!this.items) this.items = [];
-        this.data.itemDataList.each(function(data){
+        //this.data.itemDataList
+        (this.availableItemDataList || this.data.itemDataList).each(function(data){
             var item = this.items.find(function(i){
                 return i.data.id == data.id;
             });
@@ -2363,6 +2447,8 @@ o2.xDesktop.Default.StartMenu.GroupItem = new Class({
             this.setSubItemIcon(data, this.sunIconNodes[this.data.itemDataList.length]);
         }
         this.data.itemDataList.push(data);
+        if(this.availableItemDataList)this.availableItemDataList.push(data);
+        this.node.show();
     },
     setSubItemIcon: function(data, node){
         switch (this.getItemType(data)){
@@ -2898,12 +2984,12 @@ o2.xDesktop.Default.Lnk = new Class({
                 }
             }.bind(this),
             "mouseover": function(){
-                this.actionNode.fade("in");
+                if(!this.layout.isUseForceMainMenuData)this.actionNode.fade("in");
                 this.node.addClass("overColor_bg");
                 this.textNode.fade("in");
             }.bind(this),
             "mouseout": function(){
-                this.actionNode.fade("out");
+                if(!this.layout.isUseForceMainMenuData)this.actionNode.fade("out");
                 this.node.removeClass("overColor_bg");
                 this.textNode.fade("out");
             }.bind(this)
@@ -2920,14 +3006,16 @@ o2.xDesktop.Default.Lnk = new Class({
                 this.actionNode.removeClass("layout_menu_lnk_item_action_shadow");
             }.bind(this)
         });
-        var drag = new Drag(this.node, {
-            "stopPropagation": true,
-            "compensateScroll": true,
-            "onStart": function(el, e){
-                this.doDragMove(e);
-                drag.stop();
-            }.bind(this)
-        });
+        if( !this.layout.isUseForceMainMenuData ){
+            var drag = new Drag(this.node, {
+                "stopPropagation": true,
+                "compensateScroll": true,
+                "onStart": function(el, e){
+                    this.doDragMove(e);
+                    drag.stop();
+                }.bind(this)
+            });
+        }
     },
     getDragNode: function(){
         if (!this.dragNode){

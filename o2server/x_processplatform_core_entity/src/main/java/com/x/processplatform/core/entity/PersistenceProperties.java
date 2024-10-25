@@ -88,6 +88,18 @@ public final class PersistenceProperties extends AbstractPersistenceProperties {
 		public static class Snap {
 			public static final String table = "PP_C_SNAP";
 		}
+
+		public static class DataRecord {
+			public static final String table = "PP_C_DATA_RECORD";
+		}
+
+		public static class TaskProcessMode {
+			public static final String table = "PP_C_TASK_PROCESS_MODE";
+		}
+
+		public static class Handover {
+			public static final String table = "PP_C_HANDOVER";
+		}
 	}
 
 	public static class Element {

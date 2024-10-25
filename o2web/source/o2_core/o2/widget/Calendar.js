@@ -436,17 +436,37 @@ o2.widget.Calendar = o2.Calendar = new Class({
 
 	outsideClick: function(e) {
 		if(this.visible) {
-			var elementCoords = this.container.getCoordinates();
-			var targetCoords  = this.node.getCoordinates();
-			var page = e.page;
-			if (layout.userLayout && layout.userLayout.scale && layout.userLayout.scale!==1){
-				page.x = page.x/layout.userLayout.scale;
-				page.y = page.y/layout.userLayout.scale;
+			var elementCoords, targetCoords, page;
+			if ( !layout.inBrowser && layout.userLayout && layout.userLayout.scale && layout.userLayout.scale!==1){
+				elementCoords = this.container.getCoordinates( this.options.target );
+				targetCoords  = this.node.getCoordinates( this.options.target );
+				var containerSize = this.options.target.getPosition();
+				page = e.page;
+
+				// elementCoords.left = elementCoords.left * layout.userLayout.scale;
+				// elementCoords.top = elementCoords.top * layout.userLayout.scale;
+				//
+				// targetCoords.left = targetCoords.left * layout.userLayout.scale;
+				// targetCoords.top = targetCoords.top * layout.userLayout.scale;
+				//
+				// containerSize.x = containerSize.x * layout.userLayout.scale;
+				// containerSize.y = containerSize.y * layout.userLayout.scale;
+
+				page.x = page.x / layout.userLayout.scale - containerSize.x;
+				page.y = page.y / layout.userLayout.scale - containerSize.y;
+
+			}else{
+				elementCoords = this.container.getCoordinates();
+				targetCoords  = this.node.getCoordinates();
+				page = e.page;
 			}
+
+
 			if(((page.x < elementCoords.left || page.x > (elementCoords.left + elementCoords.width)) ||
 				(page.y < elementCoords.top || page.y > (elementCoords.top + elementCoords.height))) &&
 				((page.x < targetCoords.left || page.x > (targetCoords.left + targetCoords.width)) ||
 					(page.y < targetCoords.top || page.y > (targetCoords.top + targetCoords.height))) ) this.hide();
+
 		}
 	},
 
@@ -549,7 +569,7 @@ o2.widget.Calendar = o2.Calendar = new Class({
 		}
 	},
 	setPosition: function(){
-		if (this.container.position && (!layout || !layout.userLayout || !layout.userLayout.scale || layout.userLayout.scale===1) ){
+		//if (this.container.position && (!layout || !layout.userLayout || !layout.userLayout.scale || layout.userLayout.scale===1) ){
 			var postY = "bottom";
 			var postX = "left";
 			this.container.position({
@@ -601,26 +621,31 @@ o2.widget.Calendar = o2.Calendar = new Class({
 			}
 			this.postY = postY;
 			this.postX = postX;
-		}else{
-			var p = this.node.getPosition(this.options.target || null);
-			var size = this.node.getSize();
-			var containerSize = this.container.getSize();
-			var bodySize = (this.options.target) ? this.options.target.getSize() : $(document.body).getSize(); //$(document.body).getSize();
-
-			var left = p.x;
-			if ((left + containerSize.x + 40) > bodySize.x){
-				left = bodySize.x - containerSize.x - 40;
-			}
-
-			var top = p.y+size.y+2;
-			if( top + containerSize.y > bodySize.y ){
-				top = bodySize.y - containerSize.y ;
-			}
-
-			this.container.setStyle("top", top);
-			this.container.setStyle("left", left);
-
-		}
+		// }else{
+		// 	var p = this.node.getPosition(this.options.target || null);
+		// 	var size = this.node.getSize();
+		// 	var containerSize = this.container.getSize();
+		// 	var bodySize = (this.options.target) ? this.options.target.getSize() : $(document.body).getSize(); //$(document.body).getSize();
+		//
+		// 	bodySize.x = bodySize.x * layout.userLayout.scale;
+		// 	bodySize.y = bodySize.y * layout.userLayout.scale;
+		//
+		// 	var left = p.x;
+		// 	left = left * layout.userLayout.scale;
+		// 	if ((left + containerSize.x + 40) > bodySize.x){
+		// 		left = bodySize.x - containerSize.x - 40;
+		// 	}
+		//
+		// 	var top = p.y+size.y+2;
+		// 	top = top * layout.userLayout.scale;
+		// 	if( top + containerSize.y > bodySize.y ){
+		// 		top = bodySize.y - containerSize.y ;
+		// 	}
+		//
+		//
+		// 	this.container.setStyle("top", top);
+		// 	this.container.setStyle("left", left);
+		// }
 	},
 	showYear: function(year){
 		var thisYear = (year!=undefined) ? year : this.options.baseDate.getFullYear();
@@ -797,7 +822,13 @@ o2.widget.Calendar = o2.Calendar = new Class({
 			tds[i].set("text", tmpDate.getDate());
 			tds[i].addClass("gray_"+this.options.style);
 			tds[i].setStyles(this.css["gray_"+this.options.style]);
-			tds[i].store("dateValue", tmpDate.toString())
+			tds[i].store("dateValue", tmpDate.toString());
+			tds[i].removeClass("today_"+this.options.style);
+			tds[i].removeClass("current_"+this.options.style);
+			tds[i].removeClass("past_"+this.options.style);
+			if( this.options.todayClass ){
+				tds[i].removeClass( this.options.todayClass );
+			}
 		}
 
 		for (var i=day; i<tds.length; i++){
@@ -840,6 +871,11 @@ o2.widget.Calendar = o2.Calendar = new Class({
 				tds[i].setStyle("border", "0px solid #AAA");
 				if( this.options.todayClass ){
 					tds[i].addClass( this.options.todayClass );
+				}
+			}else{
+				tds[i].removeClass("today_"+this.options.style);
+				if( this.options.todayClass ){
+					tds[i].removeClass( this.options.todayClass );
 				}
 			}
 			if (tmp.diff(this.today)>0){
@@ -930,98 +966,104 @@ o2.widget.Calendar = o2.Calendar = new Class({
 		var div, items;
 
 		this.calculateCurrentHour(h);
-		if( !this.hMobileSelect ){
-			items = [];
-			for( var i=0; i<24; i++ ) {
-				div = new Element("div.hselect", {
-					"text": this.addZero(i, 2),
-					"styles": this.css.calendarTimeSelectItem_mobile
-				}).inject(this.itmeHNode);
-				div.store("d", i);
-				if (!this.isEnableHour(this.cDate, i)){
-					div.hide();
-				}else{
-					items.push(i);
-				}
-			}
-			this.selectedHour = this.cHour; //this.addZero(h, 2 );
-			this.hMobileSelect = new o2.Calendar.MobileSelect( this.itmeHNode.getParent(), {
-				"lineHeight" : 40,
-				"items" : items, //24,
-				"currentItem" : parseInt( this.cHour ),
-				"onChange": function(value){
-					this.selectedHour = value; //this.addZero(value, 2 );
-					this.cHour = this.selectedHour;
-					if( this.options.enableMinutes )this._resetMinuteSelect_mobile();
-					if( this.options.enableSeconds )this._resetSecondSelect_mobile();
-					//this.showHNode.set("text", this.addZero(i, 2 ));
-					//this.itmeHNode.getFirst().set("text", this.addZero(i, 2 ));
-				}.bind(this)
-			});
-			this.hMobileSelect.load();
+		if( this.hMobileSelect ){
+			this.itmeHNode.empty();
+			this.hMobileSelect = null;
 		}
+		items = [];
+		for( var i=0; i<24; i++ ) {
+			div = new Element("div.hselect", {
+				"text": this.addZero(i, 2),
+				"styles": this.css.calendarTimeSelectItem_mobile
+			}).inject(this.itmeHNode);
+			div.store("d", i);
+			if (!this.isEnableHour(this.cDate, i)){
+				div.hide();
+			}else{
+				items.push(i);
+			}
+		}
+		this.selectedHour = this.cHour; //this.addZero(h, 2 );
+		this.hMobileSelect = new o2.Calendar.MobileSelect( this.itmeHNode.getParent(), {
+			"lineHeight" : 40,
+			"items" : items, //24,
+			"currentItem" : parseInt( this.cHour ),
+			"onChange": function(value){
+				this.selectedHour = value; //this.addZero(value, 2 );
+				this.cHour = this.selectedHour;
+				if( this.options.enableMinutes )this._resetMinuteSelect_mobile();
+				if( this.options.enableSeconds )this._resetSecondSelect_mobile();
+				//this.showHNode.set("text", this.addZero(i, 2 ));
+				//this.itmeHNode.getFirst().set("text", this.addZero(i, 2 ));
+			}.bind(this)
+		});
+		this.hMobileSelect.load();
 
 		this.calculateCurrentMinute(m);
-		if( !this.mMobileSelect ) {
-			items = [];
-			for (var i = 0; i < 60; i++) {
-				div = new Element("div.mselect", {
-					"text": this.addZero(i, 2),
-					"styles": this.css.calendarTimeSelectItem_mobile
-				}).inject(this.itmeMNode);
-				div.store("d", i);
-				if (!this.isEnableMinute(this.cDate, this.cHour, i)) {
-					div.hide();
-				}else{
-					items.push(i);
-				}
-			}
-			this.selectedMinute = this.cMinute; //this.addZero(m, 2);
-			this.mMobileSelect = new o2.Calendar.MobileSelect(this.itmeMNode.getParent(), {
-				"lineHeight": 40,
-				"items": items, //60,
-				"currentItem": parseInt(this.cMinute),
-				"onChange": function (value) {
-					this.selectedMinute = value; //this.addZero(value, 2);
-					//this.showHNode.set("text", this.addZero(i, 2 ));
-					//this.itmeHNode.getFirst().set("text", this.addZero(i, 2 ));
-					this.cMinute = this.selectedMinute;
-					if( this.options.enableSeconds )this._resetSecondSelect_mobile();
-				}.bind(this)
-			});
-			this.mMobileSelect.load();
+		if( this.mMobileSelect ){
+			this.itmeMNode.empty();
+			this.mMobileSelect = null;
 		}
+		items = [];
+		for (var i = 0; i < 60; i++) {
+			div = new Element("div.mselect", {
+				"text": this.addZero(i, 2),
+				"styles": this.css.calendarTimeSelectItem_mobile
+			}).inject(this.itmeMNode);
+			div.store("d", i);
+			if (!this.isEnableMinute(this.cDate, this.cHour, i)) {
+				div.hide();
+			}else{
+				items.push(i);
+			}
+		}
+		this.selectedMinute = this.cMinute; //this.addZero(m, 2);
+		this.mMobileSelect = new o2.Calendar.MobileSelect(this.itmeMNode.getParent(), {
+			"lineHeight": 40,
+			"items": items, //60,
+			"currentItem": parseInt(this.cMinute),
+			"onChange": function (value) {
+				this.selectedMinute = value; //this.addZero(value, 2);
+				//this.showHNode.set("text", this.addZero(i, 2 ));
+				//this.itmeHNode.getFirst().set("text", this.addZero(i, 2 ));
+				this.cMinute = this.selectedMinute;
+				if( this.options.enableSeconds )this._resetSecondSelect_mobile();
+			}.bind(this)
+		});
+		this.mMobileSelect.load();
 
 		if(this.options.secondEnable ){
 			this.calculateCurrentSecond(s);
-			if(!this.sMobileSelect){
-				items = [];
-				for( var i=0; i<60; i++ ){
-					div = new Element("div.sselect",{
-						"text" : this.addZero(i, 2 ),
-						"styles" : this.css.calendarTimeSelectItem_mobile
-					}).inject( this.itmeSNode );
-					div.store("d", i);
-					if (!this.isEnableMinute(this.cDate, this.cHour, this.cMinute, i)) {
-						div.hide();
-					}else{
-						items.push(i);
-					}
-				}
-				this.selectedSecond = this.cSecond; //this.addZero(s, 2 );
-				this.sMobileSelect = new o2.Calendar.MobileSelect( this.itmeSNode.getParent(), {
-					"lineHeight" : 40,
-					"items" : items, //60,
-					"currentItem" : parseInt(this.cSecond),
-					"onChange": function(value){
-						this.selectedSecond = value; //this.addZero(value, 2 );
-						//this.showHNode.set("text", this.addZero(i, 2 ));
-						//this.itmeHNode.getFirst().set("text", this.addZero(i, 2 ));
-						this.cSecond = this.selectedSecond;
-					}.bind(this)
-				});
-				this.sMobileSelect.load();
+			if( this.sMobileSelect ){
+				this.itmeSNode.empty();
+				this.sMobileSelect = null;
 			}
+			items = [];
+			for( var i=0; i<60; i++ ){
+				div = new Element("div.sselect",{
+					"text" : this.addZero(i, 2 ),
+					"styles" : this.css.calendarTimeSelectItem_mobile
+				}).inject( this.itmeSNode );
+				div.store("d", i);
+				if (!this.isEnableMinute(this.cDate, this.cHour, this.cMinute, i)) {
+					div.hide();
+				}else{
+					items.push(i);
+				}
+			}
+			this.selectedSecond = this.cSecond; //this.addZero(s, 2 );
+			this.sMobileSelect = new o2.Calendar.MobileSelect( this.itmeSNode.getParent(), {
+				"lineHeight" : 40,
+				"items" : items, //60,
+				"currentItem" : parseInt(this.cSecond),
+				"onChange": function(value){
+					this.selectedSecond = value; //this.addZero(value, 2 );
+					//this.showHNode.set("text", this.addZero(i, 2 ));
+					//this.itmeHNode.getFirst().set("text", this.addZero(i, 2 ));
+					this.cSecond = this.selectedSecond;
+				}.bind(this)
+			});
+			this.sMobileSelect.load();
 		}else{
 			this.itmeSNode.hide();
 
@@ -1039,7 +1081,7 @@ o2.widget.Calendar = o2.Calendar = new Class({
 		}
 
 		if (!this.okButton){
-			this.okButton = new Element("button", {"text": o2.LP.widget.ok }).inject(this.showActionNode);
+			this.okButton = new Element("button.mainColor_bg", {"text": o2.LP.widget.ok }).inject(this.showActionNode);
 			this.okButton.addEvent("click", function(){
 				this._selectTime();
 				this.hide();

@@ -8,7 +8,9 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
 		"propertyPath": "../x_component_process_FormDesigner/Module/Form/form.html",
         "mode": "PC",
 		"fields": ["Calendar", "Checkbox", "Datagrid", "Datagrid$Title", "Datagrid$Data", "Datatable", "Datatable$Title", "Datatable$Data",
-			"Datatemplate","Htmleditor","TinyMCEEditor", "Number", "Office", "Orgfield","Org", "org", "Personfield", "Radio", "Select", "Textarea", "Textfield", "Address","Combox"],
+			"Datatemplate","Htmleditor","TinyMCEEditor", "Number", "Currency", "Office", "Orgfield","Org", "org", "Personfield", "Radio", "Select", "Textarea", "Textfield", "Address","Combox",
+			"Elcascader","Elcheckbox","Elcolorpicker", "Eldate", "Eldatetime", "Elinput", "Elnumber", "Elradio", "Elrate", "Elselect", "Elslider", "Elswitch", "ElTime"
+		],
 		"injectActions" : [
 			{
 				"name" : "top",
@@ -26,32 +28,32 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
 			}
 		]
 	},
-	
+
 	initialize: function(designer, container, options){
 		this.setOptions(options);
-		
+
 		this.path = "../x_component_process_FormDesigner/Module/Form/";
 		this.cssPath = "../x_component_process_FormDesigner/Module/Form/"+this.options.style+"/css.wcss";
 
 		this._loadCss();
-		
+
 		this.container = null;
 		this.form = this;
         this.moduleType = "form";
-		
+
 		this.moduleList = [];
 		this.moduleNodeList = [];
-		
+
 		this.moduleContainerNodeList = [];
 		this.moduleElementNodeList = [];
 		this.moduleComponentNodeList = [];
 
 	//	this.moduleContainerList = [];
 		this.dataTemplate = {};
-		
+
 		this.designer = designer;
 		this.container = container;
-		
+
 		this.selectedModules = [];
 	},
     reload: function(data){
@@ -151,6 +153,7 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
 					tools = this.json.defaultTools;
 				}else{
 					tools = o2.JSON.get(this.path+"toolbars.json", null,false);
+					tools = tools.filter( function (d) { return !d.hidden; } );
 				}
 				tools.map( function (d) { d.system = true; return d; });
 				if (this.json.tools){
@@ -191,20 +194,36 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
 
 		this.designer.fireEvent("postFormLoad");
 	},
+	isForceClearCustomStyle: function (){
+		return this.json.forceClearCustomStyle &&
+			this.json.forceClearCustomStyle.length &&
+			this.json.forceClearCustomStyle[0] === "yes";
+	},
     removeStyles: function(from, to){
-        if (this.json[to]){
-            Object.each(from, function(style, key){
-                if (this.json[to][key] && this.json[to][key]==style){
-                    delete this.json[to][key];
-                }
-            }.bind(this));
-        }
+		if( this.isForceClearCustomStyle()  ){
+			if(this.json[to])this.json[to] = {};
+		}else{
+			if (this.json[to]){
+				Object.each(from, function(style, key){
+					if (this.json[to][key] && this.json[to][key]==style){
+						delete this.json[to][key];
+					}
+				}.bind(this));
+			}
+		}
     },
     copyStyles: function(from, to){
-        if (!this.json[to]) this.json[to] = {};
-        Object.each(from, function(style, key){
-            if (!this.json[to][key]) this.json[to][key] = style;
-        }.bind(this));
+		if( this.isForceClearCustomStyle() ){
+			this.json[to] = {};
+			Object.each(from, function(style, key){
+				this.json[to][key] = style;
+			}.bind(this));
+		}else{
+			if (!this.json[to]) this.json[to] = {};
+			Object.each(from, function(style, key){
+				if (!this.json[to][key]) this.json[to][key] = style;
+			}.bind(this));
+		}
     },
     clearTemplateStyles: function(styles){
         if (styles){
@@ -470,12 +489,12 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
 
 		this.loadDomTree();
 	},
-	
+
 	loadDomTree: function(){
 		MWF.require("MWF.widget.Tree", function(){
 			this.domTree = new MWF.widget.Tree(this.designer.propertyDomArea, {"style": "domtree"});
 			this.domTree.load();
-			
+
 			this.createFormTreeNode();
 			this.parseModules(this, this.node);
 		}.bind(this));
@@ -533,7 +552,7 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
 			module = this.loadModule(obj.json, obj.dom, parent);
 		}.bind(this));
 	},
-	
+
 	getDomjson: function(dom){
 		var mwfType = dom.get("MWFtype");
 		switch (mwfType) {
@@ -550,7 +569,7 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
 				}
 		}
 	},
-	
+
 	loadModule: function(json, dom, parent){
 		if( !json ){
 			var module;
@@ -593,7 +612,7 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
 			return module;
 		}
 	},
-	
+
 	setNodeEvents: function(){
 		this.node.addEvent("click", function(e){
 			this.selected();
@@ -677,11 +696,11 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
 		this.unSelectedMulti();
 
 		this.currentSelectedModule = this;
-		
+
 		if (this.treeNode){
 			this.treeNode.selectNode();
 		}
-		
+
 		this.showProperty();
     //    this.isFocus = true;
 	},
@@ -692,7 +711,7 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
 		if (this.multimoduleActionsArea) this.multimoduleActionsArea.setStyle("display", "none");
 	},
 	unSelectAll: function(){
-		
+
 	},
 	_beginSelectMulti: function(){
 		if (this.currentSelectedModule) this.currentSelectedModule.unSelected();
@@ -716,7 +735,7 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
 				"padding": "1px",
 				"padding-right": "0px",
 				"border": "1px solid #AAA",
-				"box-shadow": "0px 2px 5px #999", 
+				"box-shadow": "0px 2px 5px #999",
 				"z-index": 10001
 			}
 		}).inject(this.form.container, "after");
@@ -732,7 +751,7 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
 			this.multimoduleActionsArea.setStyle("display", "block");
 		}
 	},
-	
+
 	_getFirstMultiSelectedModule: function(){
 		var firstModule = null;
 		this.selectedModules.each(function(module){
@@ -751,8 +770,8 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
 		});
 		return firstModule;
 	},
-	
-	
+
+
 	showProperty: function(callback){
 		if (!this.property){
 			this.property = new MWF.xApplication.process.FormDesigner.Property(this, this.designer.propertyContentArea, this.designer, {
@@ -762,7 +781,7 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
 					if (callback) callback();
 				}.bind(this)
 			});
-			this.property.load();	
+			this.property.load();
 		}else{
 			this.property.show();
 			if (callback) callback();
@@ -771,12 +790,12 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
     hideProperty: function(){
         if (this.property) this.property.hide();
     },
-	
+
 	unSelected: function(){
 		this.currentSelectedModule = null;
         this.hideProperty();
 	},
-	
+
 	_dragIn: function(module){
 		if (!this.Component) module.inContainer = this;
 		module.parentContainer = this;
@@ -1031,6 +1050,8 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
 
 		var data = this._copyFormJson(this.data);
 
+		if( data.json.forceClearCustomStyle )delete data.json.forceClearCustomStyle;
+
 		if (data.json.styleConfig && data.json.styleConfig.extendFile){
 			var stylesUrl = "../x_component_process_FormDesigner/Module/Form/skin/" + this.json.styleConfig.extendFile;
 			MWF.getJSON(stylesUrl, function (responseJSON) {
@@ -1068,11 +1089,11 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
 		debugger;
 		var existModuleList = {};
 		Object.each(  this.moduleList, function( module ){
-			existModuleList[ module.json.id ] = true;
+			if( module.json && module.json.id )existModuleList[ module.json.id ] = true;
 		});
 		Object.each( this.data.json.moduleList , function( module, key ){
 			//if( !this.node.getElement( "#" + module.id ) && !existModuleList[ module.id ] ){
-			if( !existModuleList[ module.id ] ){
+			if( module && module.id && !existModuleList[ module.id ] ){
 				delete this.data.json.moduleList[key];
 			}
 		}.bind(this));
@@ -1219,6 +1240,7 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
 	loadVersionList : function(){
 		var tableHtml = "<table width='100%' cellspacing='0' cellpadding='3' style='margin-top: 1px'><tr>" +
 			"<th>"+MWF.APPFD.LP.version["no"]+"</th>" +
+			"<th>"+MWF.APPFD.LP.version["person"]+"</th>" +
 			"<th>"+MWF.APPFD.LP.version["updateTime"]+"</th>" +
 			"<th>"+MWF.APPFD.LP.version["op"]+"</th>" +
 			"</tr></table>";
@@ -1230,6 +1252,7 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
 			this.versionList.each(function (version,index) {
 				var node = new Element("tr").inject(this.versionTable);
 				var html = "<td>"+(index+1)+"</td>" +
+					"<td>"+version.person+"</td>" +
 					"<td>"+version.updateTime+"</td>" +
 					"<td></td>";
 				node.set("html", html);
@@ -1300,7 +1323,7 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
         var y = this.container.getStyle("height");
         y = (y) ? y.toInt()-2 : this.container.getSize().y-2;
 		this.node.setStyle("min-height", ""+y+"px");
-		
+
 		if (this.initialStyles) this.node.setStyles(this.initialStyles);
 		this.node.setStyle("border", border);
 
@@ -1395,9 +1418,9 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
                 var host1 = MWF.Actions.getHost("x_processplatform_assemble_surface");
                 var host2 = MWF.Actions.getHost("x_portal_assemble_surface");
                 if (pic.indexOf("/x_processplatform_assemble_surface")!==-1){
-                    pic = pic.replace("/x_processplatform_assemble_surface", pic+"/x_processplatform_assemble_surface");
+                    pic = pic.replace("/x_processplatform_assemble_surface", host1+"/x_processplatform_assemble_surface");
                 }else if (pic.indexOf("x_processplatform_assemble_surface")!==-1){
-                    pic = pic.replace("x_processplatform_assemble_surface", pic+"/x_processplatform_assemble_surface");
+                    pic = pic.replace("x_processplatform_assemble_surface", host1+"/x_processplatform_assemble_surface");
                 }
                 if (pic.indexOf("/x_portal_assemble_surface")!==-1){
                     pic = pic.replace("/x_portal_assemble_surface", host2+"/x_portal_assemble_surface");
@@ -1421,6 +1444,10 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
         var styleNode = $("design_style"+this.json.id);
         if (styleNode) styleNode.destroy();
         if (cssText){
+
+            //删除注释
+            cssText = cssText.replace(/\/\*[\s\S]*?\*\/\n|([^:]|^)\/\/.*\n$/g, '').replace(/\\n/, '');
+
             cssText = this.parseCSS(cssText);
             var rex = new RegExp("(.+)(?=\\{)", "g");
             var match;
@@ -1428,25 +1455,29 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
 			var prefix = ".css" + id + " ";
 
             while ((match = rex.exec(cssText)) !== null) {
-                // var rule = prefix + match[0];
-                // cssText = cssText.substring(0, match.index) + rule + cssText.substring(rex.lastIndex, cssText.length);
-                // rex.lastIndex = rex.lastIndex + prefix.length;
-
 				var rulesStr = match[0];
-				if (rulesStr.indexOf(",")!=-1){
-					var rules = rulesStr.split(/\s*,\s*/g);
-					rules = rules.map(function(r){
-						return prefix + r;
-					});
-					var rule = rules.join(", ");
-					cssText = cssText.substring(0, match.index) + rule + cssText.substring(rex.lastIndex, cssText.length);
-					rex.lastIndex = rex.lastIndex + (prefix.length*rules.length);
+            var startWith = rulesStr.substring(0, 1);
+            if (startWith === "@" || startWith === ":" || rulesStr.indexOf("%") !== -1) {
 
-				}else{
-					var rule = prefix + match[0];
-					cssText = cssText.substring(0, match.index) + rule + cssText.substring(rex.lastIndex, cssText.length);
-					rex.lastIndex = rex.lastIndex + prefix.length;
-				}
+            }else if (rulesStr.trim()==='from' || rulesStr.trim()==='to'){
+
+            } else {
+                    if (rulesStr.indexOf(",")!=-1){
+                        //var rules = rulesStr.split(/\s*,\s*/g);
+                        var rules = rulesStr.split(/,/g);
+                        rules = rules.map(function(r){
+                            return prefix + r;
+                        });
+                        var rule = rules.join(",");
+                        cssText = cssText.substring(0, match.index) + rule + cssText.substring(rex.lastIndex, cssText.length);
+                        rex.lastIndex = rex.lastIndex + (prefix.length*rules.length);
+
+                    }else{
+                        var rule = prefix + match[0];
+                        cssText = cssText.substring(0, match.index) + rule + cssText.substring(rex.lastIndex, cssText.length);
+                        rex.lastIndex = rex.lastIndex + prefix.length;
+                    }
+                }
             }
 
             var styleNode = document.createElement("style");
@@ -1515,7 +1546,7 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
 		if (subformList){
 			Object.each(subformList, function(subform){
 				if (!currentSubform || currentSubform!=subform.id){
-					if (subform.moduleList[id]){
+					if ((subform.moduleList || {})[id]){
 						elementConflict = true;
 						if (this.options.fields.indexOf(type)!=-1 || this.options.fields.indexOf(subform.moduleList[id].type)!=-1){
 							fieldConflict = true;
@@ -1598,5 +1629,5 @@ MWF.xApplication.process.FormDesigner.Module.Form = MWF.FCForm = new Class({
     	// 	if (this.options.fields.indexOf(o.type))
 	// 	}.bind(this))
 	// }
-	
+
 });
